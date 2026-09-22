@@ -1,0 +1,101 @@
+﻿
+DROP TABLE IF EXISTS `accounts`;
+CREATE TABLE `accounts` (
+DROP TABLE IF EXISTS `active_sessions`;
+CREATE TABLE `active_sessions` (
+DROP TABLE IF EXISTS `areas`;
+CREATE TABLE `areas` (
+DROP TABLE IF EXISTS `booklet_invoice_usage`;
+CREATE TABLE `booklet_invoice_usage` (
+DROP TABLE IF EXISTS `booklet_numbers`;
+CREATE TABLE `booklet_numbers` (
+DROP TABLE IF EXISTS `branches`;
+CREATE TABLE `branches` (
+DROP TABLE IF EXISTS `brands`;
+CREATE TABLE `brands` (
+DROP TABLE IF EXISTS `dealers`;
+CREATE TABLE `dealers` (
+DROP TABLE IF EXISTS `departments`;
+CREATE TABLE `departments` (
+DROP TABLE IF EXISTS `family_codes`;
+CREATE TABLE `family_codes` (
+DROP TABLE IF EXISTS `groups`;
+CREATE TABLE `groups` (
+DROP TABLE IF EXISTS `item_branch_prices`;
+CREATE TABLE `item_branch_prices` (
+DROP TABLE IF EXISTS `item_discount_branches`;
+CREATE TABLE `item_discount_branches` (
+DROP TABLE IF EXISTS `item_freebies`;
+CREATE TABLE `item_freebies` (
+DROP TABLE IF EXISTS `item_prices`;
+CREATE TABLE `item_prices` (
+DROP TABLE IF EXISTS `item_serial_branches`;
+CREATE TABLE `item_serial_branches` (
+DROP TABLE IF EXISTS `items`;
+CREATE TABLE `items` (
+DROP TABLE IF EXISTS `positions`;
+CREATE TABLE `positions` (
+DROP TABLE IF EXISTS `preorder_items`;
+CREATE TABLE `preorder_items` (
+DROP TABLE IF EXISTS `preorders`;
+CREATE TABLE `preorders` (
+DROP TABLE IF EXISTS `promo_items`;
+CREATE TABLE `promo_items` (
+DROP TABLE IF EXISTS `promos`;
+CREATE TABLE `promos` (
+DROP TABLE IF EXISTS `promoters`;
+CREATE TABLE `promoters` (
+DROP TABLE IF EXISTS `purchase_order_edit_history`;
+CREATE TABLE `purchase_order_edit_history` (
+DROP TABLE IF EXISTS `purchase_order_items`;
+CREATE TABLE `purchase_order_items` (
+DROP TABLE IF EXISTS `purchase_orders`;
+CREATE TABLE `purchase_orders` (
+DROP TABLE IF EXISTS `rddeliveries`;
+CREATE TABLE `rddeliveries` (
+DROP TABLE IF EXISTS `rddelivery_items`;
+CREATE TABLE `rddelivery_items` (
+DROP TABLE IF EXISTS `receive_dd`;
+CREATE TABLE `receive_dd` (
+DROP TABLE IF EXISTS `refund_items`;
+CREATE TABLE `refund_items` (
+DROP TABLE IF EXISTS `refunds`;
+CREATE TABLE `refunds` (
+DROP TABLE IF EXISTS `sales`;
+CREATE TABLE `sales` (
+DROP TABLE IF EXISTS `sales_entry`;
+CREATE TABLE `sales_entry` (
+DROP TABLE IF EXISTS `sales_entry_freebies`;
+CREATE TABLE `sales_entry_freebies` (
+DROP TABLE IF EXISTS `sales_entry_items`;
+CREATE TABLE `sales_entry_items` (
+DROP TABLE IF EXISTS `sales_freebies`;
+CREATE TABLE `sales_freebies` (
+DROP TABLE IF EXISTS `sales_items`;
+CREATE TABLE `sales_items` (
+DROP TABLE IF EXISTS `sidebar_restrictions`;
+CREATE TABLE `sidebar_restrictions` (
+DROP TABLE IF EXISTS `skip_receipt_requests`;
+CREATE TABLE `skip_receipt_requests` (
+DROP TABLE IF EXISTS `stock_on_hand`;
+CREATE TABLE `stock_on_hand` (
+DROP TABLE IF EXISTS `stock_transfer_items`;
+CREATE TABLE `stock_transfer_items` (
+DROP TABLE IF EXISTS `stock_transfers`;
+CREATE TABLE `stock_transfers` (
+DROP TABLE IF EXISTS `suppliers`;
+CREATE TABLE `suppliers` (
+DROP TABLE IF EXISTS `terminal_ids`;
+CREATE TABLE `terminal_ids` (
+DROP TABLE IF EXISTS `terminal_issuers`;
+CREATE TABLE `terminal_issuers` (
+DROP TABLE IF EXISTS `upgrade_new_items`;
+CREATE TABLE `upgrade_new_items` (
+DROP TABLE IF EXISTS `upgrade_old_items`;
+CREATE TABLE `upgrade_old_items` (
+DROP TABLE IF EXISTS `upgrades`;
+CREATE TABLE `upgrades` (
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users` (
+
+

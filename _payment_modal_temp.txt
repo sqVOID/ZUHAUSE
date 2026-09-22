@@ -1,0 +1,600 @@
+﻿        </style>
+        <div id="paymentModal" class="modal">
+            <div class="modal-content payment-modal-content">
+                <div class="modal-header">
+                    Choose your Payment
+                </div>
+                <div class="modal-body payment-modal-body">
+                    <!-- Top Section: Dropdowns and Radio Buttons -->
+                    <div class="payment-top-section">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <label class="payment-radio-option" style="margin: 0;">
+                                <input type="checkbox" name="payment_method" value="payment_partners"
+                                    id="chkPaymentPartners">
+                            </label>
+                            <select class="payment-dropdown" id="paymentPartnersDropdown">
+                                <option value="">Payment Partners</option>
+                                <option value="partner1">STO ninio de cebu</option>
+                                <option value="partner2">Home Credit</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 5px;" class="disabled-payment">
+                            <label class="payment-radio-option disabled-payment" style="margin: 0;">
+                                <input type="checkbox" name="payment_method" value="card_payment" id="chkCardPayment"
+                                    disabled>
+                            </label>
+                            <select class="payment-dropdown disabled-payment" id="cardPaymentDropdown" disabled>
+                                <option value="">Card Payment</option>
+                                <option value="credit_card">Credit Card</option>
+                                <option value="debit_card">Debit Card</option>
+                            </select>
+                        </div>
+
+
+                        <div style="display: flex; align-items: center; gap: 5px;" class="disabled-payment">
+                            <label class="payment-radio-option disabled-payment" style="margin: 0;">
+                                <input type="checkbox" name="payment_method" value="qr" id="chkQR" disabled>
+                            </label>
+                            <select class="payment-dropdown disabled-payment" id="qrDropdown" disabled>
+                                <option value="">QR</option>
+                                <option value="qr_ph">QR PH</option>
+                                <option value="starpay_qr">Starpay QR</option>
+                            </select>
+                        </div>
+
+                        <div class="payment-radio-group" style="flex-direction: row; gap: 15px; margin-left: 10px;">
+                            <label class="payment-radio-option">
+                                <input type="checkbox" name="payment_method" value="online_banking">
+                                <span>Online Banking</span>
+                            </label>
+                            <label class="payment-radio-option">
+                                <input type="checkbox" name="payment_method" value="ewallet">
+                                <span>E-Wallet</span>
+                            </label>
+                            <label class="payment-radio-option">
+                                <input type="checkbox" name="payment_method" value="cash">
+                                <span>Cash</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Home Credit Section -->
+                    <div class="home-credit-section">
+                        <h3 id="paymentPartnerTitle">STO ninio de cebu </h3>
+
+                        <div class="hc-grid-container">
+                            <!-- Unit selector: shown when 2+ items, auto-filled when 1 item -->
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+
+                            <div class="hc-form-group">
+                                <label>Loan Type:</label>
+                                <select class="hc-input">
+                                    <option value=""></option>
+                                    <option value="installment_loan">Installment Loan</option>
+                                    <option value="0_installment">0% Installment</option>
+                                    <option value="promo_installment">Promo Installment</option>
+                                    <option value="standard_installment">Standard Installment</option>
+                                    <option value="cash_loan">Cash Loan</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Loan Terms:</label>
+                                <select class="hc-input">
+                                    <option value=""></option>
+                                    <option value="3months">3 Months</option>
+                                    <option value="6months">6 Months</option>
+                                    <option value="9months">9 Months</option>
+                                    <option value="12months">12 Months</option>
+                                    <option value="15months">15 Months</option>
+                                    <option value="18months">18 Months</option>
+                                    <option value="24months">24 Months</option>
+                                    <option value="24months">36 Months</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Customer's Name:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Loan Number:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Loan Balance:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group down-payment-group">
+                                <label>Down payment:</label>
+                                <div class="down-payment-box">
+                                    <div class="payment-method-label">
+                                        <span class="pm-label">Payment Method:</span>
+                                    </div>
+                                    <div class="payment-method-row">
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="down_payment_method" value="cash"
+                                                onchange="toggleDownPaymentReference()">
+                                            1. Cash
+                                        </label>
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="down_payment_method" value="gcash"
+                                                onchange="toggleDownPaymentReference()">
+                                            2. G-Cash
+                                        </label>
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="down_payment_method" value="maya"
+                                                onchange="toggleDownPaymentReference()">
+                                            3. Maya
+                                        </label>
+                                    </div>
+
+                                    <div class="reference-no-row hci-amount-row" id="dpCashRow"
+                                        style="display: none; align-items: center; gap: 10px; margin-bottom: 15px;">
+                                        <label
+                                            style="font-weight: 700; font-size: 14px; min-width: 160px; color: #333; margin: 0;">Cash
+                                            Amount (DP):</label>
+                                        <input type="text" class="amount-input" id="cash_down_payment_amount"
+                                            oninput="formatInput(this)"
+                                            style="padding: 8px 12px; border: 1px solid #bfbfbf; border-radius: 4px; font-size: 14px; width: 200px;">
+                                    </div>
+
+                                    <div class="reference-no-row hci-amount-row" id="dpGcashRow"
+                                        style="display: none; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label
+                                                style="font-weight: 700; font-size: 14px; min-width: 160px; color: #333; margin: 0;">G-Cash
+                                                Reference No:</label>
+                                            <input type="text" class="reference-input" id="gcash_down_payment_reference"
+                                                name="gcash_down_payment_reference"
+                                                style="padding: 8px 12px; border: 1px solid #bfbfbf; border-radius: 4px; font-size: 14px; width: 200px;">
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label
+                                                style="font-weight: 700; font-size: 14px; min-width: 160px; color: #333; margin: 0;">G-Cash
+                                                Amount (DP):</label>
+                                            <input type="text" class="amount-input" id="gcash_down_payment_amount"
+                                                oninput="formatInput(this)"
+                                                style="padding: 8px 12px; border: 1px solid #bfbfbf; border-radius: 4px; font-size: 14px; width: 200px;">
+                                        </div>
+                                    </div>
+
+                                    <div class="reference-no-row hci-amount-row" id="dpMayaRow"
+                                        style="display: none; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label
+                                                style="font-weight: 700; font-size: 14px; min-width: 160px; color: #333; margin: 0;">Maya
+                                                Reference No:</label>
+                                            <input type="text" class="reference-input" id="maya_down_payment_reference"
+                                                name="maya_down_payment_reference"
+                                                style="padding: 8px 12px; border: 1px solid #bfbfbf; border-radius: 4px; font-size: 14px; width: 200px;">
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label
+                                                style="font-weight: 700; font-size: 14px; min-width: 160px; color: #333; margin: 0;">Maya
+                                                Amount (DP):</label>
+                                            <input type="text" class="amount-input" id="maya_down_payment_amount"
+                                                oninput="formatInput(this)"
+                                                style="padding: 8px 12px; border: 1px solid #bfbfbf; border-radius: 4px; font-size: 14px; width: 200px;">
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <script>
+                                function toggleDownPaymentReference() {
+                                    const cashCb = document.querySelector('input[name="down_payment_method"][value="cash"]');
+                                    const gcashCb = document.querySelector('input[name="down_payment_method"][value="gcash"]');
+                                    const mayaCb = document.querySelector('input[name="down_payment_method"][value="maya"]');
+
+                                    const cashRow = document.getElementById('dpCashRow');
+                                    const gcashRow = document.getElementById('dpGcashRow');
+                                    const mayaRow = document.getElementById('dpMayaRow');
+
+                                    if (cashCb && cashCb.checked) {
+                                        cashRow.style.display = 'flex';
+                                    } else if (cashRow) {
+                                        cashRow.style.display = 'none';
+                                        const cInput = document.getElementById('cash_down_payment_amount');
+                                        if (cInput) { cInput.value = ''; cInput.dispatchEvent(new Event('input', { bubbles: true })); }
+                                    }
+
+                                    if (gcashCb && gcashCb.checked) {
+                                        gcashRow.style.display = 'flex';
+                                    } else if (gcashRow) {
+                                        gcashRow.style.display = 'none';
+                                        const gRef = document.getElementById('gcash_down_payment_reference');
+                                        const gInput = document.getElementById('gcash_down_payment_amount');
+                                        if (gRef) gRef.value = '';
+                                        if (gInput) { gInput.value = ''; gInput.dispatchEvent(new Event('input', { bubbles: true })); }
+                                    }
+
+                                    if (mayaCb && mayaCb.checked) {
+                                        mayaRow.style.display = 'flex';
+                                    } else if (mayaRow) {
+                                        mayaRow.style.display = 'none';
+                                        const mRef = document.getElementById('maya_down_payment_reference');
+                                        const mInput = document.getElementById('maya_down_payment_amount');
+                                        if (mRef) mRef.value = '';
+                                        if (mInput) { mInput.value = ''; mInput.dispatchEvent(new Event('input', { bubbles: true })); }
+                                    }
+                                }
+                            </script>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Credit Card Section -->
+                    <div class="credit-card-section">
+                        <h3>Credit Card</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>Terminal Issuer:</label>
+                                <select class="hc-input" id="ccTerminalIssuer" onchange="filterTerminalIds('cc')">
+                                    <option value="">Select Terminal Issuer</option>
+                                    <?php
+                                    if ($terminal_issuers_result && $terminal_issuers_result->num_rows > 0) {
+                                        $terminal_issuers_result->data_seek(0);
+                                        while ($ti_row = $terminal_issuers_result->fetch_assoc()) {
+                                            echo "<option value='" . htmlspecialchars($ti_row['bank_name'], ENT_QUOTES) . "'>" . htmlspecialchars($ti_row['bank_name']) . "</option>";
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Terminal ID:</label>
+                                <select class="hc-input" id="ccTerminalId">
+                                    <option value="">Select Terminal ID</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Bank:</label>
+                                <select class="hc-input" id="creditCardBankDropdown">
+                                    <option value="">Select Bank</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Terms:</label>
+                                <select class="hc-input" id="creditCardTermsDropdown">
+                                    <option value="">Select Terms</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>MID:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Card No:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Approval Code:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Batch:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input" id="creditCardAmount">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Debit Card Section -->
+                    <div class="debit-card-section">
+                        <h3>Debit Card</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>Terminal Issuer:</label>
+                                <select class="hc-input" id="dcTerminalIssuer" onchange="filterTerminalIds('dc')">
+                                    <option value="">Select Terminal Issuer</option>
+                                    <?php
+                                    if ($terminal_issuers_result && $terminal_issuers_result->num_rows > 0) {
+                                        $terminal_issuers_result->data_seek(0);
+                                        while ($ti_row = $terminal_issuers_result->fetch_assoc()) {
+                                            echo "<option value='" . htmlspecialchars($ti_row['bank_name'], ENT_QUOTES) . "'>" . htmlspecialchars($ti_row['bank_name']) . "</option>";
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Terminal ID:</label>
+                                <select class="hc-input" id="dcTerminalId">
+                                    <option value="">Select Terminal ID</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Bank:</label>
+                                <select class="hc-input">
+                                    <option value="">Select Bank</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Terms:</label>
+                                <select class="hc-input">
+                                    <option value="">Select Terms</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>MID:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Card No:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Approval Code:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Batch:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- QR PH Section -->
+                    <div class="qr-ph-section">
+                        <h3>QR PH</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>Bank:</label>
+                                <select class="hc-input">
+                                    <option value="">Select Bank</option>
+                                    <option value="BDO">BDO</option>
+                                    <option value="Metrobank">Metrobank</option>
+                                    <option value="PNB">Philippine National Bank</option>
+                                    <option value="E-West">E-West</option>
+                                    <option value="RCBC">RCBC</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Customer's Name:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Reference No:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Starpay QR Section -->
+                    <div class="starpay-qr-section">
+                        <h3>Starpay QR</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>Bank:</label>
+                                <select class="hc-input">
+                                    <option value="">Select Bank</option>
+                                    <option value="BDO">BDO</option>
+                                    <option value="Metrobank">Metrobank</option>
+                                    <option value="PNB">Philippine National Bank</option>
+                                    <option value="E-West">E-West</option>
+                                    <option value="RCBC">RCBC</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Customer's Name:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Reference No:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- E-Wallet Section -->
+                    <div class="ewallet-section">
+                        <h3>E-Wallet</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>E-Wallet:</label>
+                                <select class="hc-input">
+                                    <option value="">Select E-Wallet</option>
+                                    <option value="gcash">GCash</option>
+                                    <option value="maya">Maya</option>
+                                    <option value="paymaya">PayMaya</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Customer's Name:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Reference No:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Online Banking Section -->
+                    <div class="online-banking-section">
+                        <h3>Online Banking</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>Bank:</label>
+                                <select class="hc-input">
+                                    <option value="">Select Bank</option>
+                                    <option value="BDO">BDO</option>
+                                    <option value="Metrobank">Metrobank</option>
+                                    <option value="PNB">Philippine National Bank</option>
+                                    <option value="E-West">E-West</option>
+                                    <option value="RCBC">RCBC</option>
+                                </select>
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Reference No:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Cash Section -->
+                    <div class="cash-section">
+                        <h3>Cash</h3>
+
+                        <div class="hc-grid-container">
+                            <div class="hc-form-group unit-selector-row" style="display:none;"></div>
+                            <div class="hc-form-group">
+                                <label>Amount:</label>
+                                <input type="text" class="hc-input">
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <label>Total:</label>
+                            <input type="text" class="total-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Global Total -->
+                    <div class="global-totals-wrapper"
+                        style="display: flex; flex-direction: column; align-items: flex-end; padding: 15px 0; border-top: 1px solid #ddd; margin-top: 10px; gap: 10px;">
+                        <div class="global-total-due"
+                            style="display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: bold;">
+                            <label>Total Amount Due:</label>
+                            <input type="text" id="globalTotalDueInput" readonly
+                                style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; width: 150px; background-color: #f5f5f5; font-weight: bold; text-align: right;">
+                        </div>
+                        <div class="global-total-section"
+                            style="display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: bold;">
+                            <label>Total Payment:</label>
+                            <input type="text" id="globalTotalInput" readonly
+                                style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; width: 150px; background-color: #f5f5f5; font-weight: bold; text-align: right;">
+                        </div>
+                    </div>
+                    <!-- Payment Breakdown banner -->
+                    <div id="paymentBreakdownBanner"
+                        style="display:none; margin: 0 0 15px 0; padding: 12px 16px; background-color: #ffffffff; border-left: 4px solid #16a34a; border-right:1px solid #c9c9c9ff; border-top:1px solid #c9c9c9ff; border-bottom:1px solid #c9c9c9ff; border-radius: 4px;  box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: system-ui, -apple-system, sans-serif;">
+                    </div>
+
+                    <!-- Inline payment error banner -->
+                    <div id="paymentErrorBanner"
+                        style="display:none; margin: 0 0 15px 0; padding: 12px 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-right:1px solid #c9c9c9ff; border-top:1px solid #c9c9c9ff; border-bottom:1px solid #c9c9c9ff; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: system-ui, -apple-system, sans-serif;">
+                    </div>
+                </div>
+
+                <div class="modal-footer payment-modal-footer">
+                    <button type="button" class="btn-back-modal" onclick="closePaymentModal()">Back</button>
+                    <button type="button" class="btn-save-modal">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Terminal IDs dataset from PHP (filtered by current branch)
+            const allTerminalIds = <?php echo json_encode($terminal_ids_for_js); ?>;
+
+            /**
+             * Filter Terminal ID dropdown based on selected Terminal Issuer.
+             * Also wires the Terminal ID change event to filter the Bank dropdown.
+             * @param {string} section - 'cc' for Credit Card, 'dc' for Debit Card
+             */
+            function filterTerminalIds(section) {
+                const issuerSelect = document.getElementById(section === 'cc' ? 'ccTerminalIssuer' : 'dcTerminalIssuer');
+                const terminalSelect = document.getElementById(section === 'cc' ? 'ccTerminalId' : 'dcTerminalId');
+                if (!issuerSelect || !terminalSelect) return;

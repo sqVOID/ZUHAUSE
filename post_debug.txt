@@ -1,0 +1,40 @@
+Timestamp: 2026-09-21 15:56:17
+POST Data:
+Array
+(
+    [imei_primary_order] => 1
+    [item_id] => 144
+    [item_code] => SAMSUNG-S25-ULTRA-12GB-512GB-A.WHT
+    [description] => SAMSUNG S25 ULTRA 12GB 512GB AURORA WHITE
+    [brand] => SAMSUNG
+    [family_code] => S24 ULTRA 12GB 512GB
+    [group] => MOBILE PHONE
+    [department] => SMARTPHONE
+    [srp] => 49,999.00
+    [commission] => 0.00
+    [tc_commission] => 0.00
+    [points] => 0.00
+    [freebie_item_code] => Array
+        (
+            [0] => 
+        )
+
+    [freebie_quantity] => Array
+        (
+            [0] => 1
+        )
+
+    [has_discount] => on
+    [use_serial] => on
+    [voucher_amount] => 
+    [has_token] => on
+    [token_amount] => 1,500.00
+    [save_item] => 
+    [price_sets_json] => [{"label":"Price Set 1","branches":["ZUHAUSE INFANTA"],"srp":"49999.00","prices":{"BDO 12 Months":"52215.00","BDO 24 Months":"68512.00","BDO 3 Months":"49999.00","BDO 6 Months":"49999.00","BDO Straight":"49999.00"},"actives":{"BDO 12 Months":true,"BDO 24 Months":true,"BDO 3 Months":true,"BDO 6 Months":true,"BDO Straight":true}}]
+    [branch] => Array
+        (
+            [0] => ZUHAUSE INFANTA
+        )
+
+)
+

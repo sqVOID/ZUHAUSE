@@ -1,0 +1,62 @@
+﻿Field	Type	Null	Key	Default	Extra
+id	int(11)	NO	PRI	NULL	auto_increment
+invoice_no	varchar(50)	NO	UNI	NULL	
+first_name	varchar(100)	YES		NULL	
+last_name	varchar(100)	YES		NULL	
+address	varchar(255)	YES		NULL	
+contact_no	varchar(50)	YES		NULL	
+email	varchar(100)	YES		NULL	
+assisted_by	varchar(100)	NO		NULL	
+remarks	text	YES		NULL	
+total_qty	int(11)	YES		0	
+discount	decimal(10,2)	YES		0.00	
+total_amount	decimal(10,2)	YES		0.00	
+points	decimal(10,2)	YES		0.00	
+commission	decimal(10,2)	YES		0.00	
+payment_data	text	YES		NULL	
+freebie_status	varchar(50)	YES		NULL	
+branch_code	varchar(10)	YES	MUL	NULL	
+created_at	datetime	NO	MUL	NULL	
+updated_at	datetime	YES		NULL	on update current_timestamp()
+encoder	varchar(150)	YES		NULL	
+cash_payments	decimal(12,2)	YES		0.00	
+card_bank_type	varchar(100)	YES		NULL	
+commission_encoder	decimal(12,2)	YES		0.00	
+status	enum('pending','completed','voided','cancelled')	YES		completed	
+upgrade	varchar(10)	YES		NULL	
+original_invoice_no	varchar(50)	YES		NULL	
+void_reason	text	YES		NULL	
+voided_at	datetime	YES		NULL	
+voided_by	varchar(150)	YES		NULL	
+Field	Type	Null	Key	Default	Extra
+id	int(11)	NO	PRI	NULL	auto_increment
+sales_entry_id	int(11)	NO	MUL	NULL	
+item_description	varchar(255)	NO		NULL	
+imei	varchar(100)	YES	MUL	NULL	
+quantity	int(11)	NO		NULL	
+price	decimal(10,2)	NO		NULL	
+item_code	varchar(50)	YES		NULL	
+dr_number	varchar(100)	YES			
+created_at	datetime	NO		current_timestamp()	
+Field	Type	Null	Key	Default	Extra
+id	int(11)	NO	PRI	NULL	auto_increment
+item_code	varchar(50)	NO	UNI	NULL	
+description	text	YES		NULL	
+family_code	varchar(100)	YES		NULL	
+brand	varchar(100)	YES		NULL	
+group_name	varchar(100)	YES		NULL	
+department	varchar(100)	YES		NULL	
+branch	varchar(100)	YES		NULL	
+srp	decimal(10,2)	YES		0.00	
+commission	decimal(10,2)	YES		0.00	
+has_commission	tinyint(1)	YES		0	
+tc_commission	decimal(10,2)	YES		0.00	
+points	decimal(10,2)	YES		0.00	
+has_points	tinyint(1)	YES		0	
+has_freebies	tinyint(1)	YES		0	
+has_discount	tinyint(1)	YES		0	
+has_serial	tinyint(1)	YES		0	
+stock_qty	int(11)	YES		0	
+status	varchar(20)	YES		Active	
+created_at	timestamp	NO		current_timestamp()	
+freebies	varchar(255)	YES		NULL	

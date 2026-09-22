@@ -1,0 +1,119 @@
+═══════════════════════════════════════════════════════════════════
+  PREORDER BOOKLET INTEGRATION - COMPLETE ✓
+═══════════════════════════════════════════════════════════════════
+
+INTEGRATION DATE: July 6, 2026
+STATUS: Complete and Ready for Use
+
+───────────────────────────────────────────────────────────────────
+WHAT WAS CHANGED
+───────────────────────────────────────────────────────────────────
+
+1. ✓ preorder.php
+   - Updated JavaScript to fetch invoice from booklet system
+   - Passes page_type='preorder' and branch_code
+   - Displays actual invoice number (not "System Generated")
+
+2. ✓ save_preorder.php
+   - Integrated with booklet system via get_next_invoice_number.php
+   - Uses booklet configuration when available
+   - Auto-increments numeric formats
+   - Falls back to PRE-YYYYMMDD-#### if no booklet
+
+3. ✓ get_next_invoice_number.php
+   - Enhanced fallback to support preorder-specific format
+   - Queries preorders table for preorder sequence
+   - Maintains separate logic per page_type
+
+───────────────────────────────────────────────────────────────────
+HOW TO USE
+───────────────────────────────────────────────────────────────────
+
+STEP 1: Configure Booklet (Optional)
+→ Go to: Store Registration → Booklet Number Registration
+→ Click: Add Booklet Number
+→ Fill:
+  - Branch: [Select your branch]
+  - Page Type: Pre-Order
+  - Format: Numeric / Date+Suffix / Custom
+  - Prefix: [Optional, e.g., "PRE-"]
+  - Current Number: [Starting number]
+  - Suffix: [Optional]
+→ Click: Add
+
+STEP 2: Create Pre-Order
+→ Go to: Pre-Order page
+→ Invoice No field will auto-display next number
+→ Fill customer and item details
+→ Click Payment button
+→ Invoice will be generated using booklet format
+
+───────────────────────────────────────────────────────────────────
+EXAMPLES
+───────────────────────────────────────────────────────────────────
+
+WITH BOOKLET CONFIGURED:
+  Format: Numeric, Prefix="PRE-", Current="0001", Suffix="-M"
+  Result: PRE-0001-M → PRE-0002-M → PRE-0003-M
+
+  Format: Date+Suffix, Current="07-06-2026", Suffix="-SD"
+  Result: 07-06-2026-SD (manually update date daily)
+
+WITHOUT BOOKLET (Fallback):
+  Format: PRE-YYYYMMDD-####
+  Result: PRE-20260706-0001 → PRE-20260706-0002 → PRE-20260706-0003
+
+───────────────────────────────────────────────────────────────────
+INTEGRATION STATUS BY PAGE TYPE
+───────────────────────────────────────────────────────────────────
+
+✓ Sales Entry      → INTEGRATED with booklet
+✓ Pre-Order        → INTEGRATED with booklet
+✗ Stock Transfer   → NOT YET INTEGRATED
+✗ Purchase Order   → NOT YET INTEGRATED
+✗ Refund           → NOT YET INTEGRATED
+✗ Upgrade Unit     → NOT YET INTEGRATED
+
+───────────────────────────────────────────────────────────────────
+TESTING CHECKLIST
+───────────────────────────────────────────────────────────────────
+
+□ Open bookletnoreg.php and add preorder booklet configuration
+□ Verify Page Type dropdown shows "Pre-Order" option
+□ Save the booklet configuration
+□ Open preorder.php
+□ Check that Invoice No field shows actual number (not placeholder)
+□ Create a test pre-order
+□ Verify invoice is saved with correct format
+□ Check bookletnoreg.php - current number should increment
+□ Delete booklet config and test fallback format
+
+───────────────────────────────────────────────────────────────────
+TECHNICAL NOTES
+───────────────────────────────────────────────────────────────────
+
+• Page Type: "preorder" (lowercase in database)
+• Fallback queries preorders table (not sales_entry)
+• Auto-increment only works for numeric format type
+• Each branch can have separate preorder format
+• Booklet status must be "Active" to be used
+• Invoice display updates immediately on page load
+
+───────────────────────────────────────────────────────────────────
+FILES MODIFIED
+───────────────────────────────────────────────────────────────────
+
+1. c:\xampp\htdocs\MOTOGAM\preorder.php
+2. c:\xampp\htdocs\MOTOGAM\save_preorder.php
+3. c:\xampp\htdocs\MOTOGAM\get_next_invoice_number.php
+
+───────────────────────────────────────────────────────────────────
+DOCUMENTATION
+───────────────────────────────────────────────────────────────────
+
+→ PREORDER_BOOKLET_INTEGRATION.md - Detailed integration guide
+→ BOOKLET_SYSTEM_COMPLETE.md - Complete booklet system overview
+
+═══════════════════════════════════════════════════════════════════
+  ALL DONE! Ready to use preorder with booklet system
+═══════════════════════════════════════════════════════════════════

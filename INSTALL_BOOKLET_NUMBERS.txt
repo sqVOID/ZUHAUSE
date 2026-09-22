@@ -1,0 +1,200 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║          BOOKLET NUMBER REGISTRATION - INSTALLATION CHECKLIST                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+✓ Files Created:
+  ├─ bookletnoreg.php                  (Main registration page)
+  ├─ setup_booklet_numbers.php         (Database setup script)
+  ├─ get_next_invoice_number.php       (Helper functions)
+  ├─ test_booklet_integration.php      (Integration demo)
+  ├─ create_booklet_numbers_table.sql  (SQL schema)
+  ├─ BOOKLET_NUMBER_SETUP.md           (Setup guide)
+  ├─ BOOKLET_FILES_SUMMARY.md          (Files documentation)
+  └─ _sidebar.php (UPDATED)            (Added menu item)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INSTALLATION STEPS:
+
+Step 1: Create Database Table
+═══════════════════════════════════════════════════════════════════════════════
+Open your browser and navigate to:
+→ http://localhost/MOTOGAM/setup_booklet_numbers.php
+
+This will create the 'booklet_numbers' table in your database.
+You should see a success message.
+
+Step 2: Access the Registration Page
+═══════════════════════════════════════════════════════════════════════════════
+Navigate to the page via:
+→ Sidebar: Store Registration → Booklet Number Registration
+   OR
+→ Direct URL: http://localhost/MOTOGAM/bookletnoreg.php
+
+Step 3: Add Your First Booklet Number
+═══════════════════════════════════════════════════════════════════════════════
+1. Click "Add Booklet Number" button
+2. Select a branch
+3. Choose format type:
+   • Numeric: For formats like 0003128-092-149
+   • Date + Suffix: For formats like 07-06-2026-SD10
+   • Custom: For any other format
+4. Enter the current number
+5. Optionally add prefix/suffix
+6. Preview the format
+7. Click "Add" to save
+
+Step 4: Test the Integration (Optional)
+═══════════════════════════════════════════════════════════════════════════════
+Open the test page:
+→ http://localhost/MOTOGAM/test_booklet_integration.php
+
+Select a branch and click "Get Next Invoice Number" to test.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXAMPLE CONFIGURATIONS:
+
+Example 1: Numeric Sequential
+─────────────────────────────────────────────────────────────────────────────
+Branch: Main Branch (001)
+Format: Numeric
+Current Number: 0003128-092-149
+Result: 0003128-092-149
+
+Example 2: Date with Suffix
+─────────────────────────────────────────────────────────────────────────────
+Branch: San Diego (SD)
+Format: Date + Suffix
+Current Number: 07-06-2026
+Suffix: SD10
+Result: 07-06-2026-SD10
+
+Example 3: Branch Prefix
+─────────────────────────────────────────────────────────────────────────────
+Branch: Batangas (BTG)
+Format: Custom
+Prefix: BR
+Current Number: 001234
+Result: BR001234
+
+Example 4: Full Custom
+─────────────────────────────────────────────────────────────────────────────
+Branch: Manila (MNL)
+Format: Custom
+Prefix: INV-2026-
+Current Number: MNL-00123
+Result: INV-2026-MNL-00123
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INTEGRATION WITH SALES SYSTEM:
+
+To use booklet numbers in your sales entry or invoice system, add this code:
+
+PHP Example:
+─────────────────────────────────────────────────────────────────────────────
+<?php
+include 'get_next_invoice_number.php';
+
+// Get the booklet configuration for current branch
+$branch_code = $_SESSION['branch_code']; // or from form
+$booklet = getBookletConfig($conn, $branch_code);
+
+if ($booklet) {
+    // Generate the full invoice number
+    $invoice_number = generateInvoiceNumber($booklet);
+    
+    // Use it in your sales entry
+    echo "Invoice Number: " . $invoice_number;
+}
+?>
+
+JavaScript/AJAX Example:
+─────────────────────────────────────────────────────────────────────────────
+fetch('get_next_invoice_number.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'action=get_invoice_number&branch_code=SD'
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        document.getElementById('invoice_field').value = data.invoice_number;
+    }
+});
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TROUBLESHOOTING:
+
+Problem: Table creation fails
+Solution: Check database connection in config.php
+         Ensure MySQL is running
+         Verify database name is correct
+
+Problem: Menu item not visible
+Solution: Check sidebar permissions
+         Clear browser cache
+         Verify user role has access
+
+Problem: Can't add booklet number
+Solution: Ensure branch exists in branches table
+         Fill all required fields (marked with *)
+         Check for duplicate entries
+
+Problem: Preview not showing
+Solution: Check browser console for errors
+         Ensure JavaScript is enabled
+         Clear cache and reload
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FEATURES:
+
+✓ Add booklet number formats per branch
+✓ Multiple format types (Numeric, Date+Suffix, Custom)
+✓ Optional prefix and suffix
+✓ Live preview of invoice number
+✓ Edit existing booklet numbers
+✓ Activate/Deactivate booklet numbers
+✓ Search and filter functionality
+✓ Responsive design
+✓ Helper functions for integration
+✓ AJAX support for dynamic loading
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPORTANT NOTES:
+
+• Each branch can have multiple booklet number configurations
+• Only ONE booklet number per branch should be Active at a time
+• Inactive booklet numbers are kept for historical reference
+• You can manually update the current number at any time
+• Auto-increment is available for numeric formats
+• Date formats should be updated manually per day
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DOCUMENTATION:
+
+For detailed documentation, see:
+• BOOKLET_NUMBER_SETUP.md - Complete setup guide
+• BOOKLET_FILES_SUMMARY.md - File descriptions and examples
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUICK START:
+
+1. Run: http://localhost/MOTOGAM/setup_booklet_numbers.php
+2. Go to: Sidebar → Store Registration → Booklet Number Registration
+3. Click: "Add Booklet Number"
+4. Fill the form and save
+5. Test: http://localhost/MOTOGAM/test_booklet_integration.php
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Installation Complete! Ready to use.
+
+Created: 2026-07-06
+System: MOTOGAM Management System

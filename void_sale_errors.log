@@ -1,0 +1,15 @@
+[04-Aug-2026 09:21:43 Asia/Manila] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'invoice_number' in 'field list' in C:\xampp\htdocs\MOTOGAM\void_sale.php:49
+Stack trace:
+#0 C:\xampp\htdocs\MOTOGAM\void_sale.php(49): mysqli->prepare('SELECT id, stat...')
+#1 {main}
+  thrown in C:\xampp\htdocs\MOTOGAM\void_sale.php on line 49
+[04-Aug-2026 09:22:03 Asia/Manila] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'invoice_number' in 'field list' in C:\xampp\htdocs\MOTOGAM\void_sale.php:49
+Stack trace:
+#0 C:\xampp\htdocs\MOTOGAM\void_sale.php(49): mysqli->prepare('SELECT id, stat...')
+#1 {main}
+  thrown in C:\xampp\htdocs\MOTOGAM\void_sale.php on line 49
+[04-Aug-2026 09:22:12 Asia/Manila] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'invoice_number' in 'field list' in C:\xampp\htdocs\MOTOGAM\void_sale.php:49
+Stack trace:
+#0 C:\xampp\htdocs\MOTOGAM\void_sale.php(49): mysqli->prepare('SELECT id, stat...')
+#1 {main}
+  thrown in C:\xampp\htdocs\MOTOGAM\void_sale.php on line 49

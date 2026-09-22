@@ -1,0 +1,3 @@
+[27-Jul-2026 13:24:21 Asia/Manila] Exception in search_freebies.php: Table 'motogam_management.inventory' doesn't exist
+#0 C:\xampp\htdocs\MOTOGAM\search_freebies.php(68): mysqli->query('SELECT i.id, i....')
+#1 {main}
