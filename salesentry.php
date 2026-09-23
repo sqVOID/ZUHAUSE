@@ -4325,7 +4325,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 amountInput.focus();
                             }
                         } else if (fullKey && currentPrices[fullKey] !== undefined) {
-                            // For regular banks: Set price from item and make readonly.
+                            // For regular banks: Set price from item but KEEP IT EDITABLE.
                             // Deduct token/voucher/discount so Amount matches Total Amount Due.
                             let price = parseFloat(currentPrices[fullKey]) || 0;
                             const context = (typeof getCartAndPaymentContext === 'function')
@@ -4340,7 +4340,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             if (amountInput) {
                                 const formattedPrice = formatNumber(price);
                                 amountInput.value = formattedPrice;
-                                amountInput.setAttribute('readonly', 'readonly');
+                                amountInput.removeAttribute('readonly'); // CHANGED: Keep it editable
                                 amountInput.dispatchEvent(new Event('input'));
 
                                 const section = amountInput.closest(pair.sectionClass);

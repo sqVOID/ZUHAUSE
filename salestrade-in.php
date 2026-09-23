@@ -3626,7 +3626,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                 amountInput.focus();
                             }
                         } else if (fullKey && currentPrices[fullKey] !== undefined) {
-                            // Deduct token/voucher/discount/trade-in so Amount aligns with Total Amount Due.
+                            // Deduct token/voucher/discount/trade-in so Amount aligns with Total Amount Due but KEEP IT EDITABLE.
                             let price = parseFloat(currentPrices[fullKey]) || 0;
                             const context = (typeof getCartAndPaymentContext === 'function')
                                 ? getCartAndPaymentContext()
@@ -3642,7 +3642,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                             if (amountInput) {
                                 const formattedPrice = formatNumber(price);
                                 amountInput.value = formattedPrice;
-                                amountInput.setAttribute('readonly', 'readonly');
+                                amountInput.removeAttribute('readonly'); // CHANGED: Keep it editable
                                 amountInput.dispatchEvent(new Event('input'));
 
                                 const section = amountInput.closest(pair.sectionClass);
