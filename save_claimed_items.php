@@ -167,11 +167,8 @@ try {
     
     $stmt->close();
     
-    // Get the user's branch name for stock deduction
-    $user_branch = $_SESSION['user_branch'] ?? '';
-    
-    // Trim and normalize the branch name
-    $user_branch = trim($user_branch);
+    // Get the user's branch name and code for stock deduction
+    $user_branch = trim($_SESSION['user_branch'] ?? '');
     
     $stockDeductedCount = 0;
     $stockErrors = [];
@@ -180,70 +177,165 @@ try {
     foreach ($claimed_items as $item) {
         $item_code = trim($item['itemCode']);
         $quantity = intval($item['quantity']);
+        $imei = isset($item['imei']) ? trim($item['imei']) : '';
         
-        $stockDebug[] = "Processing item: $item_code, qty: $quantity, branch: '$user_branch'";
+        $stockDebug[] = "Processing item: $item_code, qty: $quantity, imei: '$imei', branch: '$user_branch', branch_name: '$branch_name'";
         
-        // Check if sufficient stock exists in stock_on_hand (with TRIM for matching)
-        $checkStockSQL = "SELECT quantity, branch FROM stock_on_hand WHERE TRIM(item_code) = TRIM(?) AND TRIM(branch) = TRIM(?)";
-        $checkStmt = $conn->prepare($checkStockSQL);
+        // 1. SERIALIZED ITEM DEDUCTION (If IMEI is present)
+        if (!empty($imei)) {
+            $checkImeiSQL = "SELECT id, quantity, branch, status 
+                             FROM stock_on_hand 
+                             WHERE (UPPER(TRIM(imei)) = UPPER(TRIM(?)) OR (imei2 IS NOT NULL AND UPPER(TRIM(imei2)) = UPPER(TRIM(?))))
+                               AND (LOWER(TRIM(status)) IN ('good', 'good stock', 'available', 'active') OR status IS NULL OR status = '')
+                             LIMIT 1";
+            $imeiStmt = $conn->prepare($checkImeiSQL);
+            if (!$imeiStmt) {
+                $stockErrors[] = "Failed to prepare IMEI check for item $item_code ($imei): " . $conn->error;
+                continue;
+            }
+            $imeiStmt->bind_param('ss', $imei, $imei);
+            $imeiStmt->execute();
+            $imeiResult = $imeiStmt->get_result();
+            
+            if ($imeiResult && $imeiResult->num_rows > 0) {
+                $stockRow = $imeiResult->fetch_assoc();
+                $stockId = $stockRow['id'];
+                $stockQty = intval($stockRow['quantity']);
+                $imeiStmt->close();
+                
+                if ($stockQty <= 1) {
+                    $delStmt = $conn->prepare("DELETE FROM stock_on_hand WHERE id = ?");
+                    $delStmt->bind_param('i', $stockId);
+                    $delStmt->execute();
+                    if ($delStmt->affected_rows > 0) {
+                        $stockDeductedCount++;
+                        $stockDebug[] = "Deleted serialized stock row id=$stockId for IMEI $imei";
+                    } else {
+                        $stockErrors[] = "Failed to delete serialized stock record for IMEI $imei";
+                    }
+                    $delStmt->close();
+                } else {
+                    $decStmt = $conn->prepare("UPDATE stock_on_hand SET quantity = quantity - 1 WHERE id = ? AND quantity >= 1");
+                    $decStmt->bind_param('i', $stockId);
+                    $decStmt->execute();
+                    if ($decStmt->affected_rows > 0) {
+                        $stockDeductedCount++;
+                        $stockDebug[] = "Decremented serialized stock quantity for row id=$stockId for IMEI $imei";
+                    } else {
+                        $stockErrors[] = "Failed to decrement serialized stock record for IMEI $imei";
+                    }
+                    $decStmt->close();
+                }
+                continue;
+            } else {
+                $imeiStmt->close();
+                $stockErrors[] = "Serialized item $item_code with IMEI '$imei' not found in available stock";
+                $stockDebug[] = "No active/good stock found for IMEI '$imei'";
+                continue;
+            }
+        }
         
-        if (!$checkStmt) {
-            $stockErrors[] = "Failed to prepare stock check for item $item_code: " . $conn->error;
+        // 2. NON-SERIALIZED ITEM DEDUCTION
+        // Query available matching stock records (ordered by ID for FIFO deduction)
+        $findStockSQL = "SELECT id, quantity, branch, status 
+                         FROM stock_on_hand 
+                         WHERE UPPER(TRIM(item_code)) = UPPER(TRIM(?))
+                           AND (
+                               TRIM(branch) = TRIM(?) 
+                               OR TRIM(branch) = TRIM(?) 
+                               OR ? = '' 
+                               OR LOWER(?) = 'all branches'
+                           )
+                           AND (LOWER(TRIM(status)) IN ('good', 'good stock', 'available', 'active') OR status IS NULL OR status = '')
+                           AND quantity > 0
+                         ORDER BY id ASC";
+        
+        $findStmt = $conn->prepare($findStockSQL);
+        if (!$findStmt) {
+            $stockErrors[] = "Failed to prepare stock query for item $item_code: " . $conn->error;
             continue;
         }
         
-        $checkStmt->bind_param('ss', $item_code, $user_branch);
-        $checkStmt->execute();
-        $checkResult = $checkStmt->get_result();
+        $findStmt->bind_param('sssss', $item_code, $user_branch, $branch_name, $user_branch, $user_branch);
+        $findStmt->execute();
+        $findResult = $findStmt->get_result();
         
-        if ($checkResult->num_rows === 0) {
-            $stockErrors[] = "Item $item_code not found in stock for branch '$user_branch'";
-            $stockDebug[] = "No stock record found for item $item_code in branch '$user_branch'";
-            $checkStmt->close();
+        $matchingRows = [];
+        $totalAvailable = 0;
+        if ($findResult) {
+            while ($row = $findResult->fetch_assoc()) {
+                $matchingRows[] = $row;
+                $totalAvailable += intval($row['quantity']);
+            }
+        }
+        $findStmt->close();
+        
+        // Fallback: If no stock matched with branch filter, check without branch constraint if branch not strictly required
+        if (empty($matchingRows)) {
+            $findFallbackSQL = "SELECT id, quantity, branch, status 
+                                FROM stock_on_hand 
+                                WHERE UPPER(TRIM(item_code)) = UPPER(TRIM(?))
+                                  AND (LOWER(TRIM(status)) IN ('good', 'good stock', 'available', 'active') OR status IS NULL OR status = '')
+                                  AND quantity > 0
+                                ORDER BY id ASC";
+            $fbStmt = $conn->prepare($findFallbackSQL);
+            if ($fbStmt) {
+                $fbStmt->bind_param('s', $item_code);
+                $fbStmt->execute();
+                $fbResult = $fbStmt->get_result();
+                if ($fbResult) {
+                    while ($row = $fbResult->fetch_assoc()) {
+                        $matchingRows[] = $row;
+                        $totalAvailable += intval($row['quantity']);
+                    }
+                }
+                $fbStmt->close();
+            }
+        }
+        
+        if (empty($matchingRows)) {
+            $stockErrors[] = "Item $item_code not found in good/available stock";
+            $stockDebug[] = "No stock record found for item $item_code in branch '$user_branch' or '$branch_name'";
             continue;
         }
         
-        $stockRow = $checkResult->fetch_assoc();
-        $currentStock = intval($stockRow['quantity']);
-        $stockBranch = $stockRow['branch'];
-        $stockDebug[] = "Found stock: item=$item_code, current=$currentStock, branch='$stockBranch'";
-        $checkStmt->close();
-        
-        // Check if sufficient quantity is available
-        if ($currentStock < $quantity) {
-            $stockErrors[] = "Insufficient stock for item $item_code in branch '$stockBranch' (available: $currentStock, requested: $quantity)";
-            $stockDebug[] = "Insufficient stock: available=$currentStock, requested=$quantity";
+        if ($totalAvailable < $quantity) {
+            $stockErrors[] = "Insufficient stock for item $item_code (available: $totalAvailable, requested: $quantity)";
+            $stockDebug[] = "Insufficient stock: available=$totalAvailable, requested=$quantity";
             continue;
         }
         
-        // Deduct from stock_on_hand (with TRIM for matching)
-        $stockDeductionSQL = "UPDATE stock_on_hand 
-                              SET quantity = quantity - ? 
-                              WHERE TRIM(item_code) = TRIM(?) AND TRIM(branch) = TRIM(?) AND quantity >= ?";
-        $stockStmt = $conn->prepare($stockDeductionSQL);
+        // Deduct quantity across matching rows
+        $remainingToDeduct = $quantity;
+        $itemDeducted = 0;
         
-        if (!$stockStmt) {
-            $stockErrors[] = "Failed to prepare stock deduction for item $item_code: " . $conn->error;
-            continue;
+        foreach ($matchingRows as $stockRow) {
+            if ($remainingToDeduct <= 0) {
+                break;
+            }
+            
+            $rowId = $stockRow['id'];
+            $rowQty = intval($stockRow['quantity']);
+            $deductThisRow = min($remainingToDeduct, $rowQty);
+            
+            $deductStmt = $conn->prepare("UPDATE stock_on_hand SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
+            if ($deductStmt) {
+                $deductStmt->bind_param('iii', $deductThisRow, $rowId, $deductThisRow);
+                if ($deductStmt->execute() && $deductStmt->affected_rows > 0) {
+                    $remainingToDeduct -= $deductThisRow;
+                    $itemDeducted += $deductThisRow;
+                    $stockDebug[] = "Deducted $deductThisRow from stock_on_hand id=$rowId (item=$item_code)";
+                }
+                $deductStmt->close();
+            }
         }
         
-        $stockStmt->bind_param('issi', $quantity, $item_code, $user_branch, $quantity);
-        
-        if (!$stockStmt->execute()) {
-            $stockErrors[] = "Failed to deduct stock for item $item_code: " . $stockStmt->error;
-            $stockStmt->close();
-            continue;
-        }
-        
-        if ($stockStmt->affected_rows > 0) {
+        if ($itemDeducted >= $quantity) {
             $stockDeductedCount++;
-            $stockDebug[] = "Successfully deducted $quantity from item $item_code";
+            $stockDebug[] = "Successfully deducted total $quantity for item $item_code";
         } else {
-            $stockErrors[] = "No stock deducted for item $item_code in branch '$user_branch' (check: current=$currentStock, requested=$quantity)";
-            $stockDebug[] = "UPDATE affected 0 rows for item $item_code";
+            $stockErrors[] = "Partial stock deduction for item $item_code ($itemDeducted of $quantity deducted)";
         }
-        
-        $stockStmt->close();
     }
     
     // Update unclaimed_freebies record status to 'claimed' and set claimed_at timestamp

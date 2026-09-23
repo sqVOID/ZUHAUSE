@@ -66,15 +66,17 @@ $stmt = $conn->prepare("
             SELECT SUM(uoi.price)
             FROM upgrades u
             JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
-            WHERE (u.original_invoice_no = se.invoice_no OR u.new_invoice_no = se.invoice_no)
+            WHERE u.new_invoice_no = se.invoice_no
         ), 0) AS old_unit_amount,
         se.status as display_status,
         r.total_amount as refund_amount,
         se.page_type,
-        se.promo_id
+        se.promo_id,
+        se.original_invoice_no
     FROM sales_entry se
     LEFT JOIN refunds r ON r.invoice_no = se.invoice_no
     WHERE DATE(se.created_at) BETWEEN ? AND ? AND se.branch_code = ?
+      AND (se.page_type != 'claimpreorder' OR se.page_type IS NULL)
     ORDER BY se.created_at ASC
 ");
 
@@ -116,13 +118,21 @@ while ($row = $result->fetch_assoc()) {
                    (IFNULL(TRIM(uni.imei), '') = '' AND IFNULL(TRIM(sei.imei), '') = '')
                    OR UPPER(TRIM(uni.imei)) = UPPER(TRIM(sei.imei))
                )
-            ) > 0 AS is_upgrade_item
+            ) > 0 AS is_upgrade_item,
+            (SELECT COUNT(*) FROM upgrade_old_items uoi
+             JOIN upgrades u ON u.id = uoi.upgrade_id
+             WHERE u.original_invoice_no = ?
+               AND (
+                   (IFNULL(TRIM(uoi.imei), '') != '' AND UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei)))
+                   OR (IFNULL(TRIM(uoi.imei), '') = '' AND UPPER(TRIM(uoi.item_description)) = UPPER(TRIM(sei.item_description)))
+               )
+            ) > 0 AS is_old_upgrade_item
         FROM sales_entry_items sei 
         WHERE sei.sales_entry_id = ?
         ORDER BY sei.id
     ");
 
-    $stmt_items->bind_param("ssi", $row['invoice_no'], $row['invoice_no'], $row['id']);
+    $stmt_items->bind_param("sssi", $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['id']);
     $stmt_items->execute();
     $items_result = $stmt_items->get_result();
 
@@ -215,32 +225,55 @@ while ($row = $result->fetch_assoc()) {
 
 $stmt->close();
 
-// Include preorder downpayments (PO-...) exactly like fetch_sales_report.php
-// EXCLUDE 'claimed' preorders since they appear as sales_entry records
+// Include preorder payment transactions exactly like fetch_sales_report.php
 $po_query = $conn->prepare("
     SELECT
-        p.id, p.invoice_no, p.first_name, p.last_name,
-        p.assisted_by, p.remarks, p.total_qty, p.total_amount,
-        p.discount, p.payment_data, p.encoder, p.branch_code,
-        p.created_at, p.status
-    FROM preorders p
-    WHERE DATE(p.created_at) BETWEEN ? AND ?
+        ph.id              AS ph_id,
+        ph.invoice_no      AS payment_invoice_no,
+        ph.payment_date,
+        ph.amount          AS payment_amount,
+        ph.payment_type    AS ph_payment_type,
+        ph.payment_method  AS ph_payment_method,
+        ph.payment_data    AS ph_payment_data,
+        ph.payment_sequence,
+        ph.encoder         AS ph_encoder,
+        p.id               AS preorder_id,
+        p.invoice_no       AS preorder_no,
+        p.claimed_at,
+        p.claimed_invoice_no,
+        p.first_name,
+        p.last_name,
+        p.assisted_by,
+        p.remarks,
+        p.total_qty,
+        p.total_amount     AS preorder_total_srp,
+        p.discount,
+        p.payment_data     AS full_payment_data,
+        p.encoder          AS preorder_encoder,
+        p.branch_code,
+        p.status           AS preorder_status,
+        p.created_at       AS preorder_created_at
+    FROM preorder_payment_history ph
+    INNER JOIN preorders p ON ph.preorder_id = p.id
+    WHERE DATE(ph.payment_date) BETWEEN ? AND ?
       AND p.branch_code = ?
-      AND p.status NOT IN ('claimed')
-    ORDER BY p.created_at ASC
+    ORDER BY ph.payment_date ASC, ph.payment_sequence ASC
 ");
 
 $po_query->bind_param("sss", $date_from, $date_to, $branch_code);
 $po_query->execute();
 $po_result = $po_query->get_result();
 
+$preorder_groups = [];
+
 if ($po_result) {
     while ($po = $po_result->fetch_assoc()) {
-        $paid = computePreorderPaidAmount($po['payment_data']);
+        $paid = floatval($po['payment_amount']);
+        $invoice_display = !empty($po['payment_invoice_no']) ? $po['payment_invoice_no'] : $po['preorder_no'];
 
         // Build item list from preorder_items
         $poi_q = $conn->prepare("SELECT family_code AS item_description, item_code, imei, quantity, price FROM preorder_items WHERE preorder_id = ?");
-        $poi_q->bind_param("i", $po['id']);
+        $poi_q->bind_param("i", $po['preorder_id']);
         $poi_q->execute();
         $poi_res = $poi_q->get_result();
 
@@ -259,21 +292,21 @@ if ($po_result) {
         $poi_q->close();
 
         $sales[] = [
-            'id' => 'PO-' . $po['id'],
-            'invoice_no' => $po['invoice_no'],
+            'id' => 'PO-' . $po['preorder_id'] . '-' . $po['ph_id'],
+            'invoice_no' => $invoice_display,
             'first_name' => $po['first_name'],
             'last_name' => $po['last_name'],
             'assisted_by' => $po['assisted_by'],
             'remarks' => '(PRE-ORDER) ' . $po['remarks'],
             'total_qty' => $po['total_qty'],
-            'total_amount' => $paid, // payment actually made
+            'total_amount' => $paid, // payment actually made for this invoice
             'actual_total_amount' => $paid, // same as total_amount for preorders
             'discount' => 0,
             'commission' => 0,
-            'payment_data' => $po['payment_data'],
-            'encoder' => $po['encoder'],
+            'payment_data' => !empty($po['ph_payment_data']) ? $po['ph_payment_data'] : $po['full_payment_data'],
+            'encoder' => !empty($po['ph_encoder']) ? $po['ph_encoder'] : $po['preorder_encoder'],
             'branch_code' => $po['branch_code'],
-            'created_at' => $po['created_at'],
+            'created_at' => $po['payment_date'],
             'status' => 'completed',
             'upgrade' => null,
             'old_unit_amount' => 0,
@@ -285,10 +318,74 @@ if ($po_result) {
             'display_status' => 'completed',
             'items' => $po_items,
         ];
+
+        // Track for breakdown grouping
+        $po_id = $po['preorder_id'];
+        if (!isset($preorder_groups[$po_id])) {
+            $first_desc = !empty($po_items[0]['item_description']) ? $po_items[0]['item_description'] : (!empty($po_items[0]['item_code']) ? $po_items[0]['item_code'] : 'PRE-ORDER ITEM');
+            $first_qty = !empty($po_items[0]['quantity']) ? intval($po_items[0]['quantity']) : 1;
+            $preorder_groups[$po_id] = [
+                'preorder_id' => $po_id,
+                'original_preorder_no' => $po['preorder_no'],
+                'claimed_invoice_no' => $po['claimed_invoice_no'] ?? null,
+                'claimed_at' => $po['claimed_at'] ?? null,
+                'preorder_status' => $po['preorder_status'],
+                'item_description' => $first_desc,
+                'quantity' => $first_qty,
+                'branch' => $branch,
+                'payments' => []
+            ];
+        }
+        $preorder_groups[$po_id]['payments'][] = [
+            'invoice_no' => $invoice_display,
+            'date' => $po['payment_date'],
+            'payment_sequence' => $po['payment_sequence']
+        ];
     }
 }
 
 $po_query->close();
+
+$unclaimed_breakdowns = [];
+
+// 1. Process Preorder groups for breakdown
+foreach ($preorder_groups as $po_id => $group) {
+    $is_claimed = (strtolower(trim($group['preorder_status'])) === 'claimed');
+
+    // UNCLAIMED PRE-ORDER for each payment invoice
+    foreach ($group['payments'] as $p) {
+        $unclaimed_breakdowns[] = [
+            'type' => 'preorder',
+            'invoice_number' => $p['invoice_no'],
+            'item_code' => $group['item_description'],
+            'quantity' => $group['quantity'],
+            'branch' => $group['branch'],
+            'status' => 'unclaimed',
+            'created_at' => $p['date'],
+            'claimed_at' => null
+        ];
+    }
+
+    // CLAIMED PRE-ORDER combined entry if claimed
+    if ($is_claimed) {
+        $allInvoices = array_map(function($p) { return $p['invoice_no']; }, $group['payments']);
+        if (!empty($group['claimed_invoice_no']) && !in_array($group['claimed_invoice_no'], $allInvoices)) {
+            $allInvoices[] = $group['claimed_invoice_no'];
+        }
+        $combinedInvoiceNo = implode(' & ', $allInvoices);
+
+        $unclaimed_breakdowns[] = [
+            'type' => 'preorder',
+            'invoice_number' => $combinedInvoiceNo,
+            'item_code' => $group['item_description'],
+            'quantity' => $group['quantity'],
+            'branch' => $group['branch'],
+            'status' => 'claimed',
+            'created_at' => $group['payments'][0]['date'] ?? null,
+            'claimed_at' => !empty($group['claimed_at']) ? $group['claimed_at'] : ($group['payments'][0]['date'] ?? null)
+        ];
+    }
+}
 
 // Fetch Unclaimed Freebies data for the selected date range
 $freebies_stmt = $conn->prepare("
@@ -318,7 +415,6 @@ $freebies_stmt->bind_param("sssss", $date_from, $date_to, $date_from, $date_to, 
 $freebies_stmt->execute();
 $freebies_result = $freebies_stmt->get_result();
 
-$unclaimed_freebies = [];
 if ($freebies_result) {
     while ($freebie = $freebies_result->fetch_assoc()) {
         $created_date = !empty($freebie['created_at']) ? date('Y-m-d', strtotime($freebie['created_at'])) : '';
@@ -327,10 +423,11 @@ if ($freebies_result) {
 
         // Add UNCLAIMED entry if created_at is within date range
         if (empty($date_from) || empty($date_to) || ($created_date >= $date_from && $created_date <= $date_to)) {
-            $unclaimed_freebies[] = [
+            $unclaimed_breakdowns[] = [
+                'type' => 'freebie',
                 'id' => $freebie['id'] . '_unclaimed',
                 'invoice_number' => $freebie['invoice_number'],
-                'item_code' => $freebie['item_code'],
+                'item_code' => !empty($freebie['item_code']) ? $freebie['item_code'] : $freebie['item_description'],
                 'item_description' => $freebie['item_description'],
                 'quantity' => intval($freebie['quantity']),
                 'status' => 'unclaimed',
@@ -344,10 +441,11 @@ if ($freebies_result) {
         // Add CLAIMED entry if status is claimed and claimed date is within date range
         if (strtolower($freebie['status']) === 'claimed') {
             if (empty($date_from) || empty($date_to) || (empty($claimed_date) || ($claimed_date >= $date_from && $claimed_date <= $date_to))) {
-                $unclaimed_freebies[] = [
+                $unclaimed_breakdowns[] = [
+                    'type' => 'freebie',
                     'id' => $freebie['id'] . '_claimed',
                     'invoice_number' => $freebie['invoice_number'],
-                    'item_code' => $freebie['item_code'],
+                    'item_code' => !empty($freebie['item_code']) ? $freebie['item_code'] : $freebie['item_description'],
                     'item_description' => $freebie['item_description'],
                     'quantity' => intval($freebie['quantity']),
                     'status' => 'claimed',
@@ -401,6 +499,13 @@ function getPerItemAmountPdf($item, $pd, $uMap)
 {
     if (!is_array($pd) || empty($uMap) || !is_array($uMap)) return null;
 
+    $mapMethods = [];
+    foreach ($uMap as $m) {
+        $cleanM = strtolower(trim((string)$m));
+        if ($cleanM !== '') $mapMethods[$cleanM] = true;
+    }
+    if (count($mapMethods) <= 1) return null;
+
     $imei = strtoupper(trim((string)($item['imei'] ?? '')));
     $desc = strtoupper(trim((string)(($item['item_description'] ?? '') ?: ($item['item_code'] ?? ''))));
     $matchedMethod = null;
@@ -448,6 +553,15 @@ function getPerItemAmountPdf($item, $pd, $uMap)
         return null;
     }
 
+    $matchedKey = strtolower(trim($matchedMethod));
+    $countWithSameMethod = 0;
+    foreach ($uMap as $m) {
+        if (strtolower(trim((string)$m)) === $matchedKey) $countWithSameMethod++;
+    }
+    if ($countWithSameMethod > 1) {
+        return null;
+    }
+
     if ($isLoanMethod($matchedMethod)) {
         $lbRaw = $pd['Loan Balance'] ?? $pd['loan_balance'] ?? $pd['totalLoanAmount'] ?? $pd['total_loan_amount'] ?? 0;
         $loanTotal = floatval(str_replace(',', '', (string)$lbRaw));
@@ -462,7 +576,7 @@ function getPerItemAmountPdf($item, $pd, $uMap)
         }
         if ($loanTotal > 0) return $loanTotal * intval($item['quantity'] ?? 1);
         return null;
-    } elseif (strtolower($matchedMethod) === 'cash') {
+    } elseif ($matchedKey === 'cash') {
         $cashAmtRaw = (string)($pd['Amount'] ?? $pd['cash_amount'] ?? '');
         $cashAmt = floatval(str_replace(',', '', trim($cashAmtRaw)));
         if ($cashAmt > 0) return $cashAmt * intval($item['quantity'] ?? 1);
@@ -591,7 +705,7 @@ if (count($sales) === 0) {
     foreach ($sales as $sale) {
         $isVoided = ($sale['status'] === 'voided');
         $isRefunded = ($sale['display_status'] === 'refunded');
-        $isTradeIn = (isset($sale['page_type']) && $sale['page_type'] === 'salestrade-in');
+        $isTradeIn = (isset($sale['page_type']) && $sale['page_type'] === 'salestrade-in' && ($sale['upgrade'] ?? '') !== 'UPGD');
 
         // Parse payment data
         $paymentMethod = '';
@@ -641,7 +755,6 @@ if (count($sales) === 0) {
 
         // Process items
         if (isset($sale['items']) && count($sale['items']) > 0) {
-            $shownUpgradeTotals = false;
             $itemsCount = count($sale['items']);
             $saleAmount = floatval($sale['actual_total_amount'] ?? $sale['total_amount'] ?? 0);
             $oldUnitAmount = floatval($sale['old_unit_amount'] ?? 0);
@@ -670,12 +783,10 @@ if (count($sales) === 0) {
                     || ($isPromoEntry && !$hasPromoItemInSale && !empty($sale['promo_id']) && (int)$sale['promo_id'] > 0);
                 $stat = $itemVoided ? 'VD' : ($itemRefunded ? 'RF' : ($isTradeIn ? 'TRD' : ($itemIsPromo ? 'PROMO' : '')));
 
-                // Detect upgrade roles:
-                // - isOriginalUpgrade: invoice 0017 (old unit traded in), upgrade='UPGD', items NOT in upgrade_new_items
-                // - isNewUpgradeInvoice: invoice 0018 (new unit), upgrade='UPGD', items ARE in upgrade_new_items
-                $isOriginalUpgrade = ($sale['upgrade'] === 'UPGD') && empty($item['is_upgrade_item']) && ($oldUnitAmount > 0);
-                $isNewUpgradeInvoice = ($sale['upgrade'] === 'UPGD') && !empty($item['is_upgrade_item']);
-                $itemIsUpgraded = $isOriginalUpgrade || $isNewUpgradeInvoice;
+                // Only NEW upgrade invoices (with original_invoice_no) use cash paid display, not the original invoice
+                $isNewUpgradeSale = (($sale['upgrade'] ?? '') === 'UPGD' && !empty($sale['original_invoice_no']));
+                $itemIsUpgraded = $isNewUpgradeSale || !empty($item['is_upgrade_item']);
+                $itemIsOldUpgraded = !empty($item['is_old_upgrade_item']);
 
                 // report.php colours the entire sale row red when invoice-level is voided/refunded
                 if ($isVoided || $isRefunded || $itemRefunded) {
@@ -690,29 +801,25 @@ if (count($sales) === 0) {
                 $totalAmtDisplay = '';
                 $upgradeCellText = '';
 
-                if ($itemIsUpgraded) {
+                if ($itemIsUpgraded || $itemIsOldUpgraded || ($itemsCount === 1 && ($sale['upgrade'] ?? '') === 'UPGD')) {
                     $upgradeCellText = 'UPGD';
+                }
 
-                    if (!$shownUpgradeTotals) {
-                        if ($isOriginalUpgrade) {
-                            // 0017/0019: original invoice — ITEM AMOUNT = original price, TOTAL AMOUNT = original price
-                            $oldUnitDisplay = '0.00';
-                            $itemAmtDisplay = number_format($saleAmount, 2, '.', ',');
-                            $totalAmtDisplay = number_format($saleAmount, 2, '.', ',');
-                        } else {
-                            // 0018/0020: new upgrade invoice — show OLD UNIT + cash paid
-                            $oldUnitDisplay = number_format($oldUnitAmount, 2, '.', ',');
-                            $cashPaid = $saleAmount - floatval($sale['discount'] ?? 0);
-                            $itemAmtDisplay = number_format($cashPaid, 2, '.', ',');
-                            $totalAmtDisplay = number_format($cashPaid, 2, '.', ',');
-                        }
-                        $shownUpgradeTotals = true;
+                if ($isNewUpgradeSale) {
+                    $oldUnitDisplay = number_format($oldUnitAmount, 2, '.', ',');
+                    // Extract cash paid from payment_data.Amount (most reliable)
+                    $cashPaid = 0;
+                    $amtRaw = $paymentData['Amount'] ?? $paymentData['amount'] ?? '';
+                    $parsedAmt = floatval(str_replace(',', '', (string)$amtRaw));
+                    if ($parsedAmt > 0) {
+                        $cashPaid = $parsedAmt;
                     } else {
-                        $oldUnitDisplay = '';
-                        $itemAmtDisplay = '';
-                        $totalAmtDisplay = '';
+                        $cashPaid = max(0, $saleAmount - floatval($sale['discount'] ?? 0));
                     }
+                    $itemAmtDisplay = number_format($cashPaid, 2, '.', ',');
+                    $totalAmtDisplay = number_format($cashPaid, 2, '.', ',');
                 } else {
+                    $oldUnitDisplay = '0.00';
                     if ($isPreorder) {
                         if ($itemsCount === 1) {
                             $itemAmtDisplay = number_format($saleAmount, 2, '.', ',');
@@ -919,11 +1026,20 @@ foreach ($sales as $sale) {
     $oldUnitAmount = floatval($sale['old_unit_amount'] ?? 0);
     $discountAmount = floatval($sale['discount'] ?? 0);
 
-    $isNewUpgradeSale = (($sale['upgrade'] ?? '') === 'UPGD' && $discountAmount > 0);
+    // Only NEW upgrade invoices (with original_invoice_no) use cash paid display
+    $isNewUpgradeSale = (($sale['upgrade'] ?? '') === 'UPGD' && !empty($sale['original_invoice_no']));
 
     $saleAmount = $rawSaleAmount;
     if ($isNewUpgradeSale) {
-        $saleAmount = max(0, $rawSaleAmount - $discountAmount);
+        // Extract cash paid from payment_data.Amount (most reliable)
+        $cashPaid = 0;
+        if (!empty($sale['payment_data'])) {
+            $pdArr = json_decode($sale['payment_data'], true);
+            $amtRaw = $pdArr['Amount'] ?? $pdArr['amount'] ?? '';
+            $parsedAmt = floatval(str_replace(',', '', (string)$amtRaw));
+            if ($parsedAmt > 0) $cashPaid = $parsedAmt;
+        }
+        $saleAmount = $cashPaid > 0 ? $cashPaid : max(0, $rawSaleAmount - $discountAmount);
     }
 
     $saleQty = intval($sale['total_qty']);
@@ -963,9 +1079,54 @@ foreach ($sales as $sale) {
         $rawPaymentType = $paymentData['payment_type'] ?? '';
         $paymentTypeLower = strtolower((string) $rawPaymentType);
 
+        $partnerMap = [
+            'partner1' => 'Skyro',
+            'partner2' => 'Home Credit',
+            'partner3' => 'Sumisho',
+            'partner4' => 'AEON Credit',
+            'partner5' => 'Salmon',
+            'partner6' => 'Samsung Finances',
+            'partner7' => 'Payjoy',
+            'partner8' => 'Billease',
+            'partner9' => 'Paymongo',
+            'partner10' => 'Skyro',
+            'partner11' => 'Fundline',
+            'partner12' => 'Flexi Finance'
+        ];
+        $normalizePartnerName = function ($p) use ($partnerMap) {
+            if (!$p) return '';
+            $pl = strtolower(trim((string) $p));
+            return $partnerMap[$pl] ?? $p;
+        };
+
         if (!$rawPaymentType || $paymentTypeLower === 'cash') {
             // Pure cash
             $totalCash += $saleAmount;
+        } elseif ($paymentTypeLower === 'multiple' && !empty($paymentData['payments']) && is_array($paymentData['payments'])) {
+            // Multiple payment methods array (e.g. preorder/claimed preorders)
+            foreach ($paymentData['payments'] as $p) {
+                $pType = strtolower((string) ($p['payment_type'] ?? ''));
+                $pAmt = floatval(str_replace(',', '', (string) ($p['amount'] ?? 0)));
+                if ($pAmt <= 0) continue;
+                if ($pType === 'cash') {
+                    $totalCash += $pAmt;
+                } else {
+                    $pLabel = $p['payment_method'] ?? $pType;
+                    if ($pType === 'payment_partners' || !empty($p['payment_partner'])) {
+                        $pLabel = $normalizePartnerName($p['payment_partner'] ?? $pLabel);
+                    } elseif ($pType === 'ewallet') {
+                        $pLabel = $p['ewallet_type'] ?? 'E-Wallet';
+                    } elseif ($pType === 'online_banking') {
+                        $pLabel = $p['bank_name'] ?? 'Online Banking';
+                    }
+                    $labelUpper = strtoupper((string) $pLabel);
+                    if (!isset($nonCashBreakdown[$labelUpper])) {
+                        $nonCashBreakdown[$labelUpper] = 0;
+                    }
+                    $nonCashBreakdown[$labelUpper] += $pAmt;
+                    $totalNonCashPayment += $pAmt;
+                }
+            }
         } else {
             $specificType = (string) $rawPaymentType;
             if (!empty($paymentData['E-Wallet-Text']) && strpos($specificType, 'E-Wallet') !== false) {
@@ -973,6 +1134,12 @@ foreach ($sales as $sale) {
             }
             if (!empty($paymentData['Bank-Text']) && strpos($specificType, 'Online Banking') !== false) {
                 $specificType = str_replace('Online Banking', $paymentData['Bank-Text'], $specificType);
+            }
+            if (!empty($paymentData['payment_partner']) || stripos($specificType, 'payment_partners') !== false || stripos($specificType, 'partner') === 0) {
+                $mapped = $normalizePartnerName($paymentData['payment_partner'] ?? $specificType);
+                $specificType = preg_replace('/payment_partners/i', $mapped, $specificType);
+                $specificType = preg_replace('/partner\d+/i', $mapped, $specificType);
+                if (!$specificType || $specificType === (string) $rawPaymentType) $specificType = $mapped;
             }
 
             $methodParts = array_values(array_filter(array_map('trim', explode(' + ', (string) $rawPaymentType)), function ($s) {
@@ -987,12 +1154,16 @@ foreach ($sales as $sale) {
                 }
             }
 
-            $resolveMethodLabel = function ($m) use ($paymentData) {
+            $resolveMethodLabel = function ($m) use ($paymentData, $normalizePartnerName) {
+                if (!$m) return '';
                 if ($m === 'E-Wallet' && !empty($paymentData['E-Wallet-Text']))
                     return $paymentData['E-Wallet-Text'];
                 if ($m === 'Online Banking' && !empty($paymentData['Bank-Text']))
                     return $paymentData['Bank-Text'];
-                return $m;
+                if (stripos($m, 'payment_partners') !== false || stripos($m, 'partner') === 0) {
+                    return $normalizePartnerName($paymentData['payment_partner'] ?? $m);
+                }
+                return $normalizePartnerName($m);
             };
 
             // Try unit_payment_map first (most accurate per-unit amounts)
@@ -1182,7 +1353,7 @@ foreach ($sales as $sale) {
             } else {
                 // Single non-cash method
                 $totalNonCashPayment += $saleAmount;
-                $specificTypeUpper = strtoupper($specificType);
+                $specificTypeUpper = strtoupper((string) $resolveMethodLabel($specificType));
                 if (!isset($nonCashBreakdown[$specificTypeUpper])) {
                     $nonCashBreakdown[$specificTypeUpper] = 0;
                 }
@@ -1260,93 +1431,99 @@ foreach ($commissionBreakdown as $name => $amount) {
     $pdf->SetX($boxX + 2);
 }
 
-// Draw Unclaimed Freebies Breakdown Box below Commission box (only if there are records)
-if (count($unclaimed_freebies) > 0) {
+// Draw Unclaimed Breakdowns Box below Commission box (only if there are records)
+if (count($unclaimed_breakdowns) > 0) {
     // Position below the commission breakdown box
-    $freebiesBoxX = $boxX; // Same X position as commission box
-    $freebiesBoxY = $contentY + $boxH + 5; // Below commission box with 5mm gap
-    $freebiesBoxW = $boxW; // Same width as commission box (55mm)
-    $pdf->SetXY($freebiesBoxX, $freebiesBoxY);
+    $breakdownsBoxX = $boxX; // Same X position as commission box
+    $breakdownsBoxY = $contentY + $boxH + 5; // Below commission box with 5mm gap
+    $breakdownsBoxW = $boxW; // Same width as commission box (55mm)
+    $pdf->SetXY($breakdownsBoxX, $breakdownsBoxY);
     $pdf->SetFont('Courier', 'B', 7);
     $pdf->SetTextColor(0, 0, 0);
 
     // Box Title
-    $pdf->Cell($freebiesBoxW, 5, 'UNCLAIMED FREEBIES', 1, 2, 'C');
+    $pdf->Cell($breakdownsBoxW, 5, 'UNCLAIMED BREAKDOWNS', 1, 2, 'C');
 
     // Calculate box height - limit to max 10 records for PDF space (each record takes 5 lines + divider)
-    $displayRecords = array_slice($unclaimed_freebies, 0, 10);
-    $freebiesContentY = $pdf->GetY();
+    $displayRecords = array_slice($unclaimed_breakdowns, 0, 10);
+    $breakdownsContentY = $pdf->GetY();
     $recordHeight = 16; // Each record takes 5 lines x 3mm + divider
-    $freebiesBoxH = count($displayRecords) * $recordHeight + 4;
-    $pdf->Rect($freebiesBoxX, $freebiesContentY, $freebiesBoxW, $freebiesBoxH);
+    $breakdownsBoxH = count($displayRecords) * $recordHeight + 4;
+    $pdf->Rect($breakdownsBoxX, $breakdownsContentY, $breakdownsBoxW, $breakdownsBoxH);
 
     // Add records inside the box (multi-line format for complete display)
-    $pdf->SetXY($freebiesBoxX + 1, $freebiesContentY + 2);
+    $pdf->SetXY($breakdownsBoxX + 1, $breakdownsContentY + 2);
     $pdf->SetFont('Courier', '', 5);
 
     $recordCount = count($displayRecords);
     $currentIndex = 0;
 
-    foreach ($displayRecords as $freebie) {
+    foreach ($displayRecords as $record) {
         $currentIndex++;
-        $statusColor = ($freebie['status'] === 'unclaimed') ? [211, 47, 47] : [46, 125, 50];
-        $statusText = strtoupper($freebie['status']);
+        $isPreorder = (($record['type'] ?? '') === 'preorder');
+        $statusColor = ($record['status'] === 'unclaimed') ? [211, 47, 47] : [46, 125, 50];
+        
+        if ($record['status'] === 'unclaimed') {
+            $statusText = $isPreorder ? 'UNCLAIMED PRE-ORDER' : 'UNCLAIMED FREEBIES';
+        } else {
+            $statusText = $isPreorder ? 'CLAIMED PRE-ORDER' : 'CLAIMED FREEBIES';
+        }
 
         // Complete invoice number
         $pdf->SetTextColor(0, 0, 0);
-        $pdf->Cell($freebiesBoxW - 2, 3, 'INV: ' . $freebie['invoice_number'], 0, 1, 'L');
-        $pdf->SetX($freebiesBoxX + 1);
+        $pdf->Cell($breakdownsBoxW - 2, 3, 'INV: ' . $record['invoice_number'], 0, 1, 'L');
+        $pdf->SetX($breakdownsBoxX + 1);
 
         // Complete item code
-        $pdf->Cell($freebiesBoxW - 2, 3, 'ITEM: ' . $freebie['item_code'], 0, 1, 'L');
-        $pdf->SetX($freebiesBoxX + 1);
+        $pdf->Cell($breakdownsBoxW - 2, 3, 'ITEM: ' . $record['item_code'], 0, 1, 'L');
+        $pdf->SetX($breakdownsBoxX + 1);
 
         // Quantity and Branch
-        $pdf->Cell(25, 3, 'QTY: ' . $freebie['quantity'], 0, 0, 'L');
-        $pdf->Cell(26, 3, 'BR: ' . $freebie['branch'], 0, 1, 'L');
-        $pdf->SetX($freebiesBoxX + 1);
+        $pdf->Cell(25, 3, 'QTY: ' . $record['quantity'], 0, 0, 'L');
+        $pdf->Cell(26, 3, 'BR: ' . $record['branch'], 0, 1, 'L');
+        $pdf->SetX($breakdownsBoxX + 1);
 
         // Status with color
         $pdf->SetTextColor($statusColor[0], $statusColor[1], $statusColor[2]);
-        $pdf->Cell($freebiesBoxW - 2, 3, 'STATUS: ' . $statusText, 0, 1, 'L');
-        $pdf->SetX($freebiesBoxX + 1);
+        $pdf->Cell($breakdownsBoxW - 2, 3, 'STATUS: ' . $statusText, 0, 1, 'L');
+        $pdf->SetX($breakdownsBoxX + 1);
 
         // Date (Unclaimed Date or Claimed Date)
         $pdf->SetTextColor(0, 0, 0);
-        if ($freebie['status'] === 'unclaimed') {
-            $dateVal = (!empty($freebie['created_at']) && $freebie['created_at'] != '0000-00-00 00:00:00')
-                ? date('m/d/Y h:i A', strtotime($freebie['created_at']))
+        if ($record['status'] === 'unclaimed') {
+            $dateVal = (!empty($record['created_at']) && $record['created_at'] != '0000-00-00 00:00:00')
+                ? date('m/d/Y h:i A', strtotime($record['created_at']))
                 : 'N/A';
-            $pdf->Cell($freebiesBoxW - 2, 3, 'UNCLAIMED DATE: ' . $dateVal, 0, 1, 'L');
+            $pdf->Cell($breakdownsBoxW - 2, 3, 'UNCLAIMED DATE: ' . $dateVal, 0, 1, 'L');
         } else {
-            $dateRaw = (!empty($freebie['claimed_at']) && $freebie['claimed_at'] != '0000-00-00 00:00:00')
-                ? $freebie['claimed_at']
-                : $freebie['created_at'];
+            $dateRaw = (!empty($record['claimed_at']) && $record['claimed_at'] != '0000-00-00 00:00:00')
+                ? $record['claimed_at']
+                : $record['created_at'];
             $dateVal = (!empty($dateRaw) && $dateRaw != '0000-00-00 00:00:00')
                 ? date('m/d/Y h:i A', strtotime($dateRaw))
                 : 'N/A';
-            $pdf->Cell($freebiesBoxW - 2, 3, 'CLAIMED DATE: ' . $dateVal, 0, 1, 'L');
+            $pdf->Cell($breakdownsBoxW - 2, 3, 'CLAIMED DATE: ' . $dateVal, 0, 1, 'L');
         }
-        $pdf->SetX($freebiesBoxX + 1);
+        $pdf->SetX($breakdownsBoxX + 1);
 
         // Divider line between items (except after the last item)
         if ($currentIndex < $recordCount) {
             $lineY = $pdf->GetY() + 0.5;
             $pdf->SetDrawColor(180, 180, 180);
-            $pdf->Line($freebiesBoxX + 1, $lineY, $freebiesBoxX + $freebiesBoxW - 1, $lineY);
+            $pdf->Line($breakdownsBoxX + 1, $lineY, $breakdownsBoxX + $breakdownsBoxW - 1, $lineY);
             $pdf->SetDrawColor(0, 0, 0);
-            $pdf->SetXY($freebiesBoxX + 1, $lineY + 1);
+            $pdf->SetXY($breakdownsBoxX + 1, $lineY + 1);
         } else {
             $pdf->Ln(0.5);
-            $pdf->SetX($freebiesBoxX + 1);
+            $pdf->SetX($breakdownsBoxX + 1);
         }
     }
 
     // Show count if more records exist
-    if (count($unclaimed_freebies) > 10) {
+    if (count($unclaimed_breakdowns) > 10) {
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFont('Courier', 'I', 5);
-        $pdf->Cell($freebiesBoxW - 2, 3, '... +' . (count($unclaimed_freebies) - 10) . ' more', 0, 1, 'C');
+        $pdf->Cell($breakdownsBoxW - 2, 3, '... +' . (count($unclaimed_breakdowns) - 10) . ' more', 0, 1, 'C');
     }
 }
 

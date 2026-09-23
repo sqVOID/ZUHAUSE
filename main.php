@@ -18,7 +18,7 @@ require_once 'session_check.php';
 
         body {
             font-family: Arial, sans-serif;
-            background-color: #fffcf4ff;
+            background-color: #f0f0f0ff;
             zoom: 77%;
         }
 

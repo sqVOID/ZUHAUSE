@@ -305,8 +305,8 @@ if ($has_full_access) {
                     <thead>
                         <tr>
                             <th>Model Code</th>
-                            <th>DR Date</th>
                             <th>IMEI</th>
+                            <th>DR Date</th>
                             <th>DR Received</th>
                             <th>Branch</th>
                             <th>Family</th>
@@ -328,8 +328,8 @@ if ($has_full_access) {
                     <thead>
                         <tr>
                             <th>Model Code</th>
-                            <th>DR Date</th>
                             <th>IMEI</th>
+                            <th>DR Date</th>
                             <th>DR Received</th>
                             <th>Branch</th>
                             <th>Family</th>
@@ -343,7 +343,6 @@ if ($has_full_access) {
                             <?php while ($row = $res->fetch_assoc()): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($row['item_code']); ?></td>
-                                    <td><?php echo $row['dr_date'] ? date('m/d/Y', strtotime($row['dr_date'])) : '—'; ?></td>
                                     <td>
                                         <?php
                                         $imei1 = htmlspecialchars($row['imei'] ?? '—');
@@ -351,16 +350,20 @@ if ($has_full_access) {
                                         
                                         // If "Single IMEI" filter is selected, only show the first IMEI
                                         if ($imei_status_f === 'single') {
-                                            echo '<div style="text-align: center;">' . $imei1 . '</div>';
+                                            echo '<div style="text-align: left;">' . $imei1 . '</div>';
                                         } else {
                                             // Default behavior: show both IMEIs if available
-                                            echo '<div style="text-align: center; padding-bottom: 2px;">' . $imei1 . '</div>';
+                                            echo '<div style="text-align: left; padding-bottom: 2px;">' . $imei1 . '</div>';
                                             if ($imei2) {
-                                                echo '<div style="text-align: center; margin: 0 auto; width: 45%; border-top: 1px solid #ccc; padding-top: 3px;">' . $imei2 . '</div>';
+                                                // Create a wrapper with border that matches imei2 width
+                                                echo '<div style="border-top: 1px solid #ccc; width: fit-content; padding-top: 3px;">';
+                                                echo '<div style="text-align: left;">' . $imei2 . '</div>';
+                                                echo '</div>';
                                             }
                                         }
                                         ?>
                                     </td>
+                                    <td><?php echo $row['dr_date'] ? date('m/d/Y', strtotime($row['dr_date'])) : '—'; ?></td>
                                     <td><?php echo htmlspecialchars($row['dr_number'] ?? '—'); ?></td>
                                     <td><?php echo htmlspecialchars($row['branch']); ?></td>
                                     <td><?php echo htmlspecialchars($row['family_code'] ?? '—'); ?></td>
@@ -401,8 +404,8 @@ if ($has_full_access) {
                     <thead>
                         <tr>
                             <th>Model Code</th>
-                            <th>DR Date</th>
                             <th>IMEI</th>
+                            <th>DR Date</th>
                             <th>DR Received</th>
                             <th>Branch</th>
                             <th>Family</th>

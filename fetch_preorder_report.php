@@ -6,16 +6,16 @@ header('Content-Type: application/json');
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     $date_from = isset($input['date_from']) ? $input['date_from'] : '';
-    $date_to   = isset($input['date_to'])   ? $input['date_to']   : '';
-    $branch    = isset($input['branch'])    ? $input['branch']    : '';
-    $status    = isset($input['status'])    ? $input['status']    : '';
-    
+    $date_to = isset($input['date_to']) ? $input['date_to'] : '';
+    $branch = isset($input['branch']) ? $input['branch'] : '';
+    $status = isset($input['status']) ? $input['status'] : '';
+
     // Validate required fields
     if (empty($date_from) || empty($date_to) || empty($branch)) {
         echo json_encode([
-            'status'  => 'error',
+            'status' => 'error',
             'message' => 'Missing required fields'
         ]);
         exit;
@@ -24,7 +24,7 @@ try {
     // ------------------------------------------------------------------
     // Step 1: Resolve branch_code from branch name
     // ------------------------------------------------------------------
-    $user_branch  = isset($_SESSION['user_branch'])  ? trim($_SESSION['user_branch'])  : '';
+    $user_branch = isset($_SESSION['user_branch']) ? trim($_SESSION['user_branch']) : '';
     $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level']) : '';
 
     $branch_code = null;
@@ -66,18 +66,18 @@ try {
     ";
 
     $payment_params = [$date_from, $date_to];
-    $payment_types  = 'ss';
+    $payment_types = 'ss';
 
     if ($branch_code !== null) {
         $payment_query .= " AND p.branch_code = ?";
         $payment_params[] = $branch_code;
-        $payment_types   .= 's';
+        $payment_types .= 's';
     }
 
     if (!empty($status)) {
         $payment_query .= " AND p.status = ?";
         $payment_params[] = $status;
-        $payment_types   .= 's';
+        $payment_types .= 's';
     }
 
     $payment_query .= " ORDER BY ph.payment_date ASC, ph.payment_sequence ASC";
@@ -96,10 +96,10 @@ try {
     $items_cache = [];
 
     while ($pay_row = $pay_result->fetch_assoc()) {
-        $preorder_id    = intval($pay_row['preorder_id']);
+        $preorder_id = intval($pay_row['preorder_id']);
         $payment_amount = floatval($pay_row['payment_amount']);
-        $payment_date   = $pay_row['payment_date'];
-        $claimed_at     = $pay_row['claimed_at'];
+        $payment_date = $pay_row['payment_date'];
+        $claimed_at = $pay_row['claimed_at'];
 
         // Use the payment's own invoice_no as the displayed "Pre Order No"
         // (e.g. 0001-PRE for partial, 0002-PRE for claim payment)
@@ -139,32 +139,34 @@ try {
             $item_stmt->close();
 
             $items_cache[$preorder_id] = [
-                'items'       => $items,
+                'items' => $items,
                 'grand_total' => $grand_total,
             ];
         }
 
-        $cached         = $items_cache[$preorder_id];
-        $items          = $cached['items'];
+        $cached = $items_cache[$preorder_id];
+        $items = $cached['items'];
         $grand_item_total = $cached['grand_total'];
 
         if (empty($items)) {
             // No items yet — emit one placeholder row for this payment
             $rows[] = [
-                'preorder_no'        => $display_invoice,
+                'preorder_id' => $preorder_id,
+                'original_preorder_no' => $pay_row['preorder_no'],
+                'preorder_no' => $display_invoice,
                 'claimed_invoice_no' => $pay_row['claimed_invoice_no'],
-                'customer_name'      => $pay_row['customer_name'],
-                'customer_phone'     => $pay_row['customer_phone'],
-                'item_description'   => '',
-                'imei'               => '',
-                'quantity'           => 0,
-                'unit_price'         => 0.00,
-                'total_amount'       => 0.00,
-                'payment_amount'     => $payment_amount,
-                'status'             => $pay_row['status'],
-                'branch_name'        => $branch,
-                'date_created'       => $payment_date,
-                'claimed_at'         => $claimed_at,
+                'customer_name' => $pay_row['customer_name'],
+                'customer_phone' => $pay_row['customer_phone'],
+                'item_description' => '',
+                'imei' => '',
+                'quantity' => 0,
+                'unit_price' => 0.00,
+                'total_amount' => 0.00,
+                'payment_amount' => $payment_amount,
+                'status' => $pay_row['status'],
+                'branch_name' => $branch,
+                'date_created' => $payment_date,
+                'claimed_at' => $claimed_at,
             ];
             continue;
         }
@@ -173,9 +175,9 @@ try {
         // Step 4: Emit one row per item, using this payment's amount/invoice
         // ------------------------------------------------------------------
         foreach ($items as $item_row) {
-            $item_total  = floatval($item_row['total_amount']);
-            $unit_price  = floatval($item_row['unit_price']);
-            $quantity    = intval($item_row['quantity']);
+            $item_total = floatval($item_row['total_amount']);
+            $unit_price = floatval($item_row['unit_price']);
+            $quantity = intval($item_row['quantity']);
 
             // Proportional share of this payment for this item
             if ($grand_item_total > 0) {
@@ -185,35 +187,37 @@ try {
             }
 
             $rows[] = [
-                'preorder_no'        => $display_invoice,
+                'preorder_id' => $preorder_id,
+                'original_preorder_no' => $pay_row['preorder_no'],
+                'preorder_no' => $display_invoice,
                 'claimed_invoice_no' => $pay_row['claimed_invoice_no'],
-                'customer_name'      => $pay_row['customer_name'],
-                'customer_phone'     => $pay_row['customer_phone'],
-                'item_description'   => $item_row['item_description'],
-                'imei'               => $item_row['imei'],
-                'quantity'           => $quantity,
-                'unit_price'         => $unit_price,
-                'total_amount'       => $item_total,
-                'payment_amount'     => $item_payment,
-                'status'             => $pay_row['status'],
-                'branch_name'        => $branch,
-                'date_created'       => $payment_date,
-                'claimed_at'         => $claimed_at,
+                'customer_name' => $pay_row['customer_name'],
+                'customer_phone' => $pay_row['customer_phone'],
+                'item_description' => $item_row['item_description'],
+                'imei' => $item_row['imei'],
+                'quantity' => $quantity,
+                'unit_price' => $unit_price,
+                'total_amount' => $item_total,
+                'payment_amount' => $item_payment,
+                'status' => $pay_row['status'],
+                'branch_name' => $branch,
+                'date_created' => $payment_date,
+                'claimed_at' => $claimed_at,
             ];
         }
     }
 
     $pay_stmt->close();
-    
+
     echo json_encode([
         'status' => 'success',
-        'rows'   => $rows,
-        'count'  => count($rows)
+        'rows' => $rows,
+        'count' => count($rows)
     ]);
-    
+
 } catch (Exception $e) {
     echo json_encode([
-        'status'  => 'error',
+        'status' => 'error',
         'message' => $e->getMessage()
     ]);
 }

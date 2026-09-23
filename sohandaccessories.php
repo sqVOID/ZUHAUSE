@@ -283,10 +283,10 @@ if ($has_full_access) {
                 </div>
 
                 <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Status:</label>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Item Status:</label>
                     <select name="status" class="searchable-select"
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                        <option value="">All Status</option>
+                        <option value="">Item Status</option>
                         <option value="Good Stock" <?php echo $status_f === 'Good Stock' ? 'selected' : ''; ?>>Good Stock
                         </option>
                         <option value="Defective" <?php echo $status_f === 'Defective' ? 'selected' : ''; ?>>Defective

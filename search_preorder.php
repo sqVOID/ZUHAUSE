@@ -184,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($booklet) {
             $sales_invoice_no = generateInvoiceNumber($booklet);
             if ($booklet['page_type'] === 'preorder' || stristr($sales_invoice_no, '-PRE') === false) {
-                $next_invoice_no = $sales_invoice_no . '-PRE';
+                $next_invoice_no = $sales_invoice_no;
             } else {
                 $next_invoice_no = $sales_invoice_no;
             }

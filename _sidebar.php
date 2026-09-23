@@ -111,7 +111,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                     <?php
                 endif; ?>
             </div>
-        </div>
+        </div> 
         <?php
     endif; ?>
 
@@ -329,7 +329,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
     endif; ?>
 
     <?php
-    $booklet_labels = ['Booklet Inventory', 'Cancel Booklet'];
+    $booklet_labels = ['Booklet Inventory', 'Cancel Inventory', 'Cancel Booklet'];
     $booklet_visible = false;
     foreach ($booklet_labels as $label) {
         if (!in_array($label, $sidebar_hidden)) {
@@ -354,10 +354,10 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         style="text-decoration:none;">• Booklet Inventory</a>
                     <?php
                 endif; ?>
-                <?php if (!in_array('Cancel Booklet', $sidebar_hidden)): ?>
+                <?php if (!in_array('Cancel Inventory', $sidebar_hidden)): ?>
                     <a href="bookletinvlive.php"
                         class="menu-item<?php echo ($current_page === 'bookletinvlive.php') ? ' active' : ''; ?>"
-                        style="text-decoration:none;">• Cancel Booklet</a>
+                        style="text-decoration:none;">• Cancel Inventory</a>
                     <?php
                 endif; ?>
             </div>

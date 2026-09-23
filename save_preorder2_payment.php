@@ -255,7 +255,7 @@ try {
                 }
             }
 
-            $invoice_no = generateInvoiceNumber($booklet) . '-PRE';
+            $invoice_no = generateInvoiceNumber($booklet);
             if ($booklet['booklet_format'] === 'numeric') {
                 $next_number = incrementInvoiceNumber($booklet['current_number'], 'numeric');
                 updateInvoiceNumber($conn, $booklet['id'], $next_number);

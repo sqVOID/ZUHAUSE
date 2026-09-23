@@ -1737,9 +1737,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                         $full_name = trim($user_row['first_name'] . ' ' . $user_row['last_name']);
                                         $brand = htmlspecialchars($user_row['brand'] ?? '');
 
-                                        // If there's a brand (promoter), include it in the option
+                                        // If there's a brand (promoter), display as "Brand - Full Name"
                                         if (!empty($brand)) {
-                                            echo "<option value='" . htmlspecialchars($full_name) . "'>" . htmlspecialchars($full_name) . " - " . $brand . "</option>";
+                                            echo "<option value='" . htmlspecialchars($full_name) . "'>" . $brand . " - " . htmlspecialchars($full_name) . "</option>";
                                         } else {
                                             echo "<option value='" . htmlspecialchars($full_name) . "'>" . htmlspecialchars($full_name) . "</option>";
                                         }
@@ -3927,23 +3927,24 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
 
                         // Auto-clear form if fully paid
                         if (data.preorder_status && data.preorder_status.toLowerCase() === 'fully paid') {
-                            document.getElementById('preOrderForm').reset();
-                            document.getElementById('family_code').value = '';
-                            document.getElementById('qty').value = '0';
-                            document.getElementById('price').value = '';
-                            document.getElementById('invoice_no').value = '';
-                            document.getElementById('search_invoice').value = '';
-
-                            const tbody = document.getElementById('itemsTableBody');
-                            tbody.innerHTML = '<tr id="no-sales-row"><td colspan="4" style="text-align:center; padding: 20px;">No Pre-Order Entry yet</td></tr>';
-
-                            // Clear loaded invoice data
-                            loadedPreorderId = null;
-                            loadedRemainingBalance = null;
-                            loadedPreorderData = null;
+                            resetPreorderForm();
+                        } else {
+                            // If partially paid, reset payment button and payment data so next payment can be made
                             window.paymentData = null;
-
-                            updateTotals();
+                            const hiddenPayment = document.getElementById('payment_data');
+                            if (hiddenPayment) hiddenPayment.value = '';
+                            const btnPayment = document.querySelector('.btn-payment');
+                            if (btnPayment) {
+                                btnPayment.innerText = 'PAYMENT';
+                                btnPayment.style.backgroundColor = '';
+                                btnPayment.style.color = '';
+                            }
+                            if (loadedRemainingBalance !== null) {
+                                document.getElementById('totalAmount').value = loadedRemainingBalance.toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                            }
                         }
                     } else {
                         alert('Error: ' + (data.message || 'Failed to save payment'));
@@ -3956,6 +3957,72 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 });
         }
 
+        // Reset/Clear entire preorder form, items table, totals, and payment state
+        function resetPreorderForm() {
+            const form = document.getElementById('preOrderForm');
+            if (form) form.reset();
+
+            // Re-initialize date to today
+            const today = new Date();
+            const dateStr = today.getFullYear() + '-' +
+                String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                String(today.getDate()).padStart(2, '0');
+            const dateInput = document.getElementById('date');
+            if (dateInput) dateInput.value = dateStr;
+
+            // Clear invoice numbers
+            const searchInvoiceNo = document.getElementById('search_invoice_no');
+            if (searchInvoiceNo) searchInvoiceNo.value = '';
+            const invoiceNo = document.getElementById('invoice_no');
+            if (invoiceNo) invoiceNo.value = '';
+
+            // Clear item entry fields
+            const familyCode = document.getElementById('family_code');
+            if (familyCode) familyCode.value = '';
+            const qty = document.getElementById('qty');
+            if (qty) qty.value = '0';
+            const price = document.getElementById('price');
+            if (price) price.value = '';
+
+            // Clear items table
+            const tbody = document.getElementById('itemsTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr id="no-sales-row"><td colspan="4" style="text-align:center; padding: 20px;">No Pre-Order Entry yet</td></tr>';
+            }
+
+            // Clear totals section and footer inputs
+            const totalQty = document.getElementById('totalQty');
+            if (totalQty) totalQty.value = '';
+            const discountField = document.getElementById('discountField');
+            if (discountField) discountField.value = '';
+            const totalAmount = document.getElementById('totalAmount');
+            if (totalAmount) totalAmount.value = '';
+            const pointsField = document.getElementById('pointsField');
+            if (pointsField) pointsField.value = '';
+            const commissionField = document.getElementById('commissionField');
+            if (commissionField) commissionField.value = '';
+
+            // Reset Payment button
+            const btnPayment = document.querySelector('.btn-payment');
+            if (btnPayment) {
+                btnPayment.innerText = 'PAYMENT';
+                btnPayment.style.backgroundColor = '';
+                btnPayment.style.color = '';
+            }
+
+            // Clear hidden payment data
+            const paymentDataInput = document.getElementById('payment_data');
+            if (paymentDataInput) paymentDataInput.value = '';
+
+            // Clear loaded invoice and tracking data
+            loadedPreorderId = null;
+            loadedRemainingBalance = null;
+            loadedPreorderData = null;
+            window.paymentData = null;
+            selectedItemPrices = {};
+            currentSearchResults = [];
+        }
+
         // Skip/Cancel receipt
         function skipCancelReceipt() {
             alert('Skip/Cancel functionality - backend integration needed');
@@ -3964,21 +4031,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
         // Clear main form
         function clearMainForm() {
             if (confirm('Are you sure you want to clear all data?')) {
-                document.getElementById('preOrderForm').reset();
-                document.getElementById('family_code').value = '';
-                document.getElementById('qty').value = '0';
-                document.getElementById('price').value = '';
-                document.getElementById('invoice_no').value = '';
-
-                const tbody = document.getElementById('itemsTableBody');
-                tbody.innerHTML = '<tr id="no-sales-row"><td colspan="4" style="text-align:center; padding: 20px;">No Pre-Order Entry yet</td></tr>';
-
-                // Clear loaded invoice data
-                loadedPreorderId = null;
-                loadedRemainingBalance = null;
-                loadedPreorderData = null;
-
-                updateTotals();
+                resetPreorderForm();
             }
         }
 

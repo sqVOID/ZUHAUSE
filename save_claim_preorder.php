@@ -174,7 +174,6 @@ try {
             }
 
             $sales_invoice_no = generateInvoiceNumber($booklet);
-            $sales_invoice_no .= '-PRE';
             if ($booklet['booklet_format'] === 'numeric') {
                 $next_number = incrementInvoiceNumber($booklet['current_number'], 'numeric');
                 updateInvoiceNumber($conn, $booklet['id'], $next_number);
@@ -793,7 +792,23 @@ try {
                 } elseif ($payment_type === 'online_banking') {
                     $payment_method = $payment['bank_name'] ?? 'Online Banking';
                 } elseif ($payment_type === 'payment_partners') {
-                    $payment_method = $payment['payment_partner'] ?? 'Payment Partner';
+                    $pp = $payment['payment_partner'] ?? '';
+                    $partner_map = [
+                        'partner1' => 'Skyro',
+                        'partner2' => 'Home Credit',
+                        'partner5' => 'Salmon',
+                        'partner6' => 'Samsung Finances',
+                        'partner7' => 'Payjoy',
+                        'partner8' => 'Billease',
+                        'partner9' => 'Paymongo',
+                        'partner10' => 'Skyro'
+                    ];
+                    if (isset($partner_map[strtolower($pp)])) {
+                        $payment_method = $partner_map[strtolower($pp)];
+                    } else {
+                        $payment_method = !empty($pp) ? $pp : 'Payment Partner';
+                    }
+                    $payment['payment_partner'] = $payment_method;
                 } elseif ($payment_type === 'credit_card') {
                     $payment_method = 'Credit Card';
                 } elseif ($payment_type === 'debit_card') {

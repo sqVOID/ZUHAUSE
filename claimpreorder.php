@@ -21,7 +21,7 @@ if (isset($_SESSION['user_branch'])) {
 
 <head>
     <meta charset="UTF-8">
-    <!-- <link rel="icon" type="image/svg+xml" href="Icon/imslogo.svg"> -->
+    <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claim Pre-Order</title>
     <style>
@@ -2310,7 +2310,7 @@ if (isset($_SESSION['user_branch'])) {
                 .then(data => {
                     console.log('Invoice number response:', data);
                     if (data.success && data.invoice_number) {
-                        newInvoiceInput.value = data.invoice_number + '-PRE';
+                        newInvoiceInput.value = data.invoice_number;
                         // Store booklet info for later use
                         newInvoiceInput.dataset.bookletId = data.booklet_id || '';
                         newInvoiceInput.dataset.bookletFormat = data.format || '';
@@ -2420,6 +2420,7 @@ if (isset($_SESSION['user_branch'])) {
                         currentPreOrderData = data.preorder;
                         displayPreOrderItems(data.preorder.items);
                         displayCustomerDetails(data.preorder.customer);
+                        updateTotals();
                         logToDebugConsole(`Successfully loaded pre-order ${data.preorder.preorder_no} with ${data.preorder.items.length} items.`, 'success');
                         logToDebugConsole(`Pre-order items details: ${JSON.stringify(data.preorder.items)}`, 'info');
                     } else {
@@ -2673,6 +2674,8 @@ if (isset($_SESSION['user_branch'])) {
             document.getElementById('preorderItemsPanel').innerHTML = '';
             document.getElementById('customerDetailsPanel').innerHTML = '';
             currentPreOrderData = null;
+            totalBalancePaid = 0;
+            preorderGrandTotal = 0;
 
             // Hide the new invoice number section when no pre-order is selected
             const newInvoiceSection = document.getElementById('newInvoiceNumberSection');
@@ -2686,6 +2689,7 @@ if (isset($_SESSION['user_branch'])) {
                 btnPayment.innerText = 'PAYMENT';
                 btnPayment.style.backgroundColor = 'var(--color-gold)';
             }
+            updateTotals();
         }
 
         function addClaimItem() {
@@ -2872,12 +2876,18 @@ if (isset($_SESSION['user_branch'])) {
             // Calculate total quantity
             const totalQty = claimItems.reduce((sum, item) => sum + item.quantity, 0);
 
-            // Calculate total amount
-            const totalAmount = claimItems.reduce((sum, item) => sum + item.total, 0);
+            // Calculate total amount from claim items
+            const claimItemsTotal = claimItems.reduce((sum, item) => sum + item.total, 0);
+
+            // Display remaining balance (claim items total minus any payments already made on pre-order)
+            let displayAmount = 0;
+            if (claimItems.length > 0) {
+                displayAmount = Math.max(0, claimItemsTotal - (totalBalancePaid || 0));
+            }
 
             // Update the display fields
             document.getElementById('totalQty').value = totalQty;
-            document.getElementById('totalAmount').value = '₱' + totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('totalAmount').value = '₱' + displayAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function removeClaimItem(itemId) {
@@ -3285,8 +3295,7 @@ if (isset($_SESSION['user_branch'])) {
                 return;
             }
 
-            const totalAmount = document.getElementById('totalAmount').value;
-            if (!totalAmount || parseFloat(totalAmount.replace(/[^0-9.]/g, '')) <= 0) {
+            if (claimItems.length === 0) {
                 alert('Please add items and calculate total before payment');
                 return;
             }
@@ -3319,10 +3328,10 @@ if (isset($_SESSION['user_branch'])) {
             });
 
             // Calculate remaining balance (Total Amount Due)
-            // rawTotal = ALL claim items total (preorder items + any extra items added)
-            const rawTotal = parseFloat(totalAmount.replace(/[^0-9.]/g, '')) || 0;
+            // claimItemsTotal = ALL claim items total (preorder items + any extra items added)
+            const claimItemsTotal = claimItems.reduce((sum, item) => sum + item.total, 0);
             // Total due = all claim items total minus what has already been paid
-            const remainingBalance = rawTotal - totalBalancePaid;
+            const remainingBalance = Math.max(0, claimItemsTotal - (totalBalancePaid || 0));
 
             // Set remaining balance in all per-section total labels
             const totalInputs = document.querySelectorAll('.total-input');
@@ -3434,7 +3443,7 @@ if (isset($_SESSION['user_branch'])) {
 
             // Display payment breakdown for fully paid pre-orders
             if (isFullyPaid && totalBalancePaid > 0) {
-                renderPaymentBreakdown(totalBalancePaid, rawTotal);
+                renderPaymentBreakdown(totalBalancePaid, claimItemsTotal);
             }
 
             // Populate Unit dropdowns from the items table
@@ -3598,6 +3607,7 @@ if (isset($_SESSION['user_branch'])) {
                     modalBody.addEventListener('input', function (e) {
                         const inp = e.target;
                         if (!inp || inp.classList.contains('total-input') || inp.readOnly) return;
+                        if (inp.id === 'totalLoanAmount') return;
                         const parentSection = inp.closest(
                             '.cash-section, .ewallet-section, .online-banking-section, ' +
                             '.home-credit-section, .credit-card-section, .debit-card-section, ' +
@@ -3607,7 +3617,7 @@ if (isset($_SESSION['user_branch'])) {
                         const formGroup = inp.closest('.hc-form-group, .enter-amount-row, .reference-no-row');
                         const lbl = formGroup ? formGroup.querySelector('label') : null;
                         const lblText = lbl ? lbl.textContent.toLowerCase() : '';
-                        const isAmountField = lblText.includes('amount') || lblText.includes('balance');
+                        const isAmountField = (lblText.includes('amount') || lblText.includes('balance')) && !lblText.includes('total loan amount');
                         if (!isAmountField) return;
                         recalcTotalPayment();
                     });
@@ -3695,11 +3705,8 @@ if (isset($_SESSION['user_branch'])) {
         }
 
         function recalcTotalPayment() {
-            const originalTotalStr = document.getElementById('totalAmount') ? document.getElementById('totalAmount').value : '0';
-            const originalTotal = parseFloat((originalTotalStr || '').replace(/[^0-9.]/g, '')) || 0;
-
-            // Total due = all claim items total minus what has already been paid
-            const remainingBalance = originalTotal - totalBalancePaid;
+            const claimItemsTotal = claimItems.reduce((sum, item) => sum + item.total, 0);
+            const remainingBalance = Math.max(0, claimItemsTotal - (totalBalancePaid || 0));
 
             const allPaySections = [
                 { class: '.cash-section', name: 'Cash' },
@@ -3719,9 +3726,9 @@ if (isset($_SESSION['user_branch'])) {
                 secEl.querySelectorAll('.hc-form-group, .enter-amount-row, .reference-no-row').forEach(group => {
                     const lbl = group.querySelector('label');
                     const lblText = lbl ? lbl.textContent.toLowerCase() : '';
-                    if (lblText.includes('amount') || lblText.includes('balance')) {
+                    if ((lblText.includes('amount') || lblText.includes('balance')) && !lblText.includes('total loan amount')) {
                         const inp = group.querySelector('input');
-                        if (inp && !inp.readOnly && inp.type !== 'checkbox') {
+                        if (inp && !inp.readOnly && inp.type !== 'checkbox' && inp.id !== 'totalLoanAmount') {
                             totalPaid += parseFloat((inp.value || '').replace(/,/g, '')) || 0;
                         }
                     }
@@ -3810,6 +3817,7 @@ if (isset($_SESSION['user_branch'])) {
 
                 secEl.querySelectorAll('input[type="text"], input[type="number"]').forEach(inp => {
                     if (inp.readOnly || inp.classList.contains('total-input')) return;
+                    if (inp.id === 'totalLoanAmount') return;
                     let isAmount = false, labelText = '';
 
                     if (inp.id === 'cash_down_payment_amount') { isAmount = true; labelText = 'Cash (DP)'; }
@@ -3819,7 +3827,7 @@ if (isset($_SESSION['user_branch'])) {
                     const fg = inp.closest('.hc-form-group');
                     if (fg) {
                         const lbl = fg.querySelector('label');
-                        if (lbl && (lbl.innerText.includes('Amount') || lbl.innerText.includes('Balance'))) {
+                        if (lbl && (lbl.innerText.includes('Amount') || lbl.innerText.includes('Balance')) && !lbl.innerText.includes('Total Loan Amount')) {
                             isAmount = true;
                             if (!labelText) labelText = lbl.innerText.replace(':', '').trim();
                         }
@@ -4004,9 +4012,8 @@ if (isset($_SESSION['user_branch'])) {
         function savePaymentData() {
             // Check if balance is fully paid
             // claimItemsTotal = ALL claim items (preorder items + extras); subtract already paid
-            const claimItemsTotalStr = document.getElementById('totalAmount') ? document.getElementById('totalAmount').value : '0';
-            const claimItemsTotal = parseFloat((claimItemsTotalStr || '').replace(/[^0-9.]/g, '')) || 0;
-            const remainingBalance = claimItemsTotal - totalBalancePaid;
+            const claimItemsTotal = claimItems.reduce((sum, item) => sum + item.total, 0);
+            const remainingBalance = claimItemsTotal - (totalBalancePaid || 0);
             const isFullyPaid = remainingBalance <= 0;
 
             // If fully paid, just close modal and mark as paid
@@ -4109,11 +4116,13 @@ if (isset($_SESSION['user_branch'])) {
                 const loanTermsEl = getSelectByLabel(homeCreditSection, 'loan terms');
                 const custNameEl = getFieldByLabel(homeCreditSection, 'customer');
                 const loanNumEl = getFieldByLabel(homeCreditSection, 'loan number');
+                const totalLoanEl = document.getElementById('totalLoanAmount');
                 const loanBalEl = getFieldByLabel(homeCreditSection, 'loan balance');
                 const loanType = loanTypeEl ? loanTypeEl.value : '';
                 const loanTerms = loanTermsEl ? loanTermsEl.value : '';
                 const customerName = custNameEl ? custNameEl.value.trim() : '';
                 const loanNumber = loanNumEl ? loanNumEl.value.trim() : '';
+                const totalLoan = totalLoanEl ? totalLoanEl.value.trim() : '';
                 const loanBalance = loanBalEl ? loanBalEl.value.trim() : '';
 
                 const downPaymentMethods = [];
@@ -4121,13 +4130,18 @@ if (isset($_SESSION['user_branch'])) {
 
                 let hcTotalAmount = parseFloat((loanBalance || '0').replace(/,/g, '')) || 0;
 
+                const paymentPartnersDropdown = document.getElementById('paymentPartnersDropdown');
+                const paymentPartnerName = (paymentPartnersDropdown && paymentPartnersDropdown.selectedIndex >= 0) ?
+                    paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text : '';
+
                 const dpEntry = {
                     payment_type: 'payment_partners',
-                    payment_partner: document.getElementById('paymentPartnersDropdown') ? document.getElementById('paymentPartnersDropdown').value : '',
+                    payment_partner: paymentPartnerName,
                     loan_type: loanType,
                     loan_terms: loanTerms,
                     customer_name: customerName,
                     loan_number: loanNumber,
+                    total_loan_amount: totalLoan,
                     loan_balance: loanBalance,
                     down_payment_methods: downPaymentMethods,
                     units: Array.from(homeCreditSection.querySelectorAll('input[name="Unit"]:checked')).map(cb => cb.value)

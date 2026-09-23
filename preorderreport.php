@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 require_once 'config.php';
 ?>
@@ -534,6 +534,85 @@ require_once 'config.php';
             display: block !important;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 3% auto;
+            padding: 0;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            background-color: #000000ff;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover,
+        .modal-close:focus {
+            color: #ffcccc;
+        }
+
+        .modal-body {
+            padding: 0;
+        }
+
 
         /* -- RESPONSIVE MEDIA QUERIES -- */
 
@@ -672,6 +751,19 @@ require_once 'config.php';
             }
 
             .no-print {
+                display: none !important;
+            }
+
+            /* Remove link styling in print */
+            .doc-table td a,
+            .doc-table td a:link,
+            .doc-table td a:visited {
+                color: #000000 !important;
+                text-decoration: none !important;
+                font-weight: bold !important;
+            }
+
+            .modal {
                 display: none !important;
             }
         }
@@ -850,6 +942,21 @@ require_once 'config.php';
         </div>
     </div>
 
+    <!-- Preorder Details Modal -->
+    <div id="preorderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Preorder Details</h2>
+                <button class="modal-close" onclick="closePreorderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="preorderModalContent">
+                    <!-- Preorder details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleSidebar() {
             const menuBtn = document.querySelector('.menu-btn');
@@ -969,9 +1076,14 @@ require_once 'config.php';
                         const statusClass = getStatusClass(row.status);
                         const claimedDate = row.claimed_at ? formatDateOnly(row.claimed_at) : '-';
 
+                        // Create hyperlink for preorder number
+                        const preorderCell = row.preorder_no
+                            ? `<a href="#" onclick="viewPreorderDetails('${row.preorder_no}'); return false;" style="color: #0066cc; text-decoration: underline; cursor: pointer;">${row.preorder_no}</a>`
+                            : '';
+
                         html += `
                             <tr>
-                                <td>${row.preorder_no || ''}</td>
+                                <td>${preorderCell}</td>
                                 <td class="td-text-left">${row.customer_name || ''}</td>
                                 <td class="td-text-left">${row.item_description || ''}</td>
                                 <td>${row.imei || ''}</td>
@@ -988,10 +1100,8 @@ require_once 'config.php';
                     });
                     tbody.innerHTML = html;
 
-                    // Handle unclaimed freebies data
-                    if (freebiesData && freebiesData.success) {
-                        displayUnclaimedFreebies(freebiesData);
-                    }
+                    // Handle unclaimed breakdown data (both pre-orders and freebies)
+                    displayUnclaimedBreakdown(freebiesData, data);
                 })
                 .catch(err => {
                     tbody.innerHTML = '<tr><td class="td-no-data" colspan="12">Error loading report: ' + err.message + '</td></tr>';
@@ -1011,6 +1121,7 @@ require_once 'config.php';
 
         /* --- Fetch Unclaimed Freebies --- */
         let currentUnclaimedFreebiesData = null;
+        let currentPreorderReportData = null;
 
         function fetchUnclaimedFreebies(dateFrom, dateTo, branch) {
             const url = `get_unclaimed_freebies_report.php?date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}`;
@@ -1040,35 +1151,125 @@ require_once 'config.php';
                 });
         }
 
-        /* --- Display Unclaimed Freebies Breakdown --- */
-        function displayUnclaimedFreebies(data) {
-            if (!data) data = currentUnclaimedFreebiesData;
-            if (!data) return;
+        /* --- Display Unclaimed Breakdown --- */
+        function displayUnclaimedBreakdown(freebiesData, preorderData) {
+            if (freebiesData !== undefined) currentUnclaimedFreebiesData = freebiesData;
+            if (preorderData !== undefined) currentPreorderReportData = preorderData;
 
             const container = document.getElementById('unclaimedFreebiesBreakdownBox');
-
             if (!container) {
-                console.warn('Unclaimed freebies container not found');
+                console.warn('Unclaimed breakdown container not found');
                 return;
             }
 
-            if (!data.data || data.data.length === 0) {
+            const records = [];
+
+            // 1. Process Pre-order rows: group payments per preorder item
+            if (currentPreorderReportData && currentPreorderReportData.rows) {
+                const preorderGroups = new Map();
+
+                currentPreorderReportData.rows.forEach(row => {
+                    const pKey = (row.preorder_id || row.original_preorder_no || row.preorder_no || '0') + '_' + (row.item_description || '') + '_' + (row.imei || '');
+
+                    if (!preorderGroups.has(pKey)) {
+                        preorderGroups.set(pKey, {
+                            item_description: row.item_description || 'N/A',
+                            quantity: row.quantity || 1,
+                            branch: row.branch_name || '',
+                            status: (row.status || '').toLowerCase(),
+                            claimed_at: row.claimed_at,
+                            claimed_invoice_no: row.claimed_invoice_no,
+                            payments: []
+                        });
+                    }
+
+                    const group = preorderGroups.get(pKey);
+                    const invNo = row.preorder_no;
+                    if (invNo && !group.payments.some(p => p.invoice_no === invNo)) {
+                        group.payments.push({
+                            invoice_no: invNo,
+                            date: row.date_created
+                        });
+                    }
+                });
+
+                preorderGroups.forEach(group => {
+                    const isClaimed = group.status === 'claimed';
+
+                    // UNCLAIMED PRE-ORDER entry for each payment invoice
+                    group.payments.forEach(p => {
+                        records.push({
+                            type: 'preorder',
+                            invoice_number: p.invoice_no,
+                            item_code: group.item_description,
+                            quantity: group.quantity,
+                            branch: group.branch,
+                            status: 'unclaimed',
+                            created_at: p.date,
+                            claimed_at: null
+                        });
+                    });
+
+                    // CLAIMED PRE-ORDER single entry combining all invoices (e.g. 0135 & 0136)
+                    if (isClaimed) {
+                        const allInvoices = group.payments.map(p => p.invoice_no);
+                        if (group.claimed_invoice_no && !allInvoices.includes(group.claimed_invoice_no)) {
+                            allInvoices.push(group.claimed_invoice_no);
+                        }
+                        const combinedInvoiceNo = allInvoices.join(' & ');
+
+                        records.push({
+                            type: 'preorder',
+                            invoice_number: combinedInvoiceNo,
+                            item_code: group.item_description,
+                            quantity: group.quantity,
+                            branch: group.branch,
+                            status: 'claimed',
+                            created_at: group.payments[0]?.date,
+                            claimed_at: group.claimed_at || group.payments[0]?.date
+                        });
+                    }
+                });
+            }
+
+            // 2. Process Freebies records if any (from claimitem.php / unclaimed_freebies table)
+            if (currentUnclaimedFreebiesData && currentUnclaimedFreebiesData.data) {
+                currentUnclaimedFreebiesData.data.forEach(fb => {
+                    records.push({
+                        type: 'freebie',
+                        invoice_number: fb.invoice_number || 'N/A',
+                        item_code: fb.item_code || fb.item_description || 'N/A',
+                        quantity: fb.quantity || 1,
+                        branch: fb.branch || '',
+                        status: fb.status,
+                        created_at: fb.created_at,
+                        claimed_at: fb.claimed_at
+                    });
+                });
+            }
+
+            if (records.length === 0) {
                 container.style.display = 'none';
                 return;
             }
 
-            const records = data.data;
             let html = '';
 
-            // Create bordered box similar to commission breakdown
+            // Create bordered box
             html += `<div style="border: 2px solid #000; font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: bold; width: 400px; max-height: 600px; overflow-y: auto; -webkit-print-color-adjust: exact; print-color-adjust: exact;">`;
-            html += `<div style="border-bottom: 2px solid #000; padding: 6px; text-align: center; color: #000; font-size: 13px;">UNCLAIMED FREEBIES BREAKDOWNS</div>`;
+            html += `<div style="border-bottom: 2px solid #000; padding: 6px; text-align: center; color: #000; font-size: 13px;">UNCLAIMED BREAKDOWNS</div>`;
             html += `<div style="padding: 6px; color: #000;">`;
 
-            // Show simple list of records
+            // Show list of records
             for (const record of records) {
                 const statusColor = record.status === 'unclaimed' ? '#d32f2f' : '#2e7d32';
-                const statusText = record.status === 'unclaimed' ? 'UNCLAIMED' : 'CLAIMED';
+                const isPreorder = record.type === 'preorder';
+                let statusText = '';
+                if (record.status === 'unclaimed') {
+                    statusText = isPreorder ? 'UNCLAIMED PRE-ORDER' : 'UNCLAIMED FREEBIES';
+                } else {
+                    statusText = isPreorder ? 'CLAIMED PRE-ORDER' : 'CLAIMED FREEBIES';
+                }
 
                 html += `<div style="border-bottom: 1px solid #ccc; padding: 4px 0; margin-bottom: 4px;">`;
                 html += `<div style="font-size: 12px; margin-bottom: 2px;"><strong>INV:</strong> ${record.invoice_number}</div>`;
@@ -1088,7 +1289,7 @@ require_once 'config.php';
                 html += `</div>`;
             }
 
-            html += `</div></div>`; // Close padding div and main container
+            html += `</div></div>`;
 
             container.innerHTML = html;
             container.style.display = 'block';
@@ -1306,6 +1507,255 @@ require_once 'config.php';
                 + '_' + dateFrom + '_to_' + dateTo + '.xlsx';
             XLSX.writeFile(wb, fileName);
         }
+
+        /* --- Preorder Modal Functions --- */
+        function viewPreorderDetails(preorderNo) {
+            if (!preorderNo) {
+                alert('No preorder number provided');
+                return;
+            }
+
+            // Show loading modal
+            showPreorderModal(preorderNo, null);
+
+            // Fetch preorder details
+            fetch('get_preorder_details.php?preorder_no=' + encodeURIComponent(preorderNo))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' || data.success) {
+                        showPreorderModal(preorderNo, data);
+                    } else {
+                        alert('Error: ' + (data.message || 'Unable to load preorder details'));
+                        closePreorderModal();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching preorder details:', error);
+                    alert('Error loading preorder details');
+                    closePreorderModal();
+                });
+        }
+
+        function showPreorderModal(preorderNo, data) {
+            const modal = document.getElementById('preorderModal');
+            const content = document.getElementById('preorderModalContent');
+
+            if (!data) {
+                // Show loading state
+                content.innerHTML = '<div style="text-align:center; padding:40px;"><p>Loading preorder details...</p></div>';
+            } else {
+                // Calculate totals
+                let grandTotal = 0;
+                let totalPaid = 0;
+
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        grandTotal += Number(item.total_amount || 0);
+                    });
+                }
+
+                if (data.payments && data.payments.length > 0) {
+                    data.payments.forEach(payment => {
+                        totalPaid += Number(payment.amount_paid || 0);
+                    });
+                }
+
+                const balance = grandTotal - totalPaid;
+                const po = data.preorder || {};
+
+                // Build items table HTML
+                let itemsHTML = '';
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const itemTotal = Number(item.total_amount || 0);
+                        const unitPrice = Number(item.unit_price || 0);
+                        const quantity = parseInt(item.quantity || 0);
+
+                        itemsHTML += `
+                            <tr>
+                                <td style="padding:8px; border:1px solid #acacacff;">${item.item_description || ''}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.imei || ''}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${quantity}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                        `;
+                    });
+
+                    itemsHTML += `
+                        <tr style="background:#F5EDE8; font-weight:bold; border-top:2px solid #1E455D;">
+                            <td colspan="4" style="padding:12px; border:1px solid #acacacff; text-align:right; font-size:15px;">OVERALL AMOUNT:</td>
+                            <td style="padding:12px; border:1px solid #acacacff; text-align:right; color:#1E455D; font-size:15px;">₱${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                    `;
+                } else {
+                    itemsHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#999;">No items found</td></tr>';
+                }
+
+                // Build payment history HTML
+                let paymentHTML = '';
+                if (data.payments && data.payments.length > 0) {
+                    data.payments.forEach(payment => {
+                        const amount = Number(payment.amount_paid || 0);
+                        const paymentDate = payment.payment_date ? new Date(payment.payment_date).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        }) : 'N/A';
+
+                        // Status styling for payment
+                        let paymentStatusStyle = '';
+                        const pStatus = (payment.status || payment.status_after_payment || 'N/A').toLowerCase();
+                        if (pStatus === 'pending' || pStatus === 'partial') {
+                            paymentStatusStyle = 'color: #ff9800; font-weight: bold;';
+                        } else if (pStatus === 'fully paid' || pStatus === 'completed' || pStatus === 'paid') {
+                            paymentStatusStyle = 'color: #4caf50; font-weight: bold;';
+                        } else if (pStatus === 'claimed') {
+                            paymentStatusStyle = 'color: #2196f3; font-weight: bold;';
+                        } else if (pStatus === 'cancelled') {
+                            paymentStatusStyle = 'color: #f44336; font-weight: bold;';
+                        } else {
+                            paymentStatusStyle = 'font-weight: bold;';
+                        }
+
+                        paymentHTML += `
+                            <tr>
+                                <td style="padding:8px; border:1px solid #acacacff;">${payment.invoice_no || 'N/A'}</td>
+                                <td style="padding:8px; border:1px solid #acacacff;">${paymentDate}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; ${paymentStatusStyle}">${(payment.status || payment.status_after_payment || 'N/A').toUpperCase()}</td>
+                                <td style="padding:8px; border:1px solid #acacacff;">${payment.payment_method || 'N/A'}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                        `;
+                    });
+
+                    paymentHTML += `
+                        <tr style="background:#F5EDE8; font-weight:bold; border-top:2px solid #1E455D;">
+                            <td colspan="4" style="padding:12px; border:1px solid #acacacff; text-align:right; font-size:15px;">TOTAL PAID:</td>
+                            <td style="padding:12px; border:1px solid #acacacff; text-align:right; color:#1E455D; font-size:15px;">₱${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                    `;
+                } else {
+                    paymentHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#999;">No payment history found</td></tr>';
+                }
+
+                // Format dates
+                const dateCreated = po.date_created ? new Date(po.date_created).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'N/A';
+
+                const dateClaimed = po.claimed_at ? new Date(po.claimed_at).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Not yet claimed';
+
+                // Status badge styling
+                let statusStyle = '';
+                const status = (po.status || '').toLowerCase();
+                if (status === 'pending') {
+                    statusStyle = 'color: #ff9800; font-weight: bold;';
+                } else if (status === 'fully paid') {
+                    statusStyle = 'color: #4caf50; font-weight: bold;';
+                } else if (status === 'claimed') {
+                    statusStyle = 'color: #2196f3; font-weight: bold;';
+                } else if (status === 'cancelled') {
+                    statusStyle = 'color: #f44336; font-weight: bold;';
+                } else {
+                    statusStyle = 'color: #ff6b00; font-weight: bold;';
+                }
+
+                // Build modal content
+                content.innerHTML = `
+                    <div style="max-height:100vh; overflow-y:auto; padding:20px;">
+                        <h2 style="margin:0 0 20px 0; color:#1a1a1a; font-size:20px; border-bottom:2px solid #acacacff; padding-bottom:10px;">
+                            Preorder Details: ${preorderNo}
+                        </h2>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:25px;">
+                            <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">
+                                <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Customer Information</h3>
+                                <table style="width:100%; font-size:14px;">
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600; width:140px;">Name:</td><td style="padding:5px 0;">${po.customer_name || 'N/A'}</td></tr>
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Contact No:</td><td style="padding:5px 0;">${po.contact_number || 'N/A'}</td></tr>
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Branch:</td><td style="padding:5px 0;">${po.branch_name || 'N/A'}</td></tr>
+                                </table>
+                            </div>
+                            
+                            <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">
+                                <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Order Information</h3>
+                                <table style="width:100%; font-size:14px;">
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600; width:140px;">Status:</td><td style="padding:5px 0; ${statusStyle}">${(po.status || 'N/A').toUpperCase()}</td></tr>
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date Created:</td><td style="padding:5px 0;">${dateCreated}</td></tr>
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date Claimed:</td><td style="padding:5px 0;">${dateClaimed}</td></tr>
+                                    <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Created By:</td><td style="padding:5px 0;">${po.created_by || 'N/A'}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:20px;">
+                            <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Items Ordered</h3>
+                            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                                <thead>
+                                    <tr style="background:#f5f5f5;">
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:left;">Item Description</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:center;">IMEI/Serial</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:center;">Qty</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:right;">Unit Price</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHTML}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:20px;">
+                            <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Payment History</h3>
+                            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                                <thead>
+                                    <tr style="background:#f5f5f5;">
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:left;">Invoice No</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:left;">Date</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:left;">Status</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:left;">Payment Method</th>
+                                        <th style="padding:10px; border:1px solid #acacacff; text-align:right;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${paymentHTML}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function closePreorderModal() {
+            const modal = document.getElementById('preorderModal');
+            modal.style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('preorderModal');
+            if (event.target === modal) {
+                closePreorderModal();
+            }
+        };
 
         function printPreOrderReport() {
             const dateFrom = document.getElementById('filterDateFrom').value;

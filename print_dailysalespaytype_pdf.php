@@ -413,28 +413,35 @@ if ($result) {
         }
 
         // Calculate actual total amount (loan total for loan transactions)
+        $isUpgradeInvoice = !empty($row['original_invoice_no']);
         $displayTotalAmount = round((float) $row['total_amount']);
-        if (!empty($row['original_invoice_no'])) {
-            $discount = (float) ($row['discount'] ?? 0);
-            $displayTotalAmount = round((float) $row['total_amount'] - $discount);
-        }
 
-        if ($loanType !== '' && !empty($pd['Total'])) {
-            // This is a loan transaction - use Total from payment_data
-            $totalFromPaymentData = str_replace(',', '', $pd['Total']);
-            if (is_numeric($totalFromPaymentData) && (float) $totalFromPaymentData > 0) {
-                $displayTotalAmount = round((float) $totalFromPaymentData);
+        if ($isUpgradeInvoice) {
+            // For upgrade invoices:
+            // payment_amount (Amount column) is the cash/payment paid (e.g. 1,400)
+            // total_amount (Total Amount column) is the full transaction value (SRP: e.g. 2,695)
+            $displayTotalAmount = round((float) $row['invoice_items_total'] > 0 ? (float) $row['invoice_items_total'] : ((float) $row['total_amount'] + (float) $row['old_unit_amount']));
+            if ($modalAmount === '' || $modalAmount == 0) {
+                $modalAmount = round((float) $row['total_amount']);
             }
-        } elseif (!empty($pd['totalLoanAmount'])) {
-            // Alternative: check for totalLoanAmount field
-            $totalLoanAmt = str_replace(',', '', $pd['totalLoanAmount']);
-            if (is_numeric($totalLoanAmt) && (float) $totalLoanAmt > 0) {
-                $displayTotalAmount = round((float) $totalLoanAmt);
+        } else {
+            if ($loanType !== '' && !empty($pd['Total'])) {
+                // This is a loan transaction - use Total from payment_data
+                $totalFromPaymentData = str_replace(',', '', $pd['Total']);
+                if (is_numeric($totalFromPaymentData) && (float) $totalFromPaymentData > 0) {
+                    $displayTotalAmount = round((float) $totalFromPaymentData);
+                }
+            } elseif (!empty($pd['totalLoanAmount'])) {
+                // Alternative: check for totalLoanAmount field
+                $totalLoanAmt = str_replace(',', '', $pd['totalLoanAmount']);
+                if (is_numeric($totalLoanAmt) && (float) $totalLoanAmt > 0) {
+                    $displayTotalAmount = round((float) $totalLoanAmt);
+                }
             }
-        }
 
-        if ($modalAmount === '' || $modalAmount == 0 || !empty($row['original_invoice_no'])) {
-            $modalAmount = $displayTotalAmount;
+            if ($modalAmount === '' || $modalAmount == 0) {
+                $modalAmount = $displayTotalAmount;
+            }
         }
 
         $rows[] = [

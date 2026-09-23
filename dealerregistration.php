@@ -43,11 +43,11 @@ if (isset($_GET['edit'])) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_dealer'])) {
-    $dealer_name = $conn->real_escape_string($_POST['dealer_name']);
+    $dealer_name = $conn->real_escape_string(strtoupper($_POST['dealer_name']));
     $store_name_raw = $_POST['store_name'];
     $contact_number = $conn->real_escape_string($_POST['contact_number']);
-    $address = $conn->real_escape_string($_POST['address']);
-    $notes = $conn->real_escape_string($_POST['notes']);
+    $address = $conn->real_escape_string(strtoupper($_POST['address']));
+    $notes = $conn->real_escape_string(strtoupper($_POST['notes']));
 
     // Check for leading or trailing spaces
     if ($store_name_raw !== trim($store_name_raw)) {
@@ -942,20 +942,22 @@ if (!empty($selected_filter)) {
                     <label>Dealer Name</label>
                     <input type="text" name="dealer_name" id="dealer_name" placeholder="Enter dealer name"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['dealer_name']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
                 <div class="form-group">
                     <label>Store Name</label>
                     <input type="text" name="store_name" id="store_name" placeholder="Enter store name"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['store_name']) : ''; ?>"
-                        required oninput="this.value = this.value.toUpperCase()">
+                        oninput="this.value = this.value.toUpperCase()"
+                        required>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group full-width">
                     <label>Contact Number</label>
-                    <input type="tel" name="contact_number" id="contact_number" placeholder="Enter contact number"
+                    <input type="tel" name="contact_number" id="contact_number" placeholder="Enter Contact Number"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['contact_number']) : ''; ?>"
                         required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
@@ -966,6 +968,7 @@ if (!empty($selected_filter)) {
                     <label>Address</label>
                     <input type="text" name="address" id="address" placeholder="Enter dealer address"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['address']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
             </div>
@@ -974,6 +977,7 @@ if (!empty($selected_filter)) {
                 <div class="form-group full-width">
                     <label>Notes</label>
                     <textarea name="notes" id="notes"
+                        oninput="this.value = this.value.toUpperCase()"
                         placeholder="Enter any additional notes or comments..."><?php echo $editMode && $editData ? htmlspecialchars($editData['notes']) : ''; ?></textarea>
                 </div>
             </div>

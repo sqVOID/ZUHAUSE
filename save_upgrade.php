@@ -102,14 +102,28 @@ try {
     }
     $stmt_old_dr->close();
 
-    // 5. Calculate total amount for new items
+    // 5. Calculate total amount for new items (SRP)
     $new_unit_total_amount = 0;
     foreach ($new_items as $ni) {
         $new_unit_total_amount += (floatval($ni['price'] ?? 0) * intval($ni['quantity'] ?? 1));
     }
+    // The actual cash paid by the customer is new unit SRP minus old unit trade-in value.
+    // This is already computed on the front-end as total_amount (= newUnitTotal - oldUnitTotal).
+    // If $total_amount was not sent or is 0, fall back to extracting from payment_data.
+    $cash_paid = $total_amount; // cash the customer actually paid
+    if ($cash_paid <= 0 && !empty($payment_data)) {
+        $pd_arr = json_decode($payment_data, true);
+        $amt_raw = $pd_arr['Amount'] ?? $pd_arr['Total'] ?? 0;
+        $cash_paid = floatval(str_replace(',', '', (string)$amt_raw));
+    }
+    // Fallback: if still 0, use new SRP (old behaviour)
+    if ($cash_paid <= 0) {
+        $cash_paid = $new_unit_total_amount;
+    }
 
     // 6. Create NEW sales_entry record under new_invoice_no
     $upgrade_flag = 'UPGD';
+    $page_type = 'upgradeunit';
     $total_qty = count($new_items);
     $assisted_by = $orig_sale['assisted_by'] ?? '';
     $sale_branch_code = !empty($orig_sale['branch_code']) ? $orig_sale['branch_code'] : $user_branch;
@@ -130,13 +144,14 @@ try {
             total_amount,
             payment_data,
             upgrade,
+            page_type,
             branch_code,
             encoder,
             created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
     $stmt_new_sale->bind_param(
-        "ssssssssidssssss",
+        "ssssssssidsssssss",
         $new_invoice_no,
         $original_invoice_no,
         $orig_sale['first_name'],
@@ -148,9 +163,10 @@ try {
         $remarks,
         $total_qty,
         $less_amount,
-        $new_unit_total_amount,
+        $cash_paid,
         $payment_data,
         $upgrade_flag,
+        $page_type,
         $sale_branch_code,
         $user_name
     );

@@ -120,8 +120,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_account'])) {
     }
     else {
         $username = $conn->real_escape_string($username_raw);
-        $first_name = $conn->real_escape_string($first_name_raw);
-        $last_name = $conn->real_escape_string($last_name_raw);
+        $first_name = $conn->real_escape_string(strtoupper($first_name_raw));
+        $last_name = $conn->real_escape_string(strtoupper($last_name_raw));
     
     // Access control: Sub-admin can only create User accounts
     if (strcasecmp($system_level, 'Sub-admin') === 0) {
@@ -1362,6 +1362,7 @@ $branches_result = $conn->query("SELECT * FROM branches ORDER BY branch_name");
                     <label>First Name</label>
                     <input type="text" name="first_name" id="first_name" placeholder="Enter first name"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['first_name']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
             </div>
@@ -1371,6 +1372,7 @@ $branches_result = $conn->query("SELECT * FROM branches ORDER BY branch_name");
                     <label>Last Name</label>
                     <input type="text" name="last_name" id="last_name" placeholder="Enter last name"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['last_name']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
                 <div class="form-group">

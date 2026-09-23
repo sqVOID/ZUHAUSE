@@ -191,7 +191,7 @@ try {
     $next_invoice_no = '';
     $booklet = getBookletConfig($conn, $preorder['branch_code'], 'preorder');
     if ($booklet) {
-        $next_invoice_no = generateInvoiceNumber($booklet) . '-PRE';
+        $next_invoice_no = generateInvoiceNumber($booklet);
     }
 
     // Return data

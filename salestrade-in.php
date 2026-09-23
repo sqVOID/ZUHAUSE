@@ -1541,9 +1541,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                         $brand = htmlspecialchars($user['brand'] ?? '');
                                         $displayText = $name;
 
-                                        // If there's a brand (promoter), include it in the option
+                                        // If there's a brand (promoter), display as "Brand - Full Name"
                                         if (!empty($brand)) {
-                                            echo '<option value="' . $displayText . '">' . $displayText . ' - ' . $brand . '</option>';
+                                            echo '<option value="' . $displayText . '">' . $brand . ' - ' . $displayText . '</option>';
                                         } else {
                                             echo '<option value="' . $displayText . '">' . $displayText . '</option>';
                                         }
@@ -2694,6 +2694,25 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     }
                 });
             }
+
+            // Add event listener for Unclaimed Freebie search input (Enter key)
+            const unclaimedFreebieSearchInput = document.getElementById('unclaimedFreebieSearchInput');
+            if (unclaimedFreebieSearchInput) {
+                unclaimedFreebieSearchInput.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        searchUnclaimedFreebies();
+                    }
+                });
+            }
+
+            // Close modal when clicking outside
+            window.addEventListener('click', function (event) {
+                const unclaimedFreebieModal = document.getElementById('searchUnclaimedFreebieModal');
+                if (event.target === unclaimedFreebieModal) {
+                    closeUnclaimedFreebieSearchModal();
+                }
+            });
         });
 
         // Store current search results
@@ -3459,6 +3478,29 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
             filterBanksByTerminalId('dc');
         }
 
+        /** Sort Terms: higher months first (36, 24, 12...), non-month labels (e.g. Straight) last. */
+        function sortTermsDropdownDescending(termsDropdown) {
+            if (!termsDropdown) return;
+            const placeholder = Array.from(termsDropdown.options).find(opt => opt.value === '');
+            const options = Array.from(termsDropdown.options).filter(opt => opt.value !== '');
+            const rank = (opt) => {
+                const text = (opt.textContent || opt.value || '').replace(/<[^>]*>/g, '').trim();
+                const m = text.match(/(\d+)\s*Months?/i);
+                return m ? parseInt(m[1], 10) : -1;
+            };
+            options.sort((a, b) => rank(b) - rank(a));
+            termsDropdown.innerHTML = '';
+            if (placeholder) {
+                termsDropdown.appendChild(placeholder);
+            } else {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Select Terms';
+                termsDropdown.appendChild(opt);
+            }
+            options.forEach(o => termsDropdown.appendChild(o));
+        }
+
         // Initialize listeners for Card Payment Dropdowns
         document.addEventListener('DOMContentLoaded', function () {
             const pairs = [
@@ -3501,7 +3543,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                             const isOtherBank = otherBanksList.includes(selectedBank);
 
                             if (isOtherBank) {
-                                const standardTerms = ['3 Months', '6 Months', '12 Months', '24 Months'];
+                                const standardTerms = ['24 Months', '12 Months', '6 Months', '3 Months'];
                                 standardTerms.forEach(term => {
                                     const option = document.createElement('option');
                                     option.value = term;
@@ -3509,9 +3551,11 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                     option.setAttribute('data-is-other-bank', 'true');
                                     termsDropdown.appendChild(option);
                                 });
+                                sortTermsDropdownDescending(termsDropdown);
 
                                 if (previousTerm && standardTerms.includes(previousTerm)) {
                                     termsDropdown.value = previousTerm;
+                                    termsDropdown.dispatchEvent(new Event('change'));
                                 }
 
                                 if (amountInput) {
@@ -3533,12 +3577,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                         termsDropdown.appendChild(option);
                                     }
                                 }
+                                sortTermsDropdownDescending(termsDropdown);
 
                                 if (previousTerm) {
                                     const options = Array.from(termsDropdown.options);
                                     const matchingOption = options.find(opt => opt.value === previousTerm);
                                     if (matchingOption) {
                                         termsDropdown.value = previousTerm;
+                                        termsDropdown.dispatchEvent(new Event('change'));
                                     }
                                 }
                             }
@@ -3560,13 +3606,39 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         const currentPrices = unitInfo.prices;
 
                         if (isOtherBank) {
+                            // Prefill net due (after token/voucher/discount/trade-in)
                             if (amountInput) {
                                 amountInput.removeAttribute('readonly');
                                 amountInput.placeholder = 'Enter amount';
+                                const context = (typeof getCartAndPaymentContext === 'function')
+                                    ? getCartAndPaymentContext()
+                                    : null;
+                                if (context && context.activeSelectedDue > 0) {
+                                    const formattedPrice = formatNumber(context.activeSelectedDue);
+                                    amountInput.value = formattedPrice;
+                                    amountInput.dispatchEvent(new Event('input'));
+                                    const section = amountInput.closest(pair.sectionClass);
+                                    if (section) {
+                                        const totalInput = section.querySelector('.total-input');
+                                        if (totalInput) totalInput.value = formattedPrice;
+                                    }
+                                }
                                 amountInput.focus();
                             }
                         } else if (fullKey && currentPrices[fullKey] !== undefined) {
-                            const price = currentPrices[fullKey];
+                            // Deduct token/voucher/discount/trade-in so Amount aligns with Total Amount Due.
+                            let price = parseFloat(currentPrices[fullKey]) || 0;
+                            const context = (typeof getCartAndPaymentContext === 'function')
+                                ? getCartAndPaymentContext()
+                                : null;
+                            if (context) {
+                                const deductions = (context.activeSelectedToken || 0)
+                                    + (context.activeSelectedVoucher || 0)
+                                    + (context.discountAmount || 0)
+                                    + (context.tradeInValue || 0)
+                                    + (context.tituVoucher || 0);
+                                price = Math.max(0, price - deductions);
+                            }
                             if (amountInput) {
                                 const formattedPrice = formatNumber(price);
                                 amountInput.value = formattedPrice;
@@ -4049,6 +4121,83 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
         function closeUnclaimedFreebieSearchModal() {
             document.getElementById('searchUnclaimedFreebieModal').style.display = 'none';
             currentUnclaimedFreebieRow = null;
+        }
+
+        // Function to search unclaimed freebies
+        function searchUnclaimedFreebies() {
+            const searchInput = document.getElementById('unclaimedFreebieSearchInput');
+            const searchTerm = searchInput.value.trim();
+            const resultsBody = document.getElementById('unclaimedFreebieSearchResultsBody');
+
+            if (searchTerm === '') {
+                alert('Please enter a search term!');
+                return;
+            }
+
+            // Show loading state
+            resultsBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">Searching...</td></tr>';
+
+            // Fetch non-serialized items
+            fetch(`search_freebies.php?term=${encodeURIComponent(searchTerm)}`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers.get('content-type'));
+
+                    // Check if response is OK
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Clone response to read it twice (for debugging)
+                    return response.clone().text().then(text => {
+                        console.log('Raw response:', text);
+
+                        // Check if response is empty
+                        if (!text || text.trim() === '') {
+                            throw new Error('Empty response from server');
+                        }
+
+                        // Try to parse as JSON
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('JSON parse error:', e);
+                            console.error('Response text:', text);
+                            throw new Error('Invalid JSON response from server');
+                        }
+                    });
+                })
+                .then(data => {
+                    console.log('Parsed data:', data);
+                    resultsBody.innerHTML = '';
+
+                    // Check for error status
+                    if (data.status === 'error') {
+                        resultsBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: red;">Error: ${data.message}</td></tr>`;
+                        return;
+                    }
+
+                    // Display results
+                    if (data.status === 'success' && data.data && data.data.length > 0) {
+                        data.data.forEach((item) => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${item.item_code}</td>
+                                <td>${item.description}</td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="btn-select" onclick="selectUnclaimedFreebie('${item.item_code.replace(/'/g, "\\'")}', '${item.description.replace(/'/g, "\\'")}')">Select</button>
+                                </td>
+                            `;
+                            resultsBody.appendChild(row);
+                        });
+                    } else {
+                        resultsBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No items found with zero stock at your branch</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultsBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: red;">Error: ${error.message}<br/>Check browser console for details</td></tr>`;
+                });
         }
 
         function selectUnclaimedFreebie(itemCode, itemDesc) {
@@ -4944,14 +5093,15 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     const overallTotalPayment = parseFloat(globalTotalInputCheck ? (globalTotalInputCheck.value || '0').replace(/[^0-9.-]/g, '') : '0') || 0;
                     const targetDue = context.activeSelectedDue;
                     const overallDifference = targetDue - overallTotalPayment;
+                    const isExceeded = overallDifference < -0.01;
+                    const cardExceedAllowed = isExceeded && (typeof hasCardPaymentAmount === 'function') && hasCardPaymentAmount();
 
-                    if (targetDue > 0 && Math.abs(overallDifference) > 0.01) {
+                    if (targetDue > 0 && Math.abs(overallDifference) > 0.01 && !cardExceedAllowed) {
                         const bkBanner = document.getElementById('paymentBreakdownBanner');
                         if (bkBanner) bkBanner.style.display = 'none';
 
                         const neededDisp = targetDue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         const enteredDisp = overallTotalPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        const isExceeded = overallDifference < -0.01;
                         const diffLabel = isExceeded ? 'Exceeded Amount:' : 'Remaining Balance:';
                         const diffAmount = Math.abs(overallDifference);
                         const diffDisp = diffAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -4975,17 +5125,17 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                         </div>
                                         ${hasVoucher ? `
                                         <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #16a34a; margin-top: 2px;">
-                                            <span style="font-weight: 600;">↳ Less Voucher:</span>
+                                            <span style="font-weight: 600;">↳ Voucher:</span>
                                             <span style="font-weight: 600;">-₱${item.voucherAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>` : ''}
                                         ${hasToken ? `
                                         <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #d97706; margin-top: 2px;">
-                                            <span style="font-weight: 600;">↳ Less Token:</span>
+                                            <span style="font-weight: 600;">↳ Token:</span>
                                             <span style="font-weight: 600;">-₱${item.tokenAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>` : ''}
                                         ${hasDiscount ? `
                                         <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #dc2626; margin-top: 2px;">
-                                            <span style="font-weight: 600;">↳ Less Discount:</span>
+                                            <span style="font-weight: 600;">↳ Discount:</span>
                                             <span style="font-weight: 600;">-₱${context.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>` : ''}
                                         ${(hasVoucher || hasToken || hasDiscount) ? `
@@ -5074,6 +5224,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                         }
                                     }
                                     if (isAmount && !labelText) labelText = 'Amount';
+                                    if (isAmount && (input.id === 'creditCardAmount' || input.id === 'debitCardAmount')) {
+                                        labelText = formatCardTermsAmountLabel(input.id);
+                                    }
 
                                     if (isAmount) {
                                         let val = parseFloat(input.value.replace(/,/g, '')) || 0;
@@ -5299,6 +5452,38 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
             }
             window.getCartAndPaymentContext = getCartAndPaymentContext;
 
+            /** True when Credit Card or Debit Card section is visible and has an Amount > 0. */
+            function hasCardPaymentAmount() {
+                const parseAmt = (id) => {
+                    const el = document.getElementById(id);
+                    return parseFloat((el && el.value ? el.value : '0').replace(/[^0-9.-]/g, '')) || 0;
+                };
+                const ccSec = document.querySelector('.credit-card-section');
+                const dcSec = document.querySelector('.debit-card-section');
+                const ccActive = ccSec && ccSec.style.display === 'block' && parseAmt('creditCardAmount') > 0;
+                const dcActive = dcSec && dcSec.style.display === 'block' && parseAmt('debitCardAmount') > 0;
+                return !!(ccActive || dcActive);
+            }
+            window.hasCardPaymentAmount = hasCardPaymentAmount;
+
+            /** e.g. "12 Months" → "12 Terms Amount"; "Straight" → "Straight Amount" */
+            function formatCardTermsAmountLabel(amountInputId) {
+                const termsId = (amountInputId === 'debitCardAmount')
+                    ? 'debitCardTermsDropdown'
+                    : 'creditCardTermsDropdown';
+                const termsEl = document.getElementById(termsId);
+                if (!termsEl || !termsEl.value) return 'Amount';
+                const raw = (termsEl.options[termsEl.selectedIndex]
+                    ? termsEl.options[termsEl.selectedIndex].text
+                    : termsEl.value) || '';
+                const clean = String(raw).replace(/<[^>]*>/g, '').trim();
+                if (!clean) return 'Amount';
+                const m = clean.match(/(\d+)\s*Months?/i);
+                if (m) return m[1] + ' Terms Amount';
+                return clean + ' Amount';
+            }
+            window.formatCardTermsAmountLabel = formatCardTermsAmountLabel;
+
             function updateSectionTotal() {
                 let globalTotal = 0;
                 const context = getCartAndPaymentContext();
@@ -5377,8 +5562,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 const enteredDisp = globalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const overallDifference = targetDue - globalTotal;
                 const isExceeded = overallDifference < -0.01;
-                const isPerfectMatch = (Math.abs(overallDifference) <= 0.01 && globalTotal > 0);
-                const diffLabel = isExceeded ? 'Exceeded Amount:' : 'Remaining Balance:';
+                const cardExceedAllowed = isExceeded && hasCardPaymentAmount();
+                const isPerfectMatch = (Math.abs(overallDifference) <= 0.01 && globalTotal > 0) || cardExceedAllowed;
+                const diffLabel = isExceeded ? (cardExceedAllowed ? 'Card Excess:' : 'Exceeded Amount:') : 'Remaining Balance:';
                 const diffAmount = Math.abs(overallDifference);
                 const diffDisp = diffAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -5387,14 +5573,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
 
                 if (displayedItems.length === 0) {
                     unitRowsHtml = '<div style="color: #ef4444; font-style: italic; font-size: 12px; padding: 4px;">No units selected for payment.</div>';
-                    } else {
-                        displayedItems.forEach((item, idx) => {
-                            const hasVoucher = (item.hasVoucher === 1 && item.voucherAmount > 0);
-                            const hasToken = (item.hasToken === 1 && item.tokenAmount > 0);
-                            const isLastItem = (idx === displayedItems.length - 1);
-                            const hasDiscount = (isLastItem && context.discountAmount > 0);
+                } else {
+                    displayedItems.forEach((item, idx) => {
+                        const hasVoucher = (item.hasVoucher === 1 && item.voucherAmount > 0);
+                        const hasToken = (item.hasToken === 1 && item.tokenAmount > 0);
+                        const isLastItem = (idx === displayedItems.length - 1);
+                        const hasDiscount = (isLastItem && context.discountAmount > 0);
 
-                            unitRowsHtml += `
+                        unitRowsHtml += `
                                 <div style="margin-top: 4px; padding: 4px 6px; background-color: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0;">
                                     <div style="display: flex; justify-content: space-between; font-size: 13px; color: #0f172a; font-weight: 600;">
                                         <span style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">• ${item.labelText}</span>
@@ -5402,17 +5588,17 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                     </div>
                                     ${hasVoucher ? `
                                     <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #16a34a; margin-top: 2px;">
-                                        <span style="font-weight: 600;">↳ Less Voucher:</span>
+                                        <span style="font-weight: 600;">↳ Voucher:</span>
                                         <span style="font-weight: 600;">-₱${item.voucherAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>` : ''}
                                     ${hasToken ? `
                                     <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #d97706; margin-top: 2px;">
-                                        <span style="font-weight: 600;">↳ Less Token:</span>
+                                        <span style="font-weight: 600;">↳ Token:</span>
                                         <span style="font-weight: 600;">-₱${item.tokenAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>` : ''}
                                     ${hasDiscount ? `
                                     <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #dc2626; margin-top: 2px;">
-                                        <span style="font-weight: 600;">↳ Less Discount:</span>
+                                        <span style="font-weight: 600;">↳ Discount:</span>
                                         <span style="font-weight: 600;">-₱${context.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>` : ''}
                                     ${(hasVoucher || hasToken || hasDiscount) ? `
@@ -5422,8 +5608,8 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                     </div>` : ''}
                                 </div>
                             `;
-                        });
-                    }
+                    });
+                }
 
                 if (unitRowsHtml) {
                     unitRowsHtml = `
@@ -5505,6 +5691,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                 }
                             }
                             if (isAmount && !labelText) labelText = 'Amount';
+                            if (isAmount && (input.id === 'creditCardAmount' || input.id === 'debitCardAmount')) {
+                                labelText = formatCardTermsAmountLabel(input.id);
+                            }
 
                             if (isAmount) {
                                 let val = parseFloat(input.value.replace(/,/g, '')) || 0;
@@ -5550,12 +5739,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     : '';
 
                 let statusText = "You are currently entering your breakdown details.";
-                if (isPerfectMatch) {
+                if (isPerfectMatch && !cardExceedAllowed) {
                     statusText = "Payment matches Total Amount Due.";
+                } else if (cardExceedAllowed) {
+                    statusText = "Card payment exceeds Total Amount Due (allowed for Credit/Debit).";
                 } else if (isExceeded) {
                     statusText = "Payment exceeds Total Amount Due. Please adjust your payment.";
                 }
-                let diffColor = isPerfectMatch ? "#16a34a" : (isExceeded ? "#dc2626" : "#ca8a04");
+                let diffColor = (isPerfectMatch || cardExceedAllowed) ? "#16a34a" : (isExceeded ? "#dc2626" : "#ca8a04");
 
                 banner.innerHTML = `
                     <div style="display: flex; align-items: flex-start; gap: 12px;">

@@ -28,11 +28,13 @@ if (isset($_GET['edit'])) {
     $result = $conn->query("SELECT * FROM positions WHERE id = '$id'");
     if ($result && $result->num_rows > 0) {
         $editData = $result->fetch_assoc();
-        
+
         // Prevent Sub-admin and User from editing Superadmin positions
-        if ((strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) && 
-            (stripos($editData['position_name'], 'superadmin') !== false || 
-             stripos($editData['position_name'], 'super admin') !== false)) {
+        if (
+            (strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) &&
+            (stripos($editData['position_name'], 'superadmin') !== false ||
+                stripos($editData['position_name'], 'super admin') !== false)
+        ) {
             $redirect_url = "position.php?error=unauthorized";
             if (!empty($selected_filter)) {
                 $redirect_url .= "&position_filter=" . urlencode($selected_filter);
@@ -59,57 +61,94 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $messageType = "error";
         }
         // Prevent Sub-admin and User from creating or updating Superadmin positions
-        else if ((strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) && 
-            (stripos($position_raw, 'superadmin') !== false || stripos($position_raw, 'super admin') !== false)) {
+        else if (
+            (strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) &&
+            (stripos($position_raw, 'superadmin') !== false || stripos($position_raw, 'super admin') !== false)
+        ) {
             $message = "Error: You do not have permission to manage Superadmin positions.";
             $messageType = "error";
-        }
-        else {
+        } else {
             $position = $conn->real_escape_string($position_raw);
-            
-        // Prevent Sub-admin and User from creating or updating Superadmin positions
-        if ((strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) && 
-            (stripos($position, 'superadmin') !== false || stripos($position, 'super admin') !== false)) {
-            $message = "Error: You do not have permission to manage Superadmin positions.";
-            $messageType = "error";
-        } 
-        // Check if Sub-admin or User is trying to create/update a position that's already used by Super-Admin or Sub-admin accounts
-        elseif (strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) {
-            $check_usage = $conn->query("SELECT COUNT(*) as count FROM accounts 
+
+            // Prevent Sub-admin and User from creating or updating Superadmin positions
+            if (
+                (strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) &&
+                (stripos($position, 'superadmin') !== false || stripos($position, 'super admin') !== false)
+            ) {
+                $message = "Error: You do not have permission to manage Superadmin positions.";
+                $messageType = "error";
+            }
+            // Check if Sub-admin or User is trying to create/update a position that's already used by Super-Admin or Sub-admin accounts
+            elseif (strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) {
+                $check_usage = $conn->query("SELECT COUNT(*) as count FROM accounts 
                                          WHERE position = '$position' 
                                          AND system_level IN ('Super-Admin', 'Sub-admin')");
-            $usage_data = $check_usage->fetch_assoc();
-            
-            if ($usage_data['count'] > 0) {
-                $message = "Error: You do not have permission to manage positions used by Sub-admin accounts.";
-                $messageType = "error";
-            } else {
-                // Proceed with update or insert
-                if (isset($_POST['id']) && !empty($_POST['id'])) {
-                    // Update - verify not editing a position used by Super-Admin/Sub-admin
-                    $id = $conn->real_escape_string($_POST['id']);
-                    
-                    $check_result = $conn->query("SELECT position_name FROM positions WHERE id='$id'");
-                    if ($check_result && $check_result->num_rows > 0) {
-                        $check_data = $check_result->fetch_assoc();
-                        $old_position = $check_data['position_name'];
-                        
-                        // Check if old position is used by Super-Admin/Sub-admin
-                        $check_old_usage = $conn->query("SELECT COUNT(*) as count FROM accounts 
+                $usage_data = $check_usage->fetch_assoc();
+
+                if ($usage_data['count'] > 0) {
+                    $message = "Error: You do not have permission to manage positions used by Sub-admin accounts.";
+                    $messageType = "error";
+                } else {
+                    // Proceed with update or insert
+                    if (isset($_POST['id']) && !empty($_POST['id'])) {
+                        // Update - verify not editing a position used by Super-Admin/Sub-admin
+                        $id = $conn->real_escape_string($_POST['id']);
+
+                        $check_result = $conn->query("SELECT position_name FROM positions WHERE id='$id'");
+                        if ($check_result && $check_result->num_rows > 0) {
+                            $check_data = $check_result->fetch_assoc();
+                            $old_position = $check_data['position_name'];
+
+                            // Check if old position is used by Super-Admin/Sub-admin
+                            $check_old_usage = $conn->query("SELECT COUNT(*) as count FROM accounts 
                                                          WHERE position = '" . $conn->real_escape_string($old_position) . "' 
                                                          AND system_level IN ('Super-Admin', 'Sub-admin')");
-                        $old_usage_data = $check_old_usage->fetch_assoc();
-                        
-                        if ($old_usage_data['count'] > 0) {
-                            $redirect_url = "position.php?error=unauthorized";
+                            $old_usage_data = $check_old_usage->fetch_assoc();
+
+                            if ($old_usage_data['count'] > 0) {
+                                $redirect_url = "position.php?error=unauthorized";
+                                if (!empty($selected_filter)) {
+                                    $redirect_url .= "&position_filter=" . urlencode($selected_filter);
+                                }
+                                header("Location: $redirect_url");
+                                exit();
+                            }
+                        }
+
+                        $sql = "UPDATE positions SET position_name='$position', sidebar_access='$sidebar' WHERE id='$id'";
+                        if ($conn->query($sql)) {
+                            $redirect_url = "position.php?updated=1";
                             if (!empty($selected_filter)) {
                                 $redirect_url .= "&position_filter=" . urlencode($selected_filter);
                             }
                             header("Location: $redirect_url");
                             exit();
+                        } else {
+                            $message = "Error: " . $conn->error;
+                            $messageType = "error";
+                        }
+                    } else {
+                        // Insert
+                        $sql = "INSERT INTO positions (position_name, sidebar_access) VALUES ('$position', '$sidebar')";
+                        if ($conn->query($sql)) {
+                            $redirect_url = "position.php?success=1";
+                            if (!empty($selected_filter)) {
+                                $redirect_url .= "&position_filter=" . urlencode($selected_filter);
+                            }
+                            header("Location: $redirect_url");
+                            exit();
+                        } else {
+                            $message = "Error: " . $conn->error;
+                            $messageType = "error";
                         }
                     }
-                    
+                }
+            } else {
+                // Super-Admin can do anything
+                if (isset($_POST['id']) && !empty($_POST['id'])) {
+                    // Update
+                    $id = $conn->real_escape_string($_POST['id']);
+
                     $sql = "UPDATE positions SET position_name='$position', sidebar_access='$sidebar' WHERE id='$id'";
                     if ($conn->query($sql)) {
                         $redirect_url = "position.php?updated=1";
@@ -138,40 +177,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     }
                 }
             }
-        } else {
-            // Super-Admin can do anything
-            if (isset($_POST['id']) && !empty($_POST['id'])) {
-                // Update
-                $id = $conn->real_escape_string($_POST['id']);
-                
-                $sql = "UPDATE positions SET position_name='$position', sidebar_access='$sidebar' WHERE id='$id'";
-                if ($conn->query($sql)) {
-                    $redirect_url = "position.php?updated=1";
-                    if (!empty($selected_filter)) {
-                        $redirect_url .= "&position_filter=" . urlencode($selected_filter);
-                    }
-                    header("Location: $redirect_url");
-                    exit();
-                } else {
-                    $message = "Error: " . $conn->error;
-                    $messageType = "error";
-                }
-            } else {
-                // Insert
-                $sql = "INSERT INTO positions (position_name, sidebar_access) VALUES ('$position', '$sidebar')";
-                if ($conn->query($sql)) {
-                    $redirect_url = "position.php?success=1";
-                    if (!empty($selected_filter)) {
-                        $redirect_url .= "&position_filter=" . urlencode($selected_filter);
-                    }
-                    header("Location: $redirect_url");
-                    exit();
-                } else {
-                    $message = "Error: " . $conn->error;
-                    $messageType = "error";
-                }
-            }
-        }
         } // End validation else block
     }
 }
@@ -179,14 +184,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 // Delete
 if (isset($_GET['delete'])) {
     $id = $conn->real_escape_string($_GET['delete']);
-    
+
     // Prevent Sub-admin and User from deleting Superadmin positions
     if (strcasecmp($system_level, 'Sub-admin') === 0 || strcasecmp($system_level, 'User') === 0) {
         $check_result = $conn->query("SELECT position_name FROM positions WHERE id='$id'");
         if ($check_result && $check_result->num_rows > 0) {
             $check_data = $check_result->fetch_assoc();
-            if (stripos($check_data['position_name'], 'superadmin') !== false || 
-                stripos($check_data['position_name'], 'super admin') !== false) {
+            if (
+                stripos($check_data['position_name'], 'superadmin') !== false ||
+                stripos($check_data['position_name'], 'super admin') !== false
+            ) {
                 $redirect_url = "position.php?error=unauthorized";
                 if (!empty($selected_filter)) {
                     $redirect_url .= "&position_filter=" . urlencode($selected_filter);
@@ -196,7 +203,7 @@ if (isset($_GET['delete'])) {
             }
         }
     }
-    
+
     $conn->query("DELETE FROM positions WHERE id='$id'");
     $redirect_url = "position.php?deleted=1";
     if (!empty($selected_filter)) {
@@ -328,7 +335,7 @@ if (!empty($selected_filter)) {
         // Super-Admin: see all positions
         $query = "SELECT * FROM positions ORDER BY id DESC";
     }
-    
+
     $positions = $conn->query($query);
 }
 ?>
@@ -337,7 +344,7 @@ if (!empty($selected_filter)) {
 
 <head>
     <meta charset="UTF-8">
-        <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
+    <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
     <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <title>Position</title>
     <style>
@@ -722,12 +729,12 @@ if (!empty($selected_filter)) {
             color: #333;
             border-bottom: 1px solid #ccc;
             text-align: center;
-            
+
         }
 
         td:first-child {
             border-left: 1px solid #ccc;
-              text-align: left !important;
+            text-align: left !important;
         }
 
         td:last-child {
@@ -1035,6 +1042,7 @@ if (!empty($selected_filter)) {
 
         /* Medium screens - Stack action buttons at 952px and below */
         @media (max-width: 952px) {
+
             .btn-view-sidebar,
             .btn-edit,
             .btn-delete {
@@ -1138,9 +1146,11 @@ if (!empty($selected_filter)) {
             <div class="table-header">
                 <h3>Position List</h3>
                 <div style="display: flex; gap: 15px; align-items: center;">
-                    <select id="positionFilter" onchange="filterPositions()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; cursor: pointer;">
+                    <select id="positionFilter" onchange="filterPositions()"
+                        style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; cursor: pointer;">
                         <option value="">Select Filter</option>
-                        <option value="all" <?php echo ($selected_filter === 'all') ? 'selected' : ''; ?>>View All</option>
+                        <option value="all" <?php echo ($selected_filter === 'all') ? 'selected' : ''; ?>>View All
+                        </option>
                     </select>
                 </div>
             </div>
@@ -1174,7 +1184,7 @@ if (!empty($selected_filter)) {
                             echo "<td>" . htmlspecialchars($row['position_name']) . "</td>";
                             echo "<td><button type='button' class='btn-view-sidebar' onclick='viewSidebarDetails(" . json_encode($row['sidebar_access']) . ")'>View Details</button></td>";
                             echo "<td>";
-                            
+
                             // Preserve position_filter when editing or deleting
                             $edit_url = '?edit=' . $row['id'];
                             $delete_url = '?delete=' . $row['id'];
@@ -1182,7 +1192,7 @@ if (!empty($selected_filter)) {
                                 $edit_url .= '&position_filter=' . urlencode($selected_filter);
                                 $delete_url .= '&position_filter=' . urlencode($selected_filter);
                             }
-                            
+
                             echo "<a href='" . $edit_url . "' class='btn-edit'>Edit</a>";
                             echo "<a href='" . $delete_url . "' class='btn-delete' onclick='return confirm(\"Are you sure?\")'>Delete</a>";
                             echo "</td>";
@@ -1216,7 +1226,7 @@ if (!empty($selected_filter)) {
                         <thead>
                             <tr>
                                 <th style="width: 60px; text-align: center;">
-                                   
+
                                 </th>
                                 <th>Category</th>
                                 <th>Item</th>
@@ -1224,22 +1234,22 @@ if (!empty($selected_filter)) {
                         </thead>
                         <tbody>
                             <!-- Process group -->
-                            <?php foreach ($processItems as $index => $item): 
+                            <?php foreach ($processItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($processItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="process"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
                                         <td class="category-cell" rowspan="<?php echo count($processItems); ?>">Process</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox process-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox process-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1247,22 +1257,23 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Purchase Order group -->
-                            <?php foreach ($purchaseOrderItems as $index => $item): 
+                            <?php foreach ($purchaseOrderItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($purchaseOrderItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="purchase-order"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($purchaseOrderItems); ?>">Purchase Order</td>
+                                        <td class="category-cell" rowspan="<?php echo count($purchaseOrderItems); ?>">Purchase
+                                            Order</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox purchase-order-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox purchase-order-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1270,22 +1281,22 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Reports group -->
-                            <?php foreach ($reportItems as $index => $item): 
+                            <?php foreach ($reportItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($reportItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="reports"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
                                         <td class="category-cell" rowspan="<?php echo count($reportItems); ?>">Reports</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox reports-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox reports-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1293,22 +1304,23 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Approval Process group -->
-                            <?php foreach ($approvalProcessItems as $index => $item): 
+                            <?php foreach ($approvalProcessItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($approvalProcessItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="approval-process"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($approvalProcessItems); ?>">Approval Process</td>
+                                        <td class="category-cell" rowspan="<?php echo count($approvalProcessItems); ?>">Approval
+                                            Process</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox approval-process-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox approval-process-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1316,22 +1328,23 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Receive Process group -->
-                            <?php foreach ($receiveProcessItems as $index => $item): 
+                            <?php foreach ($receiveProcessItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($receiveProcessItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="receive-process"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($receiveProcessItems); ?>">Receive Process</td>
+                                        <td class="category-cell" rowspan="<?php echo count($receiveProcessItems); ?>">Receive
+                                            Process</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox receive-process-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox receive-process-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1339,22 +1352,23 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Void Process group -->
-                            <?php foreach ($voidProcessItems as $index => $item): 
+                            <?php foreach ($voidProcessItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($voidProcessItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="void-process"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($voidProcessItems); ?>">Void Process</td>
+                                        <td class="category-cell" rowspan="<?php echo count($voidProcessItems); ?>">Void Process
+                                        </td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox void-process-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox void-process-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1363,22 +1377,22 @@ if (!empty($selected_filter)) {
 
                             <!-- Sub-admin group - Only visible for Sub-admin -->
                             <?php if (strcasecmp($system_level, 'Sub-admin') === 0): ?>
-                                <?php foreach ($subadminItems as $index => $item): 
+                                <?php foreach ($subadminItems as $index => $item):
                                     $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                                ?>
+                                    ?>
                                     <tr>
                                         <?php if ($index === 0): ?>
                                             <td class="checkbox-cell" rowspan="<?php echo count($subadminItems); ?>">
                                                 <input type="checkbox" class="category-select-all" data-category="subadmin"
-                                                    style="width:16px;height:16px;"
-                                                    onchange="toggleCategorySelectAll(this)">
+                                                    style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                             </td>
                                             <td class="category-cell" rowspan="<?php echo count($subadminItems); ?>">Sub-admin</td>
                                         <?php endif; ?>
                                         <td class="item-cell">
                                             <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                                <input type="checkbox" class="sidebar-checkbox subadmin-checkbox" 
-                                                    value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                                <input type="checkbox" class="sidebar-checkbox subadmin-checkbox"
+                                                    value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                    style="width:16px;height:16px;">
                                                 <span><?php echo $item; ?></span>
                                             </label>
                                         </td>
@@ -1387,22 +1401,23 @@ if (!empty($selected_filter)) {
                             <?php endif; ?>
 
                             <!-- User Registration group -->
-                            <?php foreach ($userRegistrationItems as $index => $item): 
+                            <?php foreach ($userRegistrationItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($userRegistrationItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="user-registration"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($userRegistrationItems); ?>">User Registration</td>
+                                        <td class="category-cell" rowspan="<?php echo count($userRegistrationItems); ?>">User
+                                            Registration</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox user-registration-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox user-registration-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1410,22 +1425,24 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Location Registration group -->
-                            <?php foreach ($locationRegistrationItems as $index => $item): 
+                            <?php foreach ($locationRegistrationItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($locationRegistrationItems); ?>">
-                                            <input type="checkbox" class="category-select-all" data-category="location-registration"
-                                                style="width:16px;height:16px;"
+                                            <input type="checkbox" class="category-select-all"
+                                                data-category="location-registration" style="width:16px;height:16px;"
                                                 onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($locationRegistrationItems); ?>">Store Registration</td>
+                                        <td class="category-cell" rowspan="<?php echo count($locationRegistrationItems); ?>">
+                                            Store Registration</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox location-registration-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox location-registration-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1433,22 +1450,23 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Item Registration group -->
-                            <?php foreach ($itemRegistrationItems as $index => $item): 
+                            <?php foreach ($itemRegistrationItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($itemRegistrationItems); ?>">
                                             <input type="checkbox" class="category-select-all" data-category="item-registration"
-                                                style="width:16px;height:16px;"
-                                                onchange="toggleCategorySelectAll(this)">
+                                                style="width:16px;height:16px;" onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($itemRegistrationItems); ?>">Item Registration</td>
+                                        <td class="category-cell" rowspan="<?php echo count($itemRegistrationItems); ?>">Item
+                                            Registration</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox item-registration-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox item-registration-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1456,22 +1474,24 @@ if (!empty($selected_filter)) {
                             <?php endforeach; ?>
 
                             <!-- Terminal Registration group -->
-                            <?php foreach ($terminalRegistrationItems as $index => $item): 
+                            <?php foreach ($terminalRegistrationItems as $index => $item):
                                 $checked = in_array($item, $current_sidebar) ? 'checked' : '';
-                            ?>
+                                ?>
                                 <tr>
                                     <?php if ($index === 0): ?>
                                         <td class="checkbox-cell" rowspan="<?php echo count($terminalRegistrationItems); ?>">
-                                            <input type="checkbox" class="category-select-all" data-category="terminal-registration"
-                                                style="width:16px;height:16px;"
+                                            <input type="checkbox" class="category-select-all"
+                                                data-category="terminal-registration" style="width:16px;height:16px;"
                                                 onchange="toggleCategorySelectAll(this)">
                                         </td>
-                                        <td class="category-cell" rowspan="<?php echo count($terminalRegistrationItems); ?>">Terminal Registration</td>
+                                        <td class="category-cell" rowspan="<?php echo count($terminalRegistrationItems); ?>">
+                                            Terminal Registration</td>
                                     <?php endif; ?>
                                     <td class="item-cell">
                                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                            <input type="checkbox" class="sidebar-checkbox terminal-registration-checkbox" 
-                                                value="<?php echo $item; ?>" <?php echo $checked; ?> style="width:16px;height:16px;">
+                                            <input type="checkbox" class="sidebar-checkbox terminal-registration-checkbox"
+                                                value="<?php echo $item; ?>" <?php echo $checked; ?>
+                                                style="width:16px;height:16px;">
                                             <span><?php echo $item; ?></span>
                                         </label>
                                     </td>
@@ -1494,25 +1514,25 @@ if (!empty($selected_filter)) {
             document.querySelector('.sidebar').classList.toggle('hidden');
             document.querySelector('.main-content').classList.toggle('expanded');
         }
-        function toggleSection(el) { 
+        function toggleSection(el) {
             const section = el.parentElement;
             const isCurrentlyCollapsed = section.classList.contains('collapsed');
-            
+
             // Close all other sections (accordion behavior)
             const allSections = document.querySelectorAll('.menu-section');
-            allSections.forEach(function(s) {
+            allSections.forEach(function (s) {
                 if (s !== section) {
                     s.classList.add('collapsed');
                 }
             });
-            
+
             // Toggle the clicked section
             if (isCurrentlyCollapsed) {
                 section.classList.remove('collapsed');
             } else {
                 section.classList.add('collapsed');
             }
-            
+
             if (typeof saveSidebarState === 'function') { saveSidebarState(); }
         }
 
@@ -1573,11 +1593,11 @@ if (!empty($selected_filter)) {
         function toggleSidebarSelectAll() {
             const selectAll = document.getElementById('selectAllSidebar');
             const tableSelectAll = document.getElementById('tableSelectAll');
-            
+
             // Sync both checkboxes
             if (selectAll) tableSelectAll.checked = selectAll.checked;
             if (tableSelectAll) selectAll.checked = tableSelectAll.checked;
-            
+
             const allChecked = selectAll ? selectAll.checked : tableSelectAll.checked;
             const checkboxes = document.querySelectorAll('.sidebar-checkbox');
             checkboxes.forEach(cb => cb.checked = allChecked);
@@ -1611,7 +1631,7 @@ if (!empty($selected_filter)) {
                 const category = catCheckbox.getAttribute('data-category');
                 const categoryCheckboxes = document.querySelectorAll('.' + category + '-checkbox');
                 if (categoryCheckboxes.length === 0) return;
-                
+
                 let categoryAll = true;
                 categoryCheckboxes.forEach(cb => { if (!cb.checked) categoryAll = false; });
                 catCheckbox.checked = categoryAll;
@@ -1647,7 +1667,7 @@ if (!empty($selected_filter)) {
         function viewSidebarDetails(sidebarAccess) {
             const modal = document.getElementById('viewDetailsModal');
             const modalBody = document.getElementById('viewDetailsBody');
-            
+
             if (!sidebarAccess || sidebarAccess.trim() === '') {
                 modalBody.innerHTML = '<div class="no-items">No deactivated sidebar items</div>';
                 modal.style.display = 'flex';
@@ -1655,7 +1675,7 @@ if (!empty($selected_filter)) {
             }
 
             const items = sidebarAccess.split(',').map(item => item.trim());
-            
+
             // Categorize items based on the arrays defined in PHP
             const processItems = ['Sales Entry', 'Stock Transfer', 'Upgrade Unit', 'Refund', 'Claim Item'];
             const purchaseOrderItems = ['Purchase Order', 'PO Invoice per Branch'];
@@ -1668,7 +1688,7 @@ if (!empty($selected_filter)) {
             const locationRegistrationItems = ['Promoter Registration', 'Area Registration', 'Branch Registration', 'Dealer Registration'];
             const itemRegistrationItems = ['Supplier Registration', 'Brand Registration', 'Family Code Registration', 'Department Registration', 'Group Registration', 'Item Registration', 'Bank Registration'];
             const terminalRegistrationItems = ['Terminal Issuer Registration', 'Terminal ID Registration'];
-            
+
             const process = items.filter(item => processItems.includes(item));
             const purchaseOrder = items.filter(item => purchaseOrderItems.includes(item));
             const subadmin = items.filter(item => subadminItems.includes(item));
@@ -1680,79 +1700,79 @@ if (!empty($selected_filter)) {
             const locationRegistration = items.filter(item => locationRegistrationItems.includes(item));
             const itemRegistration = items.filter(item => itemRegistrationItems.includes(item));
             const terminalRegistration = items.filter(item => terminalRegistrationItems.includes(item));
-            
+
             let html = '';
-            
+
             if (process.length > 0) {
                 html += '<div class="detail-group"><h4>Process</h4><ul>';
                 process.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (purchaseOrder.length > 0) {
                 html += '<div class="detail-group"><h4>Purchase Order</h4><ul>';
                 purchaseOrder.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (reports.length > 0) {
                 html += '<div class="detail-group"><h4>Reports</h4><ul>';
                 reports.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (approvalProcess.length > 0) {
                 html += '<div class="detail-group"><h4>Approval Process</h4><ul>';
                 approvalProcess.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (receiveProcess.length > 0) {
                 html += '<div class="detail-group"><h4>Receive Process</h4><ul>';
                 receiveProcess.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (voidProcess.length > 0) {
                 html += '<div class="detail-group"><h4>Void Process</h4><ul>';
                 voidProcess.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (subadmin.length > 0) {
                 html += '<div class="detail-group"><h4>Sub-admin</h4><ul>';
                 subadmin.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (userRegistration.length > 0) {
                 html += '<div class="detail-group"><h4>User Registration</h4><ul>';
                 userRegistration.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (locationRegistration.length > 0) {
                 html += '<div class="detail-group"><h4>Store Registration</h4><ul>';
                 locationRegistration.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (itemRegistration.length > 0) {
                 html += '<div class="detail-group"><h4>Item Registration</h4><ul>';
                 itemRegistration.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (terminalRegistration.length > 0) {
                 html += '<div class="detail-group"><h4>Terminal Registration</h4><ul>';
                 terminalRegistration.forEach(item => html += `<li>${item}</li>`);
                 html += '</ul></div>';
             }
-            
+
             if (html === '') {
                 html = '<div class="no-items">No deactivated sidebar items</div>';
             }
-            
+
             modalBody.innerHTML = html;
             modal.style.display = 'flex';
         }
@@ -1764,7 +1784,7 @@ if (!empty($selected_filter)) {
         // Filter positions function
         function filterPositions() {
             const filterValue = document.getElementById('positionFilter').value;
-            
+
             // If a filter is selected, reload page with the filter parameter
             if (filterValue) {
                 window.location.href = 'position.php?position_filter=' + encodeURIComponent(filterValue);
@@ -1775,12 +1795,12 @@ if (!empty($selected_filter)) {
         }
 
         // Initialize: Check if we have data loaded
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const table = document.getElementById('positionTable');
             if (table) {
                 const tbody = table.getElementsByTagName('tbody')[0];
                 const rows = tbody.getElementsByTagName('tr');
-                
+
                 // Check if we're showing the "SELECT A FILTER" message
                 if (rows.length > 0) {
                     const firstRow = rows[0];

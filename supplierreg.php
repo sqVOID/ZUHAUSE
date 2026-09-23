@@ -44,7 +44,7 @@ if (isset($_GET['edit'])) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_supplier'])) {
     $store_name_raw = $_POST['store_name'];
     $contact_number = $conn->real_escape_string($_POST['contact_number']);
-    $address = $conn->real_escape_string($_POST['address']);
+    $address = $conn->real_escape_string(strtoupper($_POST['address']));
     
     // Check for leading or trailing spaces
     if ($store_name_raw !== trim($store_name_raw)) {
@@ -956,6 +956,7 @@ if (!empty($selected_filter)) {
                     <label>Address</label>
                     <input type="text" name="address" id="address" placeholder="Enter supplier address"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['address']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
             </div>

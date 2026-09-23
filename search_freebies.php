@@ -61,7 +61,7 @@ try {
                 FROM items i 
                 LEFT JOIN stock_on_hand soh ON i.item_code = soh.item_code 
                     AND soh.branch = '" . $conn->real_escape_string($user_branch) . "'
-                    AND (LOWER(TRIM(soh.status)) = 'available' OR LOWER(TRIM(soh.status)) = 'active')
+                    AND (LOWER(TRIM(soh.status)) = 'available' OR LOWER(TRIM(soh.status)) = 'active' OR LOWER(TRIM(soh.status)) = 'good stock')
                 WHERE $whereClause 
                 AND i.status = 'Active'
                 AND (i.has_serial = 0 OR i.has_serial IS NULL)

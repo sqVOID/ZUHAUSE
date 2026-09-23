@@ -1691,12 +1691,12 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         <div class="form-group">
                             <label for="first_name">First Name </label>
                             <input type="text" id="first_name" name="first_name"
-                                placeholder="Enter First Name (Optional)"
+                                placeholder="Enter First Name"
                                 oninput="this.value = this.value.toUpperCase()">
                         </div>
                         <div class="form-group">
                             <label for="last_name">Last Name </label>
-                            <input type="text" id="last_name" name="last_name" placeholder="Enter Last Name (Optional)"
+                            <input type="text" id="last_name" name="last_name" placeholder="Enter Last Name"
                                 oninput="this.value = this.value.toUpperCase()">
                         </div>
                     </div>
@@ -1704,7 +1704,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="address">Address </label>
-                            <input type="text" id="address" name="address" placeholder="Enter Address (Optional)">
+                            <input type="text" id="address" name="address" placeholder="Enter Address">
                         </div>
                         <div class="form-group">
                             <label for="assisted_by">Assisted By</label>
@@ -1717,9 +1717,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                         $brand = htmlspecialchars($user['brand'] ?? '');
                                         $displayText = $name;
 
-                                        // If there's a brand (promoter), include it in the option
+                                        // If there's a brand (promoter), display as "Brand - Full Name"
                                         if (!empty($brand)) {
-                                            echo '<option value="' . $displayText . '">' . $displayText . ' - ' . $brand . '</option>';
+                                            echo '<option value="' . $displayText . '">' . $brand . ' - ' . $displayText . '</option>';
                                         } else {
                                             echo '<option value="' . $displayText . '">' . $displayText . '</option>';
                                         }
@@ -1734,7 +1734,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         <div class="form-group">
                             <label for="contact_no">Contact No</label>
                             <input type="text" id="contact_no" name="contact_no"
-                                placeholder="Enter Contact No. (Optional)"
+                                placeholder="Enter Contact No."
                                 oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
                         <div class="form-group">

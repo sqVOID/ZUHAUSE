@@ -103,7 +103,7 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_promo'])) {
-    $promo_name   = $conn->real_escape_string(trim($_POST['promo_name']));
+    $promo_name   = $conn->real_escape_string(strtoupper(trim($_POST['promo_name'])));
     $start_date   = $conn->real_escape_string(trim($_POST['start_date'] ?? ''));
     $end_date     = $conn->real_escape_string(trim($_POST['end_date'] ?? ''));
     $branch_raw   = isset($_POST['branch']) && is_array($_POST['branch']) ? implode(', ', $_POST['branch']) : '';
@@ -1273,6 +1273,7 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
                     <div class="form-group">
                         <label>Promo Name</label>
                         <input type="text" name="promo_name" placeholder="Enter promo name"
+                            oninput="this.value = this.value.toUpperCase()"
                             value="<?php echo $editMode ? htmlspecialchars($editData['promo_name']) : ''; ?>" required>
                     </div>
                     <div class="form-group">

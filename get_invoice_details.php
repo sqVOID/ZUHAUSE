@@ -11,6 +11,9 @@ include 'config.php';
 ob_clean();
 header('Content-Type: application/json');
 
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS voucher_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS token_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+
 // Get invoice number from query parameter
 $invoice_no = isset($_GET['invoice_no']) ? trim($_GET['invoice_no']) : '';
 
@@ -54,6 +57,7 @@ try {
             se.created_at,
             se.status,
             se.upgrade,
+            se.original_invoice_no,
             se.page_type,
             se.promo_id,
             se.promo_usage_number,
@@ -61,17 +65,18 @@ try {
                 SELECT SUM(uoi.price)
                 FROM upgrades u
                 JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
-                WHERE u.original_invoice_no = se.invoice_no
+                WHERE (u.new_invoice_no = se.invoice_no OR u.original_invoice_no = se.invoice_no)
             ), 0) AS old_unit_amount,
             (
                 SELECT u.payment_data
                 FROM upgrades u
-                WHERE u.original_invoice_no = se.invoice_no
+                WHERE (u.new_invoice_no = se.invoice_no OR u.original_invoice_no = se.invoice_no)
                 ORDER BY u.id DESC
                 LIMIT 1
             ) AS upgrade_payment_data
         FROM sales_entry se 
         WHERE se.invoice_no = ?
+          AND (se.page_type != 'claimpreorder' OR se.page_type IS NULL)
         LIMIT 1
     ");
 
@@ -127,7 +132,7 @@ try {
         $po_query = $conn->prepare("
             SELECT 
                 p.id,
-                p.invoice_no,
+                COALESCE(ph.invoice_no, p.invoice_no) AS invoice_no,
                 p.first_name,
                 p.last_name,
                 p.address,
@@ -136,7 +141,7 @@ try {
                 p.assisted_by,
                 p.remarks,
                 p.total_qty,
-                p.total_amount,
+                COALESCE(ph.amount, p.total_amount) AS total_amount,
                 p.discount,
                 0 AS voucher_amount,
                 0 AS token,
@@ -151,10 +156,10 @@ try {
                 NULL AS tradein_brand,
                 0 AS points,
                 0 AS commission,
-                p.payment_data,
-                p.encoder,
+                COALESCE(ph.payment_data, p.payment_data) AS payment_data,
+                COALESCE(ph.encoder, p.encoder) AS encoder,
                 p.branch_code,
-                p.created_at,
+                COALESCE(ph.payment_date, p.created_at) AS created_at,
                 p.status,
                 NULL AS upgrade,
                 'preorder' AS page_type,
@@ -162,10 +167,12 @@ try {
                 0 AS old_unit_amount,
                 NULL AS upgrade_payment_data
             FROM preorders p 
-            WHERE p.invoice_no = ?
+            LEFT JOIN preorder_payment_history ph ON ph.preorder_id = p.id AND ph.invoice_no = ?
+            WHERE p.invoice_no = ? OR ph.invoice_no = ?
+            ORDER BY (ph.invoice_no = ?) DESC
             LIMIT 1
         ");
-        $po_query->bind_param("s", $invoice_no);
+        $po_query->bind_param("ssss", $invoice_no, $invoice_no, $invoice_no, $invoice_no);
         $po_query->execute();
         $po_result = $po_query->get_result();
 
@@ -202,10 +209,13 @@ try {
         }
         $poi_query->close();
 
-        // Calculate actual paid amount for preorder
-        $paid = $compute_po_paid($sale['payment_data']);
-        $sale['actual_total_amount'] = $paid > 0 ? $paid : $sale['total_amount'];
-        $sale['total_amount'] = $paid > 0 ? $paid : $sale['total_amount'];
+        // Calculate actual paid amount for preorder (or use the transaction amount)
+        $paid = floatval($sale['total_amount']);
+        if ($paid <= 0) {
+            $paid = $compute_po_paid($sale['payment_data']);
+        }
+        $sale['actual_total_amount'] = $paid;
+        $sale['total_amount'] = $paid;
 
         // Check if assisted_by is a promoter and fetch their brand
         $assisted_by_brand = '';
@@ -249,8 +259,19 @@ try {
             sei.imei,
             sei.quantity,
             sei.price,
-            sei.is_promo_item
+            sei.is_promo_item,
+            COALESCE(
+                NULLIF(sei.voucher_amount, 0),
+                CASE WHEN i.has_voucher = 1 THEN COALESCE(i.voucher_amount, 0) ELSE 0 END,
+                0
+            ) AS voucher_amount,
+            COALESCE(
+                NULLIF(sei.token_amount, 0),
+                CASE WHEN i.has_token = 1 THEN COALESCE(i.token_amount, 0) ELSE 0 END,
+                0
+            ) AS token_amount
         FROM sales_entry_items sei 
+        LEFT JOIN items i ON i.item_code = sei.item_code
         WHERE sei.sales_entry_id = ?
         ORDER BY sei.id
     ");
@@ -321,6 +342,32 @@ try {
         }
         $promo_items_query->close();
     }
+
+    // Fetch unclaimed freebies linked to this invoice
+    $freebies = [];
+    $freebies_query = $conn->prepare("
+        SELECT 
+            uf.item_code,
+            uf.item_description,
+            uf.quantity,
+            uf.status,
+            uf.note,
+            uf.created_at,
+            uf.claimed_at
+        FROM unclaimed_freebies uf
+        WHERE uf.invoice_number = ?
+           OR uf.sales_entry_id = ?
+        ORDER BY uf.id
+    ");
+    $freebies_query->bind_param("si", $invoice_no, $sale['id']);
+    $freebies_query->execute();
+    $freebies_result = $freebies_query->get_result();
+    if ($freebies_result && $freebies_result->num_rows > 0) {
+        while ($fb = $freebies_result->fetch_assoc()) {
+            $freebies[] = $fb;
+        }
+    }
+    $freebies_query->close();
 
     // Calculate actual_total_amount (same logic as fetch_sales_report.php)
     $payment_data = [];
@@ -441,7 +488,8 @@ try {
         'sale' => $sale,
         'items' => $items,
         'promo_details' => $promo_details,
-        'promo_items' => $promo_items
+        'promo_items' => $promo_items,
+        'freebies' => $freebies
     ]);
 
 } catch (Exception $e) {

@@ -12,6 +12,9 @@ session_start();
 ob_clean();
 header('Content-Type: application/json');
 
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS voucher_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS token_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+
 // Get POST data
 $input = file_get_contents('php://input');
 $data = json_decode($input, true);
@@ -69,6 +72,8 @@ try {
             se.total_qty,
             se.total_amount,
             se.discount,
+            se.voucher_amount,
+            se.token,
             se.commission,
             se.payment_data,
             se.encoder,
@@ -81,7 +86,7 @@ try {
                 SELECT SUM(uoi.price)
                 FROM upgrades u
                 JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
-                WHERE (u.original_invoice_no = se.invoice_no OR u.new_invoice_no = se.invoice_no)
+                WHERE u.new_invoice_no = se.invoice_no
             ), 0) AS old_unit_amount,
             (
                 SELECT u.payment_data
@@ -101,6 +106,7 @@ try {
         LEFT JOIN refunds r ON r.invoice_no = se.invoice_no
         WHERE DATE(se.created_at) BETWEEN ? AND ?
           AND se.branch_code = ?
+          AND (se.page_type != 'claimpreorder' OR se.page_type IS NULL)
         ORDER BY se.created_at ASC
     ");
 
@@ -123,26 +129,45 @@ try {
                     sei.quantity,
                     sei.price,
                     sei.is_promo_item,
+                    COALESCE(
+                        NULLIF(sei.voucher_amount, 0),
+                        CASE WHEN i.has_voucher = 1 THEN COALESCE(i.voucher_amount, 0) ELSE 0 END,
+                        0
+                    ) AS voucher_amount,
+                    COALESCE(
+                        NULLIF(sei.token_amount, 0),
+                        CASE WHEN i.has_token = 1 THEN COALESCE(i.token_amount, 0) ELSE 0 END,
+                        0
+                    ) AS token_amount,
                     (SELECT COUNT(*) FROM refund_items ri 
                      JOIN refunds r ON r.id = ri.refund_id 
                      WHERE r.invoice_no = ? 
                        AND ri.item_code = sei.item_code 
                        AND (ri.imei = sei.imei OR (IFNULL(ri.imei,'') = IFNULL(sei.imei,'')))
                     ) > 0 AS is_refunded,
-                     (SELECT COUNT(*) FROM upgrade_new_items uni
-                      JOIN upgrades u ON u.id = uni.upgrade_id
-                      WHERE u.new_invoice_no = ?
-                        AND TRIM(uni.item_code) = TRIM(sei.item_code)
-                        AND (
-                            (IFNULL(TRIM(uni.imei), '') = '' AND IFNULL(TRIM(sei.imei), '') = '')
-                            OR UPPER(TRIM(uni.imei)) = UPPER(TRIM(sei.imei))
-                        )
-                     ) > 0 AS is_upgrade_item
+                    (SELECT COUNT(*) FROM upgrade_new_items uni
+                     JOIN upgrades u ON u.id = uni.upgrade_id
+                     WHERE u.new_invoice_no = ?
+                       AND TRIM(uni.item_code) = TRIM(sei.item_code)
+                       AND (
+                           (IFNULL(TRIM(uni.imei), '') = '' AND IFNULL(TRIM(sei.imei), '') = '')
+                           OR UPPER(TRIM(uni.imei)) = UPPER(TRIM(sei.imei))
+                       )
+                    ) > 0 AS is_upgrade_item,
+                    (SELECT COUNT(*) FROM upgrade_old_items uoi
+                     JOIN upgrades u ON u.id = uoi.upgrade_id
+                     WHERE u.original_invoice_no = ?
+                       AND (
+                           (IFNULL(TRIM(uoi.imei), '') != '' AND UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei)))
+                           OR (IFNULL(TRIM(uoi.imei), '') = '' AND UPPER(TRIM(uoi.item_description)) = UPPER(TRIM(sei.item_description)))
+                       )
+                    ) > 0 AS is_old_upgrade_item
                 FROM sales_entry_items sei 
+                LEFT JOIN items i ON i.item_code = sei.item_code
                 WHERE sei.sales_entry_id = ?
                 ORDER BY sei.id
             ");
-            $items_query->bind_param("ssi", $sale['invoice_no'], $sale['invoice_no'], $sale['id']);
+            $items_query->bind_param("sssi", $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['id']);
             $items_query->execute();
             $items_result = $items_query->get_result();
 
@@ -244,92 +269,39 @@ try {
     }
     $sales_query->close();
 
-    // ── Include preorder downpayments in report ───────────────────────────────
-    // Helper: compute total paid from payment_data JSON
-    function computePreorderPaidAmount($pd_json)
-    {
-        $amount = 0.0;
-        $pd = json_decode($pd_json, true);
-        if (!is_array($pd))
-            return $amount;
-
-        // Handle multiple payments
-        if (isset($pd['payment_type']) && $pd['payment_type'] === 'multiple') {
-            foreach ((array) ($pd['payments'] ?? []) as $p) {
-                if (isset($p['amount'])) {
-                    // Direct amount (cash, ewallet, credit_card, etc.)
-                    $amount += floatval(str_replace(',', '', $p['amount']));
-                } elseif (isset($p['payment_type']) && $p['payment_type'] === 'payment_partners') {
-                    // Payment partners - calculate loan_balance + down payments
-                    $loan_balance = isset($p['loan_balance']) ? floatval(str_replace(',', '', $p['loan_balance'])) : 0;
-                    $down_payment = 0;
-
-                    if (isset($p['cash_dp_amount'])) {
-                        $down_payment += floatval(str_replace(',', '', $p['cash_dp_amount']));
-                    }
-                    if (isset($p['gcash_dp_amount'])) {
-                        $down_payment += floatval(str_replace(',', '', $p['gcash_dp_amount']));
-                    }
-                    if (isset($p['maya_dp_amount'])) {
-                        $down_payment += floatval(str_replace(',', '', $p['maya_dp_amount']));
-                    }
-
-                    $amount += $loan_balance + $down_payment;
-                }
-            }
-        } else {
-            // Single payment
-            if (isset($pd['amount'])) {
-                // Direct amount
-                $amount = floatval(str_replace(',', '', $pd['amount']));
-            } elseif (isset($pd['payment_type']) && $pd['payment_type'] === 'payment_partners') {
-                // Payment partners - calculate loan_balance + down payments
-                $loan_balance = isset($pd['loan_balance']) ? floatval(str_replace(',', '', $pd['loan_balance'])) : 0;
-                $down_payment = 0;
-
-                if (isset($pd['cash_dp_amount'])) {
-                    $down_payment += floatval(str_replace(',', '', $pd['cash_dp_amount']));
-                }
-                if (isset($pd['gcash_dp_amount'])) {
-                    $down_payment += floatval(str_replace(',', '', $pd['gcash_dp_amount']));
-                }
-                if (isset($pd['maya_dp_amount'])) {
-                    $down_payment += floatval(str_replace(',', '', $pd['maya_dp_amount']));
-                }
-
-                $amount = $loan_balance + $down_payment;
-            }
-        }
-
-        return $amount;
-    }
-
-    // Fetch preorders created on this date range (downpayment row)
-    // EXCLUDE 'claimed' preorders where the pre-order was FULLY PAID (invoice reused as sales_entry)
-    // INCLUDE 'claimed' preorders that were originally PARTIAL (they had a separate downpayment row)
+    // ── Include preorder payment transactions in report ────────────────────────
     $po_query = $conn->prepare("
         SELECT
-            p.id, p.invoice_no, p.first_name, p.last_name,
-            p.assisted_by, p.remarks, p.total_qty, p.total_amount,
-            p.discount, p.payment_data, p.encoder, p.branch_code,
-            p.created_at, p.status
-        FROM preorders p
-        WHERE DATE(p.created_at) BETWEEN ? AND ?
+            ph.id              AS ph_id,
+            ph.invoice_no      AS payment_invoice_no,
+            ph.payment_date,
+            ph.amount          AS payment_amount,
+            ph.payment_type    AS ph_payment_type,
+            ph.payment_method  AS ph_payment_method,
+            ph.payment_data    AS ph_payment_data,
+            ph.payment_sequence,
+            ph.encoder         AS ph_encoder,
+            p.id               AS preorder_id,
+            p.invoice_no       AS preorder_no,
+            p.first_name,
+            p.last_name,
+            p.assisted_by,
+            p.remarks,
+            p.total_qty,
+            p.total_amount     AS preorder_total_srp,
+            p.discount,
+            p.payment_data     AS full_payment_data,
+            p.encoder          AS preorder_encoder,
+            p.branch_code,
+            p.status           AS preorder_status,
+            p.created_at       AS preorder_created_at,
+            p.claimed_at,
+            p.claimed_invoice_no
+        FROM preorder_payment_history ph
+        INNER JOIN preorders p ON ph.preorder_id = p.id
+        WHERE DATE(ph.payment_date) BETWEEN ? AND ?
           AND p.branch_code = ?
-          AND (
-              p.status NOT IN ('claimed')
-              OR (
-                  -- Include claimed preorders that were originally partial
-                  -- (they had a real downpayment that should appear on the creation date)
-                  p.status = 'claimed'
-                  AND EXISTS (
-                      SELECT 1 FROM preorder_payment_history pph
-                      WHERE pph.preorder_id = p.id
-                      AND pph.payment_sequence > 1
-                  )
-              )
-          )
-        ORDER BY p.created_at ASC
+        ORDER BY ph.payment_date ASC, ph.payment_sequence ASC
     ");
     $po_query->bind_param("sss", $date_from, $date_to, $branch_code);
     $po_query->execute();
@@ -337,26 +309,12 @@ try {
 
     if ($po_result) {
         while ($po = $po_result->fetch_assoc()) {
-            // For claimed preorders that were partial: only show the initial downpayment amount
-            // For all others: show total paid amount
-            if ($po['status'] === 'claimed') {
-                // Get only the FIRST payment from payment history (the initial downpayment)
-                $first_pay_q = $conn->prepare("
-                    SELECT amount FROM preorder_payment_history
-                    WHERE preorder_id = ? ORDER BY payment_sequence ASC LIMIT 1
-                ");
-                $first_pay_q->bind_param("i", $po['id']);
-                $first_pay_q->execute();
-                $first_pay_res = $first_pay_q->get_result()->fetch_assoc();
-                $first_pay_q->close();
-                $paid = $first_pay_res ? floatval($first_pay_res['amount']) : computePreorderPaidAmount($po['payment_data']);
-            } else {
-                $paid = computePreorderPaidAmount($po['payment_data']);
-            }
+            $paid = floatval($po['payment_amount']);
+            $invoice_display = !empty($po['payment_invoice_no']) ? $po['payment_invoice_no'] : $po['preorder_no'];
 
             // Build item list from preorder_items
             $poi_q = $conn->prepare("SELECT family_code AS item_description, item_code, imei, quantity, price FROM preorder_items WHERE preorder_id = ?");
-            $poi_q->bind_param("i", $po['id']);
+            $poi_q->bind_param("i", $po['preorder_id']);
             $poi_q->execute();
             $poi_res = $poi_q->get_result();
             $po_items = [];
@@ -374,21 +332,27 @@ try {
             $poi_q->close();
 
             $sales_data[] = [
-                'id' => 'PO-' . $po['id'],
-                'invoice_no' => $po['invoice_no'],
+                'id' => 'PO-' . $po['preorder_id'] . '-' . $po['ph_id'],
+                'is_preorder' => true,
+                'preorder_id' => $po['preorder_id'],
+                'original_preorder_no' => $po['preorder_no'],
+                'preorder_status' => $po['preorder_status'],
+                'claimed_at' => $po['claimed_at'],
+                'claimed_invoice_no' => $po['claimed_invoice_no'],
+                'invoice_no' => $invoice_display,
                 'first_name' => $po['first_name'],
                 'last_name' => $po['last_name'],
                 'assisted_by' => $po['assisted_by'],
                 'remarks' => '(PRE-ORDER) ' . $po['remarks'],
                 'total_qty' => $po['total_qty'],
-                'total_amount' => $paid,          // payment actually made
-                'actual_total_amount' => $paid,          // same as total_amount for preorders
+                'total_amount' => $paid,          // payment actually made for this invoice
+                'actual_total_amount' => $paid,   // same as total_amount for preorders
                 'discount' => 0,
                 'commission' => 0,
-                'payment_data' => $po['payment_data'],
-                'encoder' => $po['encoder'],
+                'payment_data' => !empty($po['ph_payment_data']) ? $po['ph_payment_data'] : $po['full_payment_data'],
+                'encoder' => !empty($po['ph_encoder']) ? $po['ph_encoder'] : $po['preorder_encoder'],
                 'branch_code' => $po['branch_code'],
-                'created_at' => $po['created_at'],
+                'created_at' => $po['payment_date'],
                 'status' => 'completed',
                 'upgrade' => null,
                 'old_unit_amount' => 0,
@@ -400,6 +364,11 @@ try {
                 'display_status' => 'completed',
                 'items' => $po_items,
             ];
+
+            // Track last invoice
+            if (empty($last_invoice) || $invoice_display > $last_invoice) {
+                $last_invoice = $invoice_display;
+            }
         }
     }
     $po_query->close();

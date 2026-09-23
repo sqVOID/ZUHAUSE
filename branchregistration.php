@@ -89,7 +89,7 @@ if (isset($_GET['edit'])) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_branch'])) {
     $branch_name_raw = $_POST['branch_name'];
     $branch_code_raw = $_POST['branch_code'];
-    $address = $conn->real_escape_string($_POST['address']);
+    $address = $conn->real_escape_string(strtoupper($_POST['address']));
     $area = $conn->real_escape_string($_POST['area']);
 
     // Check for leading or trailing spaces in branch name
@@ -113,7 +113,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_branch'])) {
         $messageType = "error";
     }
     else {
-        $branch_name = $conn->real_escape_string($branch_name_raw);
+        // Convert branch name to uppercase before saving
+        $branch_name = $conn->real_escape_string(strtoupper($branch_name_raw));
         $branch_code = $conn->real_escape_string($branch_code_raw);
 
     // Check if updating or inserting
@@ -1026,6 +1027,7 @@ if (!empty($selected_filter)) {
                     <label>Branch Name <span style="color: red;">*</span></label>
                     <input type="text" name="branch_name" id="branch_name" placeholder="Enter branch name"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['branch_name']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
                 <div class="form-group">
@@ -1040,6 +1042,7 @@ if (!empty($selected_filter)) {
                 <div class="form-group">
                     <label>Address <span style="color: red;">*</span></label>
                     <textarea name="address" id="address" placeholder="Enter branch address" rows="4"
+                        oninput="this.value = this.value.toUpperCase()"
                         required><?php echo $editMode && $editData ? htmlspecialchars($editData['address']) : ''; ?></textarea>
                 </div>
                 <div class="form-group">

@@ -54,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_bank'])) {
         $messageType = "error";
     }
     else {
-        $bank_name = $conn->real_escape_string(trim($bank_name_raw));
+        $bank_name = $conn->real_escape_string(strtoupper(trim($bank_name_raw)));
 
         // Check if updating or inserting
         if (isset($_POST['bank_record_id']) && !empty($_POST['bank_record_id'])) {
@@ -930,6 +930,7 @@ if (!empty($selected_filter)) {
                         <label>Bank Name</label>
                         <input type="text" name="bank_name" required
                             value="<?php echo $editMode ? htmlspecialchars($editData['bank_name']) : ''; ?>"
+                            oninput="this.value = this.value.toUpperCase()"
                             placeholder="Enter Bank Name">
                     </div>
                 </div>

@@ -64,7 +64,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_promoter'])) 
         $message = "Promoter name contains special characters! (Only letters, numbers, and spaces are allowed)";
         $messageType = "error";
     } else {
-        $name = $conn->real_escape_string($name_raw);
+        // Convert name to uppercase before saving
+        $name = $conn->real_escape_string(strtoupper($name_raw));
 
         // Check if updating or inserting
         if (isset($_POST['promoter_id']) && !empty($_POST['promoter_id'])) {
@@ -1106,6 +1107,7 @@ $brands_for_form_result = $conn->query("SELECT brand_name FROM brands ORDER BY b
                     <label>Name</label>
                     <input type="text" name="name" id="name" placeholder="Enter name"
                         value="<?php echo $editMode && $editData ? htmlspecialchars($editData['name']) : ''; ?>"
+                        oninput="this.value = this.value.toUpperCase()"
                         required>
                 </div>
                 <div class="form-group">

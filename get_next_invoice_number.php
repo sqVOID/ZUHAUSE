@@ -270,10 +270,10 @@ if (isset($_POST['action']) && $_POST['action'] == 'get_invoice_number') {
     if ($booklet) {
         $invoice_number = generateInvoiceNumber($booklet);
         
-        // Add -PRE suffix for preorder page type
-        if ($page_type === 'preorder') {
-            $invoice_number .= '-PRE';
-        }
+        // Removed -PRE suffix for preorder page type
+        // if ($page_type === 'preorder') {
+        //     $invoice_number .= '-PRE';
+        // }
         
         echo json_encode([
             'success' => true,

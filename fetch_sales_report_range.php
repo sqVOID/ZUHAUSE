@@ -9,6 +9,10 @@ require_once 'config.php';
 ob_clean();
 header('Content-Type: application/json');
 
+// Ensure per-item voucher/token columns exist (idempotent)
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS voucher_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS token_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+
 $input = file_get_contents('php://input');
 $data = json_decode($input, true);
 
@@ -90,8 +94,20 @@ try {
             COALESCE(sei.quantity, 0) AS quantity,
             COALESCE(sei.price, 0) AS item_price,
             COALESCE(se.discount, 0) AS invoice_discount,
+            COALESCE(se.voucher_amount, 0) AS invoice_voucher,
+            COALESCE(se.token, 0) AS invoice_token,
             se.total_amount AS invoice_total,
             (COALESCE(sei.quantity, 0) * COALESCE(sei.price, 0)) AS item_subtotal,
+            COALESCE(
+                NULLIF(sei.voucher_amount, 0),
+                CASE WHEN i.has_voucher = 1 THEN COALESCE(i.voucher_amount, 0) ELSE 0 END,
+                0
+            ) AS item_voucher,
+            COALESCE(
+                NULLIF(sei.token_amount, 0),
+                CASE WHEN i.has_token = 1 THEN COALESCE(i.token_amount, 0) ELSE 0 END,
+                0
+            ) AS item_token,
             COALESCE(se.commission, 0.00) AS commission,
             COALESCE(i.family_code, '') AS family_code,
             COALESCE(sei.imei, '') AS imei,
@@ -177,10 +193,14 @@ try {
                 }
             }
 
-            // Calculate total_sales with proportional discount applied
+            // Calculate total_sales: apply voucher/token to the specific item (not pro-rated)
             $item_subtotal = floatval($row['item_subtotal']);
             $invoice_subtotal = floatval($row['invoice_subtotal']);
             $invoice_discount = floatval($row['invoice_discount']);
+            $invoice_voucher = floatval($row['invoice_voucher'] ?? 0);
+            $invoice_token = floatval($row['invoice_token'] ?? 0);
+            $item_voucher = floatval($row['item_voucher'] ?? 0);
+            $item_token = floatval($row['item_token'] ?? 0);
 
             // SRP is the item_subtotal (price × quantity without discount)
             $srp_amount = $item_subtotal;
@@ -238,27 +258,49 @@ try {
                 }
             }
 
-            // Calculate proportional total_sales
+            // Calculate total_sales
             if ($invoice_total_from_pd > 0 && $invoice_subtotal > 0) {
                 // Loan transaction: distribute loan total proportionally across items
                 $proportion = $item_subtotal / $invoice_subtotal;
                 $total_sales = round($invoice_total_from_pd * $proportion);
             } else {
-                // Non-loan (cash, card, QR, etc.): distribute se.total_amount proportionally.
-                // se.total_amount already reflects the actual payment amount including any
-                // card/QR installment surcharges — same source used by the Daily Sales Report.
-                $invoice_total = floatval($row['invoice_total']); // se.total_amount from SQL
-                if ($invoice_subtotal > 0 && $invoice_total > 0) {
-                    $proportion = $item_subtotal / $invoice_subtotal;
-                    $total_sales = round($invoice_total * $proportion);
-                } elseif ($invoice_subtotal > 0 && $invoice_discount > 0) {
-                    // Fallback: apply discount proportionally if total_amount not available
-                    $proportion = $item_subtotal / $invoice_subtotal;
-                    $item_discount = round($invoice_discount * $proportion);
-                    $total_sales = $item_subtotal - $item_discount;
-                } else {
-                    $total_sales = $item_subtotal;
+                // Non-loan: deduct this item's own voucher/token (+ proportional invoice discount)
+                $item_discount = 0;
+                if ($invoice_subtotal > 0 && $invoice_discount > 0) {
+                    $item_discount = round($invoice_discount * ($item_subtotal / $invoice_subtotal));
                 }
+                $item_net = $item_subtotal - $item_voucher - $item_token - $item_discount;
+                $expected_total = $invoice_subtotal - $invoice_voucher - $invoice_token - $invoice_discount;
+                $invoice_total = floatval($row['invoice_total']); // se.total_amount
+
+                // Card/QR surcharge: scale nets so they still sum to se.total_amount
+                if ($expected_total > 0 && $invoice_total > 0 && abs($invoice_total - $expected_total) > 0.02) {
+                    $total_sales = round($invoice_total * ($item_net / $expected_total));
+                } else {
+                    $total_sales = round($item_net);
+                }
+            }
+
+            // For upgrade items, calculate the actual cash paid for the upgrade
+            if (!empty($row['is_upgrade_item'])) {
+                $upgPaid = 0;
+                if (!empty($pd['Amount'])) {
+                    $upgPaid = floatval(str_replace(',', '', (string)$pd['Amount']));
+                } elseif (!empty($pd['Enter Amount'])) {
+                    $upgPaid = floatval(str_replace(',', '', (string)$pd['Enter Amount']));
+                } elseif (!empty($pd['Cash Amount'])) {
+                    $upgPaid = floatval(str_replace(',', '', (string)$pd['Cash Amount']));
+                }
+                if ($upgPaid <= 0) {
+                    $rawUpgAmt = floatval($row['upgrade_amount']);
+                    $disc = floatval($row['discount']);
+                    if ($rawUpgAmt > $disc && $rawUpgAmt == $srp_amount) {
+                        $upgPaid = $rawUpgAmt - $disc;
+                    } else {
+                        $upgPaid = $rawUpgAmt;
+                    }
+                }
+                $row['upgrade_amount'] = $upgPaid;
             }
 
             // Add the calculated values to the row

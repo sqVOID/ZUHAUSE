@@ -49827,3 +49827,505 @@ Stock SQL: INSERT INTO stock_on_hand
 Item added to stock successfully
 Updating purchase_order_allocations with received quantities and invoice number
 === TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-23 15:22:19 ===
+POST data: Array
+(
+    [po_id] => 243
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => 54208F
+)
+
+PO ID: 243
+New Status: Received
+Invoice Number: 54208F
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: 
+Serial Numbers Decoded: Array
+(
+)
+
+Serial Numbers Count: 0
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = '54208F' WHERE id = 243
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row GLOBE SIM FREEBIES-1 (has_serial=0) with serials: NULL, imei2: NULL
+Updating row IPHONE 15 128GB-2 (has_serial=0) with serials: NULL, imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 243 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 2 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 708
+    [po_id] => 243
+    [po_number] => PO-2026-028
+    [item_no] => 1
+    [family_code] => GLOBE SIM FREEBIES
+    [item_model] => SAMSUNG-GLOBE-SIM
+    [item_description] => SAMSUNG GLOBE SIM FREEBIES
+    [serial_number] => 
+    [quantity] => 10
+    [allocated_quantity] => 10
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 15:21:11
+    [received_qty] => 10
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 0
+)
+
+Item details - Model: SAMSUNG-GLOBE-SIM, Desc: SAMSUNG GLOBE SIM FREEBIES, FC: GLOBE SIM FREEBIES, ItemNo: 1, HasSerial: NO
+Non-serialized item (has_serial=0), adding to stock as accessories
+Item SAMSUNG-GLOBE-SIM and PO PO-2026-028 already exists in stock, skipping
+Processing item for stock: Array
+(
+    [id] => 709
+    [po_id] => 243
+    [po_number] => PO-2026-028
+    [item_no] => 2
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-CASE-PREMIUM
+    [item_description] => IPHONE 15 128GB CASE PREMIUM
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 1
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 15:21:11
+    [received_qty] => 1
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 0
+)
+
+Item details - Model: IPHONE-15-128GB-CASE-PREMIUM, Desc: IPHONE 15 128GB CASE PREMIUM, FC: IPHONE 15 128GB, ItemNo: 2, HasSerial: NO
+Non-serialized item (has_serial=0), adding to stock as accessories
+Stock SQL: INSERT INTO stock_on_hand 
+                                  (item_code, description, item_type, dr_number, branch, 
+                                   dr_date, system_entry_date, status, quantity, family_code)
+                                  VALUES 
+                                  ('IPHONE-15-128GB-CASE-PREMIUM', 'IPHONE 15 128GB CASE PREMIUM', 'Accessories', 
+                                   'PO-2026-028', 'ZUHAUSE INFANTA', 
+                                   '2026-09-23 15:22:19', '2026-09-23 15:22:19', 'Good Stock', 1, 'IPHONE 15 128GB')
+Item added to stock successfully
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-23 16:03:34 ===
+POST data: Array
+(
+    [po_id] => 243
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => 54208F
+)
+
+PO ID: 243
+New Status: Received
+Invoice Number: 54208F
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: 
+Serial Numbers Decoded: Array
+(
+)
+
+Serial Numbers Count: 0
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = '54208F' WHERE id = 243
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row GLOBE SIM FREEBIES-1 (has_serial=0) with serials: NULL, imei2: NULL
+Updating row IPHONE 15 128GB-2 (has_serial=0) with serials: NULL, imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 243 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 2 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 710
+    [po_id] => 243
+    [po_number] => PO-2026-028
+    [item_no] => 1
+    [family_code] => GLOBE SIM FREEBIES
+    [item_model] => SAMSUNG-GLOBE-SIM
+    [item_description] => SAMSUNG GLOBE SIM FREEBIES
+    [serial_number] => 
+    [quantity] => 10
+    [allocated_quantity] => 10
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 16:02:55
+    [received_qty] => 10
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 0
+)
+
+Item details - Model: SAMSUNG-GLOBE-SIM, Desc: SAMSUNG GLOBE SIM FREEBIES, FC: GLOBE SIM FREEBIES, ItemNo: 1, HasSerial: NO
+Non-serialized item (has_serial=0), adding to stock as accessories
+Item SAMSUNG-GLOBE-SIM and PO PO-2026-028 already exists in stock, skipping
+Processing item for stock: Array
+(
+    [id] => 711
+    [po_id] => 243
+    [po_number] => PO-2026-028
+    [item_no] => 2
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-CASE-PREMIUM
+    [item_description] => IPHONE 15 128GB CASE PREMIUM
+    [serial_number] => 
+    [quantity] => 2
+    [allocated_quantity] => 2
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 16:02:55
+    [received_qty] => 2
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 0
+)
+
+Item details - Model: IPHONE-15-128GB-CASE-PREMIUM, Desc: IPHONE 15 128GB CASE PREMIUM, FC: IPHONE 15 128GB, ItemNo: 2, HasSerial: NO
+Non-serialized item (has_serial=0), adding to stock as accessories
+Item IPHONE-15-128GB-CASE-PREMIUM and PO PO-2026-028 already exists in stock, skipping
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-23 16:12:54 ===
+POST data: Array
+(
+    [po_id] => 240
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TESTI212H
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"JCI12J13I12J3IC"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"CJ12I3PCJI23CJ1"},{"family_code":"HUAWEI MATEPAD 11.5 S","item_no":2,"serial_number":"C124C124"}]
+    [serial_numbers_2] => [{"family_code":"HUAWEI MATEPAD 11.5 S","item_no":2,"imei_2":"C1C1412C4124"}]
+)
+
+PO ID: 240
+New Status: Received
+Invoice Number: TESTI212H
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"JCI12J13I12J3IC"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"CJ12I3PCJI23CJ1"},{"family_code":"HUAWEI MATEPAD 11.5 S","item_no":2,"serial_number":"C124C124"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => JCI12J13I12J3IC
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => CJ12I3PCJI23CJ1
+        )
+
+    [2] => Array
+        (
+            [family_code] => HUAWEI MATEPAD 11.5 S
+            [item_no] => 2
+            [serial_number] => C124C124
+        )
+
+)
+
+Serial Numbers Count: 3
+Serial Numbers 2 Raw: [{"family_code":"HUAWEI MATEPAD 11.5 S","item_no":2,"imei_2":"C1C1412C4124"}]
+Serial Numbers 2 Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => HUAWEI MATEPAD 11.5 S
+            [item_no] => 2
+            [imei_2] => C1C1412C4124
+        )
+
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = 'TESTI212H' WHERE id = 240
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 15 128GB-1 (has_serial=1) with serials: 'JCI12J13I12J3IC\nCJ12I3PCJI23CJ1', imei2: NULL
+Updating row IPHONE 15 128GB-2 (has_serial=0) with serials: NULL, imei2: NULL
+Updating row HUAWEI MATEPAD 11.5 S-2 (has_serial=1) with serials: 'C124C124', imei2: 'C1C1412C4124'
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 240 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 3 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 712
+    [po_id] => 240
+    [po_number] => PO-2026-025
+    [item_no] => 1
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-BLUE
+    [item_description] => IPHONE 15 128GB BLUE
+    [serial_number] => 
+    [quantity] => 2
+    [allocated_quantity] => 3
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 16:12:19
+    [received_qty] => 2
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-15-128GB-BLUE, Desc: IPHONE 15 128GB BLUE, FC: IPHONE 15 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => JCI12J13I12J3IC
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => CJ12I3PCJI23CJ1
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: JCI12J13I12J3IC (imei2: ) with status: Good Stock
+Serial JCI12J13I12J3IC already exists in stock, skipping
+Adding serial to stock: CJ12I3PCJI23CJ1 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'CJ12I3PCJI23CJ1', NULL, 'PO-2026-025', 'ZUHAUSE INFANTA', 
+                                       '2026-09-23 16:12:54', '2026-09-23 16:12:54', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 714
+    [po_id] => 240
+    [po_number] => PO-2026-025
+    [item_no] => 2
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-CASE-PREMIUM
+    [item_description] => IPHONE 15 128GB CASE PREMIUM
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 0
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 16:12:52
+    [received_qty] => 1
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 0
+)
+
+Item details - Model: IPHONE-15-128GB-CASE-PREMIUM, Desc: IPHONE 15 128GB CASE PREMIUM, FC: IPHONE 15 128GB, ItemNo: 2, HasSerial: NO
+Non-serialized item (has_serial=0), adding to stock as accessories
+Stock SQL: INSERT INTO stock_on_hand 
+                                  (item_code, description, item_type, dr_number, branch, 
+                                   dr_date, system_entry_date, status, quantity, family_code)
+                                  VALUES 
+                                  ('IPHONE-15-128GB-CASE-PREMIUM', 'IPHONE 15 128GB CASE PREMIUM', 'Accessories', 
+                                   'PO-2026-025', 'ZUHAUSE INFANTA', 
+                                   '2026-09-23 16:12:54', '2026-09-23 16:12:54', 'Good Stock', 1, 'IPHONE 15 128GB')
+Item added to stock successfully
+Processing item for stock: Array
+(
+    [id] => 713
+    [po_id] => 240
+    [po_number] => PO-2026-025
+    [item_no] => 2
+    [family_code] => HUAWEI MATEPAD 11.5 S
+    [item_model] => HUAWE-MATEPAD-11.5-S-2025
+    [item_description] => HUAWE MATEPAD 11.5 S 2025
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 1
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-23 16:12:19
+    [received_qty] => 1
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: HUAWE-MATEPAD-11.5-S-2025, Desc: HUAWE MATEPAD 11.5 S 2025, FC: HUAWEI MATEPAD 11.5 S, ItemNo: 2, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => HUAWEI MATEPAD 11.5 S
+            [item_no] => 2
+            [serial_number] => C124C124
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => HUAWEI MATEPAD 11.5 S
+            [item_no] => 2
+            [imei_2] => C1C1412C4124
+        )
+
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: C124C124 (imei2: C1C1412C4124) with status: Good Stock
+Serial C124C124 already exists in stock, skipping
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===

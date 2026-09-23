@@ -117,7 +117,7 @@ if ($booklet) {
     }
 
     // Use booklet number configuration
-    $invoice_no = generateInvoiceNumber($booklet) . '-PRE';
+    $invoice_no = generateInvoiceNumber($booklet);
 
     // Auto-increment for numeric formats
     // Also increment 'custom' format if current_number is purely numeric (e.g. 0000001)

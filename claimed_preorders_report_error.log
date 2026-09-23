@@ -1,0 +1,30 @@
+[23-Sep-2026 14:45:39 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:40 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:40 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:40 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:40 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:41 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:41 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:45:43 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(71): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:47:44 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(72): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}
+[23-Sep-2026 14:47:46 Asia/Manila] Exception in get_claimed_preorders_report.php: Unknown column 'p.preorder_no' in 'field list'
+#0 C:\xampp\htdocs\ZUHAUSE\get_claimed_preorders_report.php(72): mysqli->prepare('SELECT \r\n      ...')
+#1 {main}

@@ -22,6 +22,10 @@ $conn->query("ALTER TABLE sales_entry ADD INDEX IF NOT EXISTS idx_promo_id (prom
 // Ensure is_promo_item column exists in sales_entry_items (idempotent)
 $conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS is_promo_item TINYINT(1) NOT NULL DEFAULT 0 AFTER dr_number");
 
+// Per-item voucher/token (so reports don't pro-rate header totals across all units)
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS voucher_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER is_promo_item");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS token_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER voucher_amount");
+
 
 // Get POST data
 $data = json_decode(file_get_contents('php://input'), true);
@@ -479,8 +483,10 @@ try {
             price,
             item_code,
             dr_number,
-            is_promo_item
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            is_promo_item,
+            voucher_amount,
+            token_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     foreach ($data['items'] as $item) {
@@ -489,6 +495,8 @@ try {
         $quantity = $item['quantity'];
         $price = $item['price'];
         $item_code = isset($item['item_code']) ? trim(strtoupper($item['item_code'])) : '';
+        $item_voucher = isset($item['voucher_amount']) ? floatval($item['voucher_amount']) : 0.00;
+        $item_token = isset($item['token_amount']) ? floatval($item['token_amount']) : 0.00;
 
         // ── Capture original dr_number BEFORE touching stock ────────────────
         $original_dr_number = '';
@@ -538,7 +546,7 @@ try {
         $is_promo_item = isset($item['is_promo_item']) ? intval($item['is_promo_item']) : 0;
 
         $stmt_items->bind_param(
-            "issidssi",
+            "issidssidd",
             $sales_entry_id,
             $item_description,
             $imei,
@@ -546,7 +554,9 @@ try {
             $price,
             $item_code,
             $original_dr_number,
-            $is_promo_item
+            $is_promo_item,
+            $item_voucher,
+            $item_token
         );
         $stmt_items->execute();
 

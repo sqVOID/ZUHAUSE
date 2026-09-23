@@ -1913,9 +1913,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                         $brand = htmlspecialchars($user['brand'] ?? '');
                                         $displayText = $name;
 
-                                        // If there's a brand (promoter), include it in the option
+                                        // If there's a brand (promoter), display as "Brand - Full Name"
                                         if (!empty($brand)) {
-                                            echo '<option value="' . $displayText . '">' . $displayText . ' - ' . $brand . '</option>';
+                                            echo '<option value="' . $displayText . '">' . $brand . ' - ' . $displayText . '</option>';
                                         } else {
                                             echo '<option value="' . $displayText . '">' . $displayText . '</option>';
                                         }
@@ -3754,13 +3754,22 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             (appliedPromoId && currentPrice === 0 && basePrice > 0)
                         ) ? 1 : 0;
 
+                        const hasVoucher = parseInt(row.getAttribute('data-has-voucher')) || 0;
+                        const hasToken = parseInt(row.getAttribute('data-has-token')) || 0;
+                        const rowVoucher = (hasVoucher === 1) ? (parseFloat(row.getAttribute('data-voucher-amount')) || 0) : 0;
+                        const rowToken = (hasToken === 1) ? (parseFloat(row.getAttribute('data-token-amount')) || 0) : 0;
+
                         items.push({
                             description: cells[0].textContent.trim(),
                             imei: cells[1].textContent.trim(),
                             quantity: parseInt(qtyInput.value) || 0,
                             price: currentPrice,
                             item_code: itemCode,
-                            is_promo_item: isPromoItem
+                            is_promo_item: isPromoItem,
+                            has_voucher: hasVoucher,
+                            voucher_amount: rowVoucher,
+                            has_token: hasToken,
+                            token_amount: rowToken
                         });
                     }
                 });
@@ -4261,6 +4270,29 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 filterBanksByTerminalId('dc');
             }
 
+            /** Sort Terms: higher months first (36, 24, 12...), non-month labels (e.g. Straight) last. */
+            function sortTermsDropdownDescending(termsDropdown) {
+                if (!termsDropdown) return;
+                const placeholder = Array.from(termsDropdown.options).find(opt => opt.value === '');
+                const options = Array.from(termsDropdown.options).filter(opt => opt.value !== '');
+                const rank = (opt) => {
+                    const text = (opt.textContent || opt.value || '').replace(/<[^>]*>/g, '').trim();
+                    const m = text.match(/(\d+)\s*Months?/i);
+                    return m ? parseInt(m[1], 10) : -1;
+                };
+                options.sort((a, b) => rank(b) - rank(a));
+                termsDropdown.innerHTML = '';
+                if (placeholder) {
+                    termsDropdown.appendChild(placeholder);
+                } else {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Select Terms';
+                    termsDropdown.appendChild(opt);
+                }
+                options.forEach(o => termsDropdown.appendChild(o));
+            }
+
             // Initialize listeners for Card Payment Dropdowns
             document.addEventListener('DOMContentLoaded', function () {
                 const pairs = [
@@ -4306,8 +4338,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 const isOtherBank = otherBanksList.includes(selectedBank);
 
                                 if (isOtherBank) {
-                                    // For Other Banks: Add standard installment terms
-                                    const standardTerms = ['3 Months', '6 Months', '12 Months', '24 Months'];
+                                    // For Other Banks: Add standard installment terms (highest months first)
+                                    const standardTerms = ['24 Months', '12 Months', '6 Months', '3 Months'];
                                     standardTerms.forEach(term => {
                                         const option = document.createElement('option');
                                         option.value = term;
@@ -4315,10 +4347,12 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                         option.setAttribute('data-is-other-bank', 'true');
                                         termsDropdown.appendChild(option);
                                     });
+                                    sortTermsDropdownDescending(termsDropdown);
 
                                     // Restore previous selection if it exists in new options
                                     if (previousTerm && standardTerms.includes(previousTerm)) {
                                         termsDropdown.value = previousTerm;
+                                        termsDropdown.dispatchEvent(new Event('change'));
                                     }
 
                                     // Keep amount field editable for Other Banks
@@ -4342,6 +4376,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                             termsDropdown.appendChild(option);
                                         }
                                     }
+                                    sortTermsDropdownDescending(termsDropdown);
 
                                     // Restore previous selection if it exists in new options
                                     if (previousTerm) {
@@ -4349,6 +4384,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                         const matchingOption = options.find(opt => opt.value === previousTerm);
                                         if (matchingOption) {
                                             termsDropdown.value = previousTerm;
+                                            termsDropdown.dispatchEvent(new Event('change'));
                                         }
                                     }
                                 }
@@ -4371,15 +4407,38 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             const currentPrices = unitInfo.prices;
 
                             if (isOtherBank) {
-                                // For Other Banks: Keep amount editable
+                                // For Other Banks: Keep amount editable, prefill net due (after token/voucher/discount)
                                 if (amountInput) {
                                     amountInput.removeAttribute('readonly');
                                     amountInput.placeholder = 'Enter amount';
+                                    const context = (typeof getCartAndPaymentContext === 'function')
+                                        ? getCartAndPaymentContext()
+                                        : null;
+                                    if (context && context.activeSelectedDue > 0) {
+                                        const formattedPrice = formatNumber(context.activeSelectedDue);
+                                        amountInput.value = formattedPrice;
+                                        amountInput.dispatchEvent(new Event('input'));
+                                        const section = amountInput.closest(pair.sectionClass);
+                                        if (section) {
+                                            const totalInput = section.querySelector('.total-input');
+                                            if (totalInput) totalInput.value = formattedPrice;
+                                        }
+                                    }
                                     amountInput.focus();
                                 }
                             } else if (fullKey && currentPrices[fullKey] !== undefined) {
-                                // For regular banks: Set price from item and make readonly
-                                const price = currentPrices[fullKey];
+                                // For regular banks: Set price from item and make readonly.
+                                // Deduct token/voucher/discount so Amount matches Total Amount Due.
+                                let price = parseFloat(currentPrices[fullKey]) || 0;
+                                const context = (typeof getCartAndPaymentContext === 'function')
+                                    ? getCartAndPaymentContext()
+                                    : null;
+                                if (context) {
+                                    const deductions = (context.activeSelectedToken || 0)
+                                        + (context.activeSelectedVoucher || 0)
+                                        + (context.discountAmount || 0);
+                                    price = Math.max(0, price - deductions);
+                                }
                                 if (amountInput) {
                                     const formattedPrice = formatNumber(price);
                                     amountInput.value = formattedPrice;
@@ -6396,20 +6455,22 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             hiddenInput.value = JSON.stringify(data);
 
                             // Global Payment Validation: Sum of ALL entered payments must equal Target Amount Due
+                            // Exception: Credit Card / Debit Card may exceed (bank installment rates).
                             const globalTotalInputCheck = document.getElementById('globalTotalInput');
                             const overallTotalPayment = parseFloat(globalTotalInputCheck ? (globalTotalInputCheck.value || '0').replace(/[^0-9.-]/g, '') : '0') || 0;
 
                             const context = (typeof getCartAndPaymentContext === 'function') ? getCartAndPaymentContext() : null;
                             const targetAmountDue = context ? context.activeSelectedDue : _originalTotalAmountDue;
                             const overallDifference = targetAmountDue - overallTotalPayment;
+                            const isExceeded = overallDifference < -0.01;
+                            const cardExceedAllowed = isExceeded && (typeof hasCardPaymentAmount === 'function') && hasCardPaymentAmount();
 
-                            if (targetAmountDue > 0 && Math.abs(overallDifference) > 0.01) {
+                            if (targetAmountDue > 0 && Math.abs(overallDifference) > 0.01 && !cardExceedAllowed) {
                                 const bkBanner = document.getElementById('paymentBreakdownBanner');
                                 if (bkBanner) bkBanner.style.display = 'none';
 
                                 const neededDisp = targetAmountDue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                 const enteredDisp = overallTotalPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                const isExceeded = overallDifference < -0.01;
                                 const diffLabel = isExceeded ? 'Exceeded Amount:' : 'Remaining Balance:';
                                 const diffAmount = Math.abs(overallDifference);
                                 const diffDisp = diffAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -6432,12 +6493,12 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                                 </div>
                                                 ${hasVoucher ? `
                                                 <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #16a34a; margin-top: 2px;">
-                                                    <span style="font-weight: 600;">↳ Less Voucher:</span>
+                                                    <span style="font-weight: 600;">↳ Voucher:</span>
                                                     <span style="font-weight: 600;">-₱${item.voucherAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>` : ''}
                                                 ${hasToken ? `
                                                 <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #d97706; margin-top: 2px;">
-                                                    <span style="font-weight: 600;">↳ Less Token:</span>
+                                                    <span style="font-weight: 600;">↳ Token:</span>
                                                     <span style="font-weight: 600;">-₱${item.tokenAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>` : ''}
                                                 ${(hasVoucher || hasToken) ? `
@@ -6512,6 +6573,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                                 }
                                             }
                                             if (isAmount && !labelText) labelText = 'Amount';
+                                            if (isAmount && (input.id === 'creditCardAmount' || input.id === 'debitCardAmount')) {
+                                                labelText = formatCardTermsAmountLabel(input.id);
+                                            }
 
                                             if (isAmount) {
                                                 let val = parseFloat(input.value.replace(/,/g, '')) || 0;
@@ -6754,6 +6818,38 @@ if ($promos_result && $promos_result->num_rows > 0) {
             }
             window.getCartAndPaymentContext = getCartAndPaymentContext;
 
+            /** True when Credit Card or Debit Card section is visible and has an Amount > 0. */
+            function hasCardPaymentAmount() {
+                const parseAmt = (id) => {
+                    const el = document.getElementById(id);
+                    return parseFloat((el && el.value ? el.value : '0').replace(/[^0-9.-]/g, '')) || 0;
+                };
+                const ccSec = document.querySelector('.credit-card-section');
+                const dcSec = document.querySelector('.debit-card-section');
+                const ccActive = ccSec && ccSec.style.display === 'block' && parseAmt('creditCardAmount') > 0;
+                const dcActive = dcSec && dcSec.style.display === 'block' && parseAmt('debitCardAmount') > 0;
+                return !!(ccActive || dcActive);
+            }
+            window.hasCardPaymentAmount = hasCardPaymentAmount;
+
+            /** e.g. "12 Months" → "12 Terms Amount"; "Straight" → "Straight Amount" */
+            function formatCardTermsAmountLabel(amountInputId) {
+                const termsId = (amountInputId === 'debitCardAmount')
+                    ? 'debitCardTermsDropdown'
+                    : 'creditCardTermsDropdown';
+                const termsEl = document.getElementById(termsId);
+                if (!termsEl || !termsEl.value) return 'Amount';
+                const raw = (termsEl.options[termsEl.selectedIndex]
+                    ? termsEl.options[termsEl.selectedIndex].text
+                    : termsEl.value) || '';
+                const clean = String(raw).replace(/<[^>]*>/g, '').trim();
+                if (!clean) return 'Amount';
+                const m = clean.match(/(\d+)\s*Months?/i);
+                if (m) return m[1] + ' Terms Amount';
+                return clean + ' Amount';
+            }
+            window.formatCardTermsAmountLabel = formatCardTermsAmountLabel;
+
             document.addEventListener('DOMContentLoaded', function () {
                 // Function to update global total based on input across all sections
                 function updateSectionTotal() {
@@ -6839,8 +6935,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const enteredDisp = globalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const overallDifference = targetDue - globalTotal;
                     const isExceeded = overallDifference < -0.01;
-                    const isPerfectMatch = (Math.abs(overallDifference) <= 0.01 && globalTotal > 0);
-                    const diffLabel = isExceeded ? 'Exceeded Amount:' : 'Remaining Balance:';
+                    const cardExceedAllowed = isExceeded && hasCardPaymentAmount();
+                    const isPerfectMatch = (Math.abs(overallDifference) <= 0.01 && globalTotal > 0) || cardExceedAllowed;
+                    const diffLabel = isExceeded ? (cardExceedAllowed ? 'Card Excess:' : 'Exceeded Amount:') : 'Remaining Balance:';
                     const diffAmount = Math.abs(overallDifference);
                     const diffDisp = diffAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -6865,17 +6962,17 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                     </div>
                                     ${hasVoucher ? `
                                     <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #16a34a; margin-top: 2px;">
-                                        <span style="font-weight: 600;">↳ Less Voucher:</span>
+                                        <span style="font-weight: 600;">↳ Voucher:</span>
                                         <span style="font-weight: 600;">-₱${item.voucherAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>` : ''}
                                     ${hasToken ? `
                                     <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #d97706; margin-top: 2px;">
-                                        <span style="font-weight: 600;">↳ Less Token:</span>
+                                        <span style="font-weight: 600;">↳ Token:</span>
                                         <span style="font-weight: 600;">-₱${item.tokenAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>` : ''}
                                     ${hasDiscount ? `
                                     <div style="display: flex; justify-content: space-between; padding-left: 14px; font-size: 12px; color: #dc2626; margin-top: 2px;">
-                                        <span style="font-weight: 600;">↳ Less Discount:</span>
+                                        <span style="font-weight: 600;">↳ Discount:</span>
                                         <span style="font-weight: 600;">-₱${context.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>` : ''}
                                     ${(hasVoucher || hasToken || hasDiscount) ? `
@@ -6962,6 +7059,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                     }
                                 }
                                 if (isAmount && !labelText) labelText = 'Amount';
+                                if (isAmount && (input.id === 'creditCardAmount' || input.id === 'debitCardAmount')) {
+                                    labelText = formatCardTermsAmountLabel(input.id);
+                                }
 
                                 if (isAmount) {
                                     let val = parseFloat(input.value.replace(/,/g, '')) || 0;
@@ -7007,12 +7107,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         : '';
 
                     let statusText = "You are currently entering your breakdown details.";
-                    if (isPerfectMatch) {
+                    if (isPerfectMatch && !cardExceedAllowed) {
                         statusText = "Payment matches Total Amount Due.";
+                    } else if (cardExceedAllowed) {
+                        statusText = "Card payment exceeds Total Amount Due (allowed for Credit/Debit).";
                     } else if (isExceeded) {
                         statusText = "Payment exceeds Total Amount Due. Please adjust your payment.";
                     }
-                    let diffColor = isPerfectMatch ? "#16a34a" : (isExceeded ? "#dc2626" : "#ca8a04");
+                    let diffColor = (isPerfectMatch || cardExceedAllowed) ? "#16a34a" : (isExceeded ? "#dc2626" : "#ca8a04");
 
                     banner.innerHTML = `
                         <div style="display: flex; align-items: flex-start; gap: 12px;">

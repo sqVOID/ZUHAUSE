@@ -7,7 +7,7 @@ require_once 'config.php';
 
 <head>
     <meta charset="UTF-8">
-       <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
+    <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
     <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <title>Monthly Sales Report</title>
     <style>
@@ -376,7 +376,7 @@ require_once 'config.php';
             margin-bottom: 12px;
         }
 
-     
+
         .doc-logo {
             margin-left: -33px;
             height: 130px;
@@ -921,7 +921,7 @@ require_once 'config.php';
                 // Fetch areas based on user access
                 $user_branch = isset($_SESSION['user_branch']) ? trim($_SESSION['user_branch']) : '';
                 $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level']) : '';
-                
+
                 if ($system_level === 'Super-Admin' || strtoupper($user_branch) === 'SUPERADMIN') {
                     // Super-Admin sees all areas
                     $areas_query = $conn->query("SELECT * FROM areas WHERE status = 'Active' ORDER BY area_name ASC");
@@ -936,13 +936,13 @@ require_once 'config.php';
                     $user_branches = array_filter($user_branches, function ($branch) {
                         return !empty($branch);
                     });
-                    
+
                     if (!empty($user_branches)) {
-                        $branch_names_quoted = array_map(function($name) use ($conn) {
+                        $branch_names_quoted = array_map(function ($name) use ($conn) {
                             return "'" . $conn->real_escape_string($name) . "'";
                         }, $user_branches);
                         $branch_in_clause = implode(', ', $branch_names_quoted);
-                        
+
                         // Get unique areas from user's branches
                         $areas_query = $conn->query("
                             SELECT DISTINCT b.area 
@@ -953,7 +953,7 @@ require_once 'config.php';
                             AND b.status = 'Active' 
                             ORDER BY b.area ASC
                         ");
-                        
+
                         if ($areas_query && $areas_query->num_rows > 0) {
                             while ($area_row = $areas_query->fetch_assoc()) {
                                 if (!empty($area_row['area'])) {
@@ -1117,22 +1117,22 @@ require_once 'config.php';
         function toggleSection(element) {
             const section = element.parentElement;
             const isCurrentlyCollapsed = section.classList.contains('collapsed');
-            
+
             // Close all other sections (accordion behavior)
             const allSections = document.querySelectorAll('.menu-section');
-            allSections.forEach(function(s) {
+            allSections.forEach(function (s) {
                 if (s !== section) {
                     s.classList.add('collapsed');
                 }
             });
-            
+
             // Toggle the clicked section
             if (isCurrentlyCollapsed) {
                 section.classList.remove('collapsed');
             } else {
                 section.classList.add('collapsed');
             }
-            
+
             // Save the sidebar state to persist across navigation
             if (typeof saveSidebarState === 'function') {
                 saveSidebarState();
@@ -1163,16 +1163,16 @@ require_once 'config.php';
         function updateAreaFromBranch() {
             const branchSelect = document.getElementById('filterBranch');
             const areaSelect = document.getElementById('filterArea');
-            
+
             if (!branchSelect || !areaSelect) return;
-            
+
             const selectedBranch = branchSelect.value;
-            
+
             if (selectedBranch) {
                 // Get the data-area attribute from selected branch
                 const selectedOption = branchSelect.options[branchSelect.selectedIndex];
                 const branchArea = selectedOption.getAttribute('data-area') || '';
-                
+
                 // Auto-select the area
                 if (branchArea) {
                     areaSelect.value = branchArea;
@@ -1223,7 +1223,7 @@ require_once 'config.php';
                 alert('From date cannot be later than To date.');
                 return;
             }
-            
+
             // Require Branch to be selected (Area is optional for filtering)
             if (!branch) {
                 alert('Please select a Branch before searching.');
@@ -1268,16 +1268,15 @@ require_once 'config.php';
                         const isUpgd = row.is_upgrade_item == 1;
                         const oldUnitAmountRaw = Number(row.old_unit_amount || 0);
                         const upgradeUnitAmountRaw = Number(row.upgrade_amount || 0);
-                        const discountRaw = Number(row.discount || 0);
 
-                        // Balance paid on new unit upgrade = upgrade_amount - discount
-                        const cashPaidUpgd = isUpgd ? Math.max(0, upgradeUnitAmountRaw - discountRaw) : 0;
+                        // Cash paid on new unit upgrade (upgrade_amount is already the cash paid)
+                        const cashPaidUpgd = isUpgd ? upgradeUnitAmountRaw : 0;
 
                         // Original sale (0017/0019) retains its total_sales amount (e.g. 39,990.00).
                         // New upgrade invoice (0018/0020) has total_sales = 0, and cashPaidUpgd in TOTAL SALES UPGD.
                         const displayTotalSales = isUpgd ? 0 : Number(row.total_sales || 0);
                         const displayDateUpg = isUpgd ? formatDateOnly(row.date_sold) : '';
-                        
+
                         const displayOldUnitAmount = isUpgd
                             ? oldUnitAmountRaw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '0.00';

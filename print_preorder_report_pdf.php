@@ -54,7 +54,7 @@ if ($system_level === 'Super-Admin' || $system_level === 'Sub-admin' || strtoupp
     $branch_query->bind_param('s', $branch);
     $branch_query->execute();
     $branch_result = $branch_query->get_result();
-    
+
     if ($branch_result && $branch_result->num_rows > 0) {
         $branch_data = $branch_result->fetch_assoc();
         $branch_code = $branch_data['branch_code'];
@@ -72,7 +72,7 @@ if ($system_level === 'Super-Admin' || $system_level === 'Sub-admin' || strtoupp
     $branch_query->bind_param('s', $branch);
     $branch_query->execute();
     $branch_result = $branch_query->get_result();
-    
+
     if ($branch_result && $branch_result->num_rows > 0) {
         $branch_data = $branch_result->fetch_assoc();
         $branch_code = $branch_data['branch_code'];
@@ -113,14 +113,14 @@ while ($row = $result->fetch_assoc()) {
     $item_created = $row['item_created_at'] ?? $row['preorder_created_at'];
     $preorder_created = $row['preorder_created_at'];
     $payment_date = $row['date_created'];
-    
+
     // Skip items that were added after this payment transaction
     if ($seq === 1 && !empty($item_created) && !empty($payment_date)) {
         if (strtotime($item_created) > strtotime($payment_date) + 60) {
             continue; // Item did not exist during Payment 1 (Deposit)
         }
     }
-    
+
     // Calculate payment amount for this row
     if ($unit_price == 0 || $total_amount == 0) {
         $payment_amount = 0.00;
@@ -138,20 +138,20 @@ while ($row = $result->fetch_assoc()) {
             $payment_amount = ($deposit_before > 0) ? min($total_amount, $deposit_before) : $total_amount;
         }
     }
-    
+
     $records[] = [
-        'preorder_no'        => $row['preorder_no'],
+        'preorder_no' => $row['preorder_no'],
         'claimed_invoice_no' => $row['claimed_invoice_no'],
-        'customer_name'      => $row['customer_name'],
-        'item_description'   => $row['item_description'],
-        'imei'               => $row['imei'],
-        'quantity'           => $row['quantity'],
-        'unit_price'         => $unit_price,
-        'total_amount'       => $total_amount,
-        'payment_amount'     => $payment_amount,
-        'status'             => $row['status'], // Use current status from preorders table
-        'date_created'       => $row['date_created'], // Use payment_date from history
-        'claimed_at'         => $row['claimed_at']
+        'customer_name' => $row['customer_name'],
+        'item_description' => $row['item_description'],
+        'imei' => $row['imei'],
+        'quantity' => $row['quantity'],
+        'unit_price' => $unit_price,
+        'total_amount' => $total_amount,
+        'payment_amount' => $payment_amount,
+        'status' => $row['status'], // Use current status from preorders table
+        'date_created' => $row['date_created'], // Use payment_date from history
+        'claimed_at' => $row['claimed_at']
     ];
 }
 
@@ -209,7 +209,7 @@ $pdf->SetFillColor(240, 240, 240);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('Courier', 'B', 6.5);
 
-$widths  = [28, 32, 45, 20, 10, 18, 20, 18, 18, 23, 24];
+$widths = [28, 32, 45, 20, 10, 18, 20, 18, 18, 23, 24];
 $headers = ['PRE ORDER NO', 'CUSTOMER NAME', 'ITEM DESCRIPTION', 'IMEI', 'QTY', 'UNIT PRICE', 'TOTAL AMT', 'PAYMENT', 'STATUS', 'DATE CREATED', 'DATE CLAIMED'];
 
 // Calculate starting X position to center the table
@@ -230,30 +230,30 @@ if (count($records) === 0) {
     $pdf->Cell(array_sum($widths), 8, 'NO DATA', 1, 1, 'C');
 } else {
     foreach ($records as $row) {
-        $preorder_no    = $row['preorder_no']      ? strtoupper($row['preorder_no'])                     : 'N/A';
-        $customer_name  = $row['customer_name']    ? strtoupper(substr($row['customer_name'], 0, 30))    : 'N/A';
-        $item_desc      = $row['item_description'] ? strtoupper(substr($row['item_description'], 0, 40))    : 'N/A';
-        $imei           = $row['imei']             ? strtoupper(substr($row['imei'], 0, 18))               : '';
-        $qty            = $row['quantity']          ? $row['quantity']                                    : '0';
-        $unit_price     = number_format($row['unit_price'], 2);
-        $total_amount   = number_format($row['total_amount'], 2);
+        $preorder_no = $row['preorder_no'] ? strtoupper($row['preorder_no']) : 'N/A';
+        $customer_name = $row['customer_name'] ? strtoupper(substr($row['customer_name'], 0, 30)) : 'N/A';
+        $item_desc = $row['item_description'] ? strtoupper(substr($row['item_description'], 0, 40)) : 'N/A';
+        $imei = $row['imei'] ? strtoupper(substr($row['imei'], 0, 18)) : '';
+        $qty = $row['quantity'] ? $row['quantity'] : '0';
+        $unit_price = number_format($row['unit_price'], 2);
+        $total_amount = number_format($row['total_amount'], 2);
         $payment_amount = number_format($row['payment_amount'], 2);
-        $status_display = $row['status']           ? strtoupper($row['status'])                          : 'N/A';
-        $date_created   = $row['date_created']     ? date('m/d/Y', strtotime($row['date_created']))      : 'N/A';
-        $date_claimed   = $row['claimed_at']       ? date('m/d/Y', strtotime($row['claimed_at']))        : '-';
-        
+        $status_display = $row['status'] ? strtoupper($row['status']) : 'N/A';
+        $date_created = $row['date_created'] ? date('m/d/Y', strtotime($row['date_created'])) : 'N/A';
+        $date_claimed = $row['claimed_at'] ? date('m/d/Y', strtotime($row['claimed_at'])) : '-';
+
         $pdf->SetX($start_x);
-        $pdf->Cell($widths[0], 6, $preorder_no,    1, 0, 'C');
-        $pdf->Cell($widths[1], 6, $customer_name,  1, 0, 'L');
-        $pdf->Cell($widths[2], 6, $item_desc,      1, 0, 'L');
-        $pdf->Cell($widths[3], 6, $imei,           1, 0, 'C');
-        $pdf->Cell($widths[4], 6, $qty,            1, 0, 'C');
-        $pdf->Cell($widths[5], 6, $unit_price,     1, 0, 'R');
-        $pdf->Cell($widths[6], 6, $total_amount,   1, 0, 'R');
+        $pdf->Cell($widths[0], 6, $preorder_no, 1, 0, 'C');
+        $pdf->Cell($widths[1], 6, $customer_name, 1, 0, 'L');
+        $pdf->Cell($widths[2], 6, $item_desc, 1, 0, 'L');
+        $pdf->Cell($widths[3], 6, $imei, 1, 0, 'C');
+        $pdf->Cell($widths[4], 6, $qty, 1, 0, 'C');
+        $pdf->Cell($widths[5], 6, $unit_price, 1, 0, 'R');
+        $pdf->Cell($widths[6], 6, $total_amount, 1, 0, 'R');
         $pdf->Cell($widths[7], 6, $payment_amount, 1, 0, 'R');
         $pdf->Cell($widths[8], 6, $status_display, 1, 0, 'C');
-        $pdf->Cell($widths[9], 6, $date_created,   1, 0, 'C');
-        $pdf->Cell($widths[10], 6, $date_claimed,  1, 1, 'C');
+        $pdf->Cell($widths[9], 6, $date_created, 1, 0, 'C');
+        $pdf->Cell($widths[10], 6, $date_claimed, 1, 1, 'C');
     }
 }
 

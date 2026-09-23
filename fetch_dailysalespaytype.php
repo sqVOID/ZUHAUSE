@@ -458,30 +458,35 @@ try {
             }
 
             // Determine the correct total amount to display.
-            // Use se.total_amount as the base.
-            // For new upgrade invoices (original_invoice_no is set), deduct trade-in discount (less_amount)
+            $isUpgradeInvoice = !empty($row['original_invoice_no']);
             $displayTotalAmount = round(floatval($row['total_amount']));
-            if (!empty($row['original_invoice_no'])) {
-                $discount = floatval($row['discount'] ?? 0);
-                $displayTotalAmount = round(floatval($row['total_amount']) - $discount);
-            }
 
-            if ($loanType !== '' && !empty($pd['Total'])) {
-                // This is a loan transaction - use Total from payment_data
-                $totalFromPaymentData = str_replace(',', '', $pd['Total']);
-                if (is_numeric($totalFromPaymentData) && (float)$totalFromPaymentData > 0) {
-                    $displayTotalAmount = round((float)$totalFromPaymentData);
+            if ($isUpgradeInvoice) {
+                // For upgrade invoices:
+                // payment_amount (Amount column) is the cash/payment paid (e.g. 1,400)
+                // total_amount (Total Amount column) is the full transaction value (SRP: e.g. 2,695)
+                $displayTotalAmount = round(floatval($row['invoice_items_total']) > 0 ? floatval($row['invoice_items_total']) : (floatval($row['total_amount']) + floatval($row['old_unit_amount'])));
+                if ($modalAmount === '' || $modalAmount == 0) {
+                    $modalAmount = round(floatval($row['total_amount']));
                 }
-            } elseif (!empty($pd['totalLoanAmount'])) {
-                // Alternative: check for totalLoanAmount field
-                $totalLoanAmt = str_replace(',', '', $pd['totalLoanAmount']);
-                if (is_numeric($totalLoanAmt) && (float)$totalLoanAmt > 0) {
-                    $displayTotalAmount = round((float)$totalLoanAmt);
+            } else {
+                if ($loanType !== '' && !empty($pd['Total'])) {
+                    // This is a loan transaction - use Total from payment_data
+                    $totalFromPaymentData = str_replace(',', '', $pd['Total']);
+                    if (is_numeric($totalFromPaymentData) && (float)$totalFromPaymentData > 0) {
+                        $displayTotalAmount = round((float)$totalFromPaymentData);
+                    }
+                } elseif (!empty($pd['totalLoanAmount'])) {
+                    // Alternative: check for totalLoanAmount field
+                    $totalLoanAmt = str_replace(',', '', $pd['totalLoanAmount']);
+                    if (is_numeric($totalLoanAmt) && (float)$totalLoanAmt > 0) {
+                        $displayTotalAmount = round((float)$totalLoanAmt);
+                    }
                 }
-            }
 
-            if ($modalAmount === '' || $modalAmount == 0 || !empty($row['original_invoice_no'])) {
-                $modalAmount = $displayTotalAmount;
+                if ($modalAmount === '' || $modalAmount == 0) {
+                    $modalAmount = $displayTotalAmount;
+                }
             }
 
             // Get SRP (invoice_items_total is the sum of item prices which is the SRP)

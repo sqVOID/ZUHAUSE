@@ -109,11 +109,25 @@ if ($isLoanPayment) {
 }
 
 // Fetch items for this sale
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS voucher_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS token_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00");
+
 $istmt = $conn->prepare(
-    "SELECT item_code, item_description, quantity, price
-     FROM sales_entry_items
-     WHERE sales_entry_id = ?
-     ORDER BY id"
+    "SELECT sei.item_code, sei.item_description, sei.quantity, sei.price, sei.imei,
+            COALESCE(
+                NULLIF(sei.voucher_amount, 0),
+                CASE WHEN i.has_voucher = 1 THEN COALESCE(i.voucher_amount, 0) ELSE 0 END,
+                0
+            ) AS voucher_amount,
+            COALESCE(
+                NULLIF(sei.token_amount, 0),
+                CASE WHEN i.has_token = 1 THEN COALESCE(i.token_amount, 0) ELSE 0 END,
+                0
+            ) AS token_amount
+     FROM sales_entry_items sei
+     LEFT JOIN items i ON i.item_code = sei.item_code
+     WHERE sei.sales_entry_id = ?
+     ORDER BY sei.id"
 );
 $istmt->bind_param("i", $id);
 $istmt->execute();
@@ -121,6 +135,7 @@ $ires = $istmt->get_result();
 
 $items = [];
 $invoice_subtotal = 0;
+$invoice_discount = floatval($sale['discount'] ?? 0);
 
 // First pass: calculate invoice subtotal
 while ($item = $ires->fetch_assoc()) {
@@ -144,57 +159,85 @@ foreach ($items as $item) {
     // Try unit_payment_map resolution first
     $perItemResolved = null;
     if (!empty($uMap)) {
-        $desc = strtoupper(trim((string)$item['item_description']));
-        $matchedMethod = null;
-        foreach ($uMap as $key => $method) {
-            if (strpos(strtoupper((string)$key), $desc) === 0) {
-                $matchedMethod = (string)$method;
-                break;
-            }
+        $mapMethods = [];
+        foreach ($uMap as $m) {
+            $cleanM = strtolower(trim((string)$m));
+            if ($cleanM !== '') $mapMethods[$cleanM] = true;
         }
-        $isLoanMethod = function ($m) {
-            $ml = strtolower((string)$m);
-            return strpos($ml, 'home credit') !== false || strpos($ml, 'salmon') !== false ||
-                   strpos($ml, 'sumisho') !== false || strpos($ml, 'payjoy') !== false ||
-                   strpos($ml, 'billease') !== false || strpos($ml, 'paymongo') !== false ||
-                   strpos($ml, 'skyro') !== false || strpos($ml, 'samsung') !== false ||
-                   strpos($ml, 'cebu') !== false || strpos($ml, 'partner') !== false ||
-                   strpos($ml, 'makati') !== false;
-        };
-        if ($matchedMethod && $isLoanMethod($matchedMethod)) {
-            $lbRaw = $pd['Loan Balance'] ?? $pd['loan_balance'] ?? $pd['totalLoanAmount'] ?? $pd['total_loan_amount'] ?? 0;
-            $loanTotal = floatval(str_replace(',', '', (string)$lbRaw));
-            $dpKeys = ['cash_down_payment_amount', 'cash_dp_amount', 'gcash_down_payment_amount', 'gcash_dp_amount', 'maya_down_payment_amount', 'maya_dp_amount'];
-            foreach ($dpKeys as $dk) {
-                if (isset($pd[$dk])) {
-                    $dpParts = explode('|', str_replace(',', '', (string)$pd[$dk]));
-                    $dpVal = floatval(trim($dpParts[0]));
-                    if ($dpVal > 0) $loanTotal += $dpVal;
+
+        if (count($mapMethods) > 1) {
+            $desc = strtoupper(trim((string)$item['item_description']));
+            $imei = strtoupper(trim((string)($item['imei'] ?? '')));
+            $matchedMethod = null;
+            if ($imei) {
+                foreach ($uMap as $key => $method) {
+                    if (strpos(strtoupper((string)$key), $imei) !== false) {
+                        $matchedMethod = (string)$method;
+                        break;
+                    }
                 }
             }
-            if ($loanTotal > 0) $perItemResolved = $loanTotal * intval($item['quantity'] ?? 1);
-        } elseif ($matchedMethod && strtolower($matchedMethod) === 'cash') {
-            $cashAmtRaw = (string)($pd['Amount'] ?? $pd['cash_amount'] ?? '');
-            $cashAmt = floatval(str_replace(',', '', trim($cashAmtRaw)));
-            if ($cashAmt > 0) $perItemResolved = $cashAmt * intval($item['quantity'] ?? 1);
+            if ($matchedMethod === null && $desc) {
+                foreach ($uMap as $key => $method) {
+                    if (strpos(strtoupper((string)$key), $desc) === 0) {
+                        $matchedMethod = (string)$method;
+                        break;
+                    }
+                }
+            }
+            $isLoanMethod = function ($m) {
+                $ml = strtolower((string)$m);
+                return strpos($ml, 'home credit') !== false || strpos($ml, 'salmon') !== false ||
+                       strpos($ml, 'sumisho') !== false || strpos($ml, 'payjoy') !== false ||
+                       strpos($ml, 'billease') !== false || strpos($ml, 'paymongo') !== false ||
+                       strpos($ml, 'skyro') !== false || strpos($ml, 'samsung') !== false ||
+                       strpos($ml, 'cebu') !== false || strpos($ml, 'partner') !== false ||
+                       strpos($ml, 'makati') !== false;
+            };
+
+            $matchedKey = strtolower(trim((string)$matchedMethod));
+            $countWithSameMethod = 0;
+            foreach ($uMap as $m) {
+                if (strtolower(trim((string)$m)) === $matchedKey) $countWithSameMethod++;
+            }
+
+            if ($matchedMethod && $countWithSameMethod === 1) {
+                if ($isLoanMethod($matchedMethod)) {
+                    $lbRaw = $pd['Loan Balance'] ?? $pd['loan_balance'] ?? $pd['totalLoanAmount'] ?? $pd['total_loan_amount'] ?? 0;
+                    $loanTotal = floatval(str_replace(',', '', (string)$lbRaw));
+                    $dpKeys = ['cash_down_payment_amount', 'cash_dp_amount', 'gcash_down_payment_amount', 'gcash_dp_amount', 'maya_down_payment_amount', 'maya_dp_amount'];
+                    foreach ($dpKeys as $dk) {
+                        if (isset($pd[$dk])) {
+                            $dpParts = explode('|', str_replace(',', '', (string)$pd[$dk]));
+                            $dpVal = floatval(trim($dpParts[0]));
+                            if ($dpVal > 0) $loanTotal += $dpVal;
+                        }
+                    }
+                    if ($loanTotal > 0) $perItemResolved = $loanTotal * intval($item['quantity'] ?? 1);
+                } elseif ($matchedKey === 'cash') {
+                    $cashAmtRaw = (string)($pd['Amount'] ?? $pd['cash_amount'] ?? '');
+                    $cashAmt = floatval(str_replace(',', '', trim($cashAmtRaw)));
+                    if ($cashAmt > 0) $perItemResolved = $cashAmt * intval($item['quantity'] ?? 1);
+                }
+            }
         }
     }
 
     if ($perItemResolved !== null) {
         $item_total = round($perItemResolved);
-    } elseif ($actual_total_amount > 0 && $invoice_subtotal > 0) {
+    } elseif ($actual_total_amount > 0 && $invoice_subtotal > 0 && $isLoanPayment) {
         // Loan transaction: use proportional calculation based on actual loan total
         $proportion = $item_subtotal / $invoice_subtotal;
         $item_total = round($actual_total_amount * $proportion);
     } else {
-        // Standard calculation with discount
+        // Standard: deduct this item's own voucher/token (+ proportional discount)
+        $item_voucher = floatval($item['voucher_amount'] ?? 0);
+        $item_token = floatval($item['token_amount'] ?? 0);
+        $item_discount = 0;
         if ($invoice_subtotal > 0 && $invoice_discount > 0) {
-            $proportion = $item_subtotal / $invoice_subtotal;
-            $item_discount = $invoice_discount * $proportion;
-            $item_total = $item_subtotal - $item_discount;
-        } else {
-            $item_total = $item_subtotal;
+            $item_discount = round($invoice_discount * ($item_subtotal / $invoice_subtotal));
         }
+        $item_total = round($item_subtotal - $item_voucher - $item_token - $item_discount);
     }
     
     $items_with_discount[] = [
@@ -203,6 +246,8 @@ foreach ($items as $item) {
         'quantity'         => $item['quantity'],
         'price'            => $item['price'],
         'srp'              => $srp_amount,
+        'voucher_amount'   => floatval($item['voucher_amount'] ?? 0),
+        'token_amount'     => floatval($item['token_amount'] ?? 0),
         'total'            => $item_total,
     ];
 }
