@@ -346,7 +346,7 @@ try {
                             (item_code, description, group_name, department, brand, family_code,
                              imei, quantity, branch, dr_date, dr_number, system_entry_date, item_type, status)
                         VALUES
-                            (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'Active')
+                            (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'Good Stock')
                     ");
                     $insert_stock->bind_param(
                         "ssssssssssss",
@@ -355,6 +355,12 @@ try {
                     );
                     $insert_stock->execute();
                     $insert_stock->close();
+                } else {
+                    // Ensure returned upgrade unit is marked Good Stock (not Active)
+                    $upd_status = $conn->prepare("UPDATE stock_on_hand SET status = 'Good Stock' WHERE imei = ? AND item_code = ? LIMIT 1");
+                    $upd_status->bind_param("ss", $imei, $item_code);
+                    $upd_status->execute();
+                    $upd_status->close();
                 }
             }
         }

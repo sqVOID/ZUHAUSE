@@ -1,3 +1,5 @@
+report.php
+100%
 <?php
 require_once 'session_check.php';
 require_once 'config.php';
