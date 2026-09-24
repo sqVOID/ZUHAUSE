@@ -1,19 +1,19 @@
-Timestamp: 2026-09-22 14:35:30
+Timestamp: 2026-09-24 17:32:02
 POST Data:
 Array
 (
     [imei_primary_order] => 1
-    [item_id] => 144
-    [item_code] => SAMSUNG-S25-ULTRA-12GB-512GB-A.WHT
-    [description] => SAMSUNG S25 ULTRA 12GB 512GB AURORA WHITE
-    [brand] => SAMSUNG
-    [family_code] => S24 ULTRA 12GB 512GB
-    [group] => MOBILE PHONE
-    [department] => SMARTPHONE
-    [srp] => 49,999.00
-    [commission] => 0
+    [item_id] => 134
+    [item_code] => IPHONE-16-128GB-PINK
+    [description] => IPHONE 16 128GB PINK
+    [brand] => APPLE
+    [family_code] => IPHONE 16 128GB
+    [group] => APPLE MOBILE
+    [department] => MOBILE
+    [srp] => 49990.00
+    [commission] => 0.00
     [tc_commission] => 0.00
-    [points] => 0
+    [points] => 0.00
     [freebie_item_code] => Array
         (
             [0] => 
@@ -24,16 +24,19 @@ Array
             [0] => 1
         )
 
-    [has_discount] => on
     [use_serial] => on
+    [use_serial_2] => on
     [voucher_amount] => 
-    [has_token] => on
-    [token_amount] => 1,500.00
+    [token_amount] => 
     [save_item] => 
-    [price_sets_json] => 
+    [price_sets_json] => [{"label":"Price Set 1","branches":["ZUHAUSE HEAD OFFICE","ZUHAUSE INFANTA","ZUHAUSE LOPEZ","ZUHAUSE LUCBAN","ZUHAUSE LUCENA","ZUHAUSE MAUBAN","ZUHAUSE TAYABAS"],"srp":"49990.00","prices":{"BDO Straight":"49990.00","BDO 24 Months":"52780"},"actives":{"BDO Straight":true,"BDO 3 Months":false,"BDO 6 Months":false,"BDO 12 Months":false,"BDO 24 Months":true,"BPI Straight":false,"BPI 3 Months":false,"BPI 6 Months":false,"BPI 12 Months":false,"BPI 24 Months":false,"E-West Straight":false,"E-West 3 Months":false,"E-West 6 Months":false,"E-West 12 Months":false,"E-West 24 Months":false,"MBTC Straight":false,"MBTC 3 Months":false,"MBTC 6 Months":false,"MBTC 12 Months":false,"MBTC 24 Months":false,"PNB Straight":false,"PNB 3 Months":false,"PNB 6 Months":false,"PNB 12 Months":false,"PNB 24 Months":false,"RCBC Straight":false,"RCBC 3 Months":false,"RCBC 6 Months":false,"RCBC 12 Months":false,"RCBC 24 Months":false,"Dealer Price":false,"Others Bank":false}}]
     [branch] => Array
         (
-            [0] => ZUHAUSE INFANTA
+            [0] => ZUHAUSE HEAD OFFICE
+            [1] => ZUHAUSE INFANTA
+            [2] => ZUHAUSE LOPEZ
+            [3] => ZUHAUSE LUCBAN
+            [4] => ZUHAUSE LUCENA
         )
 
 )

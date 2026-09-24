@@ -3649,14 +3649,32 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 return;
             }
 
-            // Get total amount from the form
+            // Get cart total from the form
             const totalAmountField = document.getElementById('totalAmount');
-            const totalAmount = parseFloat(totalAmountField.value.replace(/,/g, '')) || 0;
+            let totalAmount = parseFloat(totalAmountField.value.replace(/,/g, '')) || 0;
+
+            // Credit/Debit Card installment set prices (e.g. 24 Months) can exceed cart SRP.
+            // Prefer the actual payment total so invoice/report show the terms amount.
+            (function elevateTotalFromPayment() {
+                let paymentTotal = 0;
+                if (paymentData['Total'] || paymentData['total']) {
+                    paymentTotal = parseFloat(String(paymentData['Total'] || paymentData['total']).replace(/,/g, '')) || 0;
+                }
+                if (paymentTotal <= 0 && (paymentData['Amount'] || paymentData['amount'])) {
+                    String(paymentData['Amount'] || paymentData['amount']).split('|').forEach(part => {
+                        paymentTotal += parseFloat(String(part).replace(/,/g, '').trim()) || 0;
+                    });
+                }
+                if (paymentTotal > totalAmount + 0.01) {
+                    totalAmount = paymentTotal;
+                }
+            })();
 
             // Debug: Log discount field value
             const discountFieldDebug = document.getElementById('discountField');
             console.log('Discount Field Value:', discountFieldDebug.value);
             console.log('Total Amount Field Value:', totalAmountField.value);
+            console.log('Effective Total Amount (after payment elevate):', totalAmount);
 
             // Validate full payment for specific payment types
             const paymentType = paymentData.payment_type;
@@ -3793,7 +3811,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 voucher: parseFormattedNumber(document.getElementById('voucherField').value),
                 voucher_amount: parseFormattedNumber(document.getElementById('voucherField').value),
                 token: parseFormattedNumber(document.getElementById('tokenField').value),
-                total_amount: parseFormattedNumber(document.getElementById('totalAmount').value),
+                total_amount: totalAmount,
                 points: parseFormattedNumber(document.getElementById('pointsField').value),
                 commission: parseFormattedNumber(document.getElementById('commissionField').value),
                 payment_data: paymentData,

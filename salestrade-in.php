@@ -4732,6 +4732,26 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 }
             });
 
+            // Cart/trade-in net total from form
+            let totalAmount = parseFormattedNum(document.getElementById('totalAmount').value);
+
+            // Credit/Debit Card installment set prices (e.g. 24 Months) can exceed cart SRP.
+            // Prefer the actual payment total so invoice/report show the terms amount.
+            (function elevateTotalFromPayment() {
+                let paymentTotal = 0;
+                if (paymentData['Total'] || paymentData['total']) {
+                    paymentTotal = parseFloat(String(paymentData['Total'] || paymentData['total']).replace(/,/g, '')) || 0;
+                }
+                if (paymentTotal <= 0 && (paymentData['Amount'] || paymentData['amount'])) {
+                    String(paymentData['Amount'] || paymentData['amount']).split('|').forEach(part => {
+                        paymentTotal += parseFloat(String(part).replace(/,/g, '').trim()) || 0;
+                    });
+                }
+                if (paymentTotal > totalAmount + 0.01) {
+                    totalAmount = paymentTotal;
+                }
+            })();
+
             // Prepare data object
             const data = {
                 first_name: document.getElementById('first_name').value.trim(),
@@ -4760,7 +4780,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 discount: parseFormattedNum(document.getElementById('discountField').value),
                 voucher_amount: 0,
                 token: parseFormattedNum(document.getElementById('tokenField').value),
-                total_amount: parseFormattedNum(document.getElementById('totalAmount').value),
+                total_amount: totalAmount,
                 points: parseFormattedNum(document.getElementById('pointsField').value),
                 commission: parseFormattedNum(document.getElementById('commissionField').value),
 

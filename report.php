@@ -1481,6 +1481,42 @@ require_once 'config.php';
             return Math.round(itemNet);
         }
 
+        /**
+         * Effective invoice total: max(DB total, payment_data Amount/Total).
+         * Credit Card installment set prices are stored in payment_data but older
+         * rows may still have cart SRP in total_amount — prefer the higher payment.
+         */
+        function getEffectiveSaleTotal(sale, paymentData) {
+            const dbTotal = parseFloat(sale && (sale.actual_total_amount || sale.total_amount)) || 0;
+            if (!paymentData || typeof paymentData !== 'object') return dbTotal;
+
+            let payTotal = 0;
+            const totalRaw = paymentData['Total'] || paymentData['total'];
+            if (totalRaw !== undefined && totalRaw !== null && totalRaw !== '') {
+                const parts = String(totalRaw).split('|');
+                for (let part of parts) {
+                    const v = parseFloat(String(part).replace(/,/g, '').trim());
+                    if (!isNaN(v) && v > 0) { payTotal = v; break; }
+                }
+            }
+            if (payTotal <= 0) {
+                const amtRaw = paymentData['Amount'] || paymentData['amount'] || '';
+                String(amtRaw).split('|').forEach(part => {
+                    const v = parseFloat(String(part).replace(/,/g, '').trim());
+                    if (!isNaN(v) && v > 0) payTotal += v;
+                });
+            }
+            // Also include Loan Balance for financing when present
+            const lbRaw = paymentData['Loan Balance'] || paymentData['loan_balance'] || paymentData['totalLoanAmount'];
+            if (lbRaw !== undefined && lbRaw !== null && lbRaw !== '') {
+                const lb = parseFloat(String(lbRaw).replace(/,/g, '').trim());
+                if (!isNaN(lb) && lb > 0 && payTotal <= 0) payTotal = lb;
+            }
+
+            return Math.max(dbTotal, payTotal);
+        }
+        window.getEffectiveSaleTotal = getEffectiveSaleTotal;
+
         /* --- Per-Item Amount Helper ---
          * For mixed payment types like "Home Credit + Cash" with unit_payment_map,
          * loan items get Loan Balance + DP, cash items get the Amount field.
@@ -1785,11 +1821,12 @@ require_once 'config.php';
                                 }
                             } else {
                                 itemAmtDisplay = parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                // Use the sale's actual_total_amount (includes loan amount) or total_amount for accurate calculation
-                                // For single item: use actual_total_amount; for multiple items: proportional distribution
-                                const saleTotal = parseFloat(sale.actual_total_amount || sale.total_amount);
+                                // Prefer payment installment total (card set price) over cart SRP in total_amount
+                                const saleTotal = (typeof getEffectiveSaleTotal === 'function')
+                                    ? getEffectiveSaleTotal(sale, parsedSalePaymentData)
+                                    : parseFloat(sale.actual_total_amount || sale.total_amount);
                                 if (sale.items.length === 1) {
-                                    // For single item, ITEM AMOUNT = actual_total_amount / quantity
+                                    // For single item, ITEM AMOUNT = effective total / quantity
                                     const itemQty = parseInt(item.quantity) || 1;
                                     const itemAmount = Math.round(saleTotal / itemQty);
                                     itemAmtDisplay = itemAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1805,7 +1842,11 @@ require_once 'config.php';
                                         itemAmtDisplay = itemAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                         totalAmtDisplay = itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                     } else {
-                                        const itemTotal = getItemNetTotal(item, sale, sale.items);
+                                        const saleForNet = Object.assign({}, sale, {
+                                            total_amount: saleTotal,
+                                            actual_total_amount: saleTotal
+                                        });
+                                        const itemTotal = getItemNetTotal(item, saleForNet, sale.items);
                                         const itemAmount = Math.round(itemTotal / itemQty);
                                         itemAmtDisplay = itemAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                         totalAmtDisplay = itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1934,7 +1975,13 @@ require_once 'config.php';
                 const encoderName = sale.encoder || 'Unknown';
                 const isVoided = (sale.status === 'voided');
                 const isRefunded = (sale.display_status === 'refunded');
-                const rawSaleAmount = parseFloat(sale.actual_total_amount || sale.total_amount) || 0;
+                let parsedPdForTotal = null;
+                if (sale.payment_data) {
+                    try { parsedPdForTotal = JSON.parse(sale.payment_data); } catch (e) { }
+                }
+                const rawSaleAmount = (typeof getEffectiveSaleTotal === 'function')
+                    ? getEffectiveSaleTotal(sale, parsedPdForTotal)
+                    : (parseFloat(sale.actual_total_amount || sale.total_amount) || 0);
                 const oldUnitAmount = parseFloat(sale.old_unit_amount) || 0;
                 const discountAmount = parseFloat(sale.discount) || 0;
 
@@ -2762,9 +2809,17 @@ require_once 'config.php';
                             const parsedAmt = parseFloat(String(amtRaw).replace(/,/g, '').trim());
                             upgradeCashPaid = (!isNaN(parsedAmt) && parsedAmt > 0) ? parsedAmt : 0;
                         }
+                        // Prefer payment installment total over cart SRP stored in total_amount
+                        const effectiveDbTotal = (typeof getEffectiveSaleTotal === 'function')
+                            ? getEffectiveSaleTotal(data.sale, paymentData)
+                            : parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
                         const saleTotal = isUpgradeInvoiceItems && upgradeCashPaid > 0
                             ? upgradeCashPaid
-                            : parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
+                            : effectiveDbTotal;
+                        const saleForNet = Object.assign({}, data.sale, {
+                            total_amount: saleTotal,
+                            actual_total_amount: saleTotal
+                        });
                         const totalSrp = data.items.reduce((sum, it) => sum + (parseFloat(it.price || 0) * parseInt(it.quantity || 1)), 0);
 
                         filteredItems.forEach(item => {
@@ -2778,7 +2833,7 @@ require_once 'config.php';
                             if (perItemAmtModal !== null) {
                                 itemTotal = Math.round(perItemAmtModal);
                             } else {
-                                itemTotal = getItemNetTotal(item, data.sale, data.items);
+                                itemTotal = getItemNetTotal(item, saleForNet, data.items);
                             }
                             overallAmount += itemTotal;
 
@@ -2788,7 +2843,7 @@ require_once 'config.php';
                                     <td style="padding:8px; border:1px solid #acacacff;">${item.item_description || ''}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.imei || ''}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${qty}</td>
-                                    <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 </tr>
                             `;
@@ -3197,7 +3252,12 @@ require_once 'config.php';
                         const parsedAmt = parseFloat(String(amtRaw).replace(/,/g, '').trim());
                         fallbackAmt = (!isNaN(parsedAmt) && parsedAmt > 0) ? parsedAmt : parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
                     } else {
-                        fallbackAmt = parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
+                        // Prefer payment Amount/Total (card installment set price) over cart SRP in total_amount
+                        const payAmt = extractPaymentAmount(singleEntry, 0);
+                        const effectiveTotal = (typeof getEffectiveSaleTotal === 'function')
+                            ? getEffectiveSaleTotal(data.sale, paymentData)
+                            : parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
+                        fallbackAmt = Math.max(payAmt, effectiveTotal, overallAmount || 0);
                     }
                     let unitList = (filteredItems.length > 0 ? filteredItems : (data.items || [])).map(item => {
                         const desc = item.item_description || item.item_code || '';
