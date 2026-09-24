@@ -216,12 +216,20 @@ function parseSerialString($serial_string) {
     return array_values(array_filter(array_map('trim', $serial_array)));
 }
 
-function getMergedAllocationSerials($conn, $po_id, $family_code, $branch_name = '') {
+function getMergedAllocationSerials($conn, $po_id, $family_code, $branch_name = '', $item_model = '') {
     $serials = [];
     $family_code_esc = $conn->real_escape_string($family_code);
     $branch_filter = '';
     if (!empty($branch_name)) {
         $branch_filter = " AND branch_name = '" . $conn->real_escape_string($branch_name) . "'";
+    }
+    $model_filter = '';
+    if (!empty($item_model) && $item_model !== '-') {
+        $item_model_esc = $conn->real_escape_string($item_model);
+        $model_filter = " AND (
+            item_model IS NULL OR item_model = '' OR item_model = '-'
+            OR item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci
+        )";
     }
 
     $result = $conn->query("
@@ -232,6 +240,7 @@ function getMergedAllocationSerials($conn, $po_id, $family_code, $branch_name = 
         AND serial_number IS NOT NULL
         AND serial_number != ''
         {$branch_filter}
+        {$model_filter}
     ");
 
     if ($result) {
@@ -243,20 +252,30 @@ function getMergedAllocationSerials($conn, $po_id, $family_code, $branch_name = 
     return array_values(array_unique($serials));
 }
 
-function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $received_qty, $branch_name = '') {
+function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $received_qty, $branch_name = '', $item_model = '') {
     $family_code_esc = $conn->real_escape_string($family_code);
     $serial_string_esc = $conn->real_escape_string($serial_string);
     $branch_filter = '';
     if (!empty($branch_name)) {
         $branch_filter = " AND branch_name = '" . $conn->real_escape_string($branch_name) . "'";
     }
+    // Scope by item_model so siblings sharing a family_code (e.g. phone + case) are not overwritten
+    $model_filter = '';
+    if (!empty($item_model) && $item_model !== '-') {
+        $item_model_esc = $conn->real_escape_string($item_model);
+        $model_filter = " AND (
+            item_model IS NULL OR item_model = '' OR item_model = '-'
+            OR item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci
+        )";
+    }
 
     $alloc_result = $conn->query("
-        SELECT id, quantity, received_qty, serial_number
+        SELECT id, quantity, received_qty, serial_number, item_model
         FROM purchase_order_allocations
         WHERE po_id = {$po_id}
         AND family_code = '{$family_code_esc}'
         {$branch_filter}
+        {$model_filter}
     ");
 
     if (!$alloc_result || $alloc_result->num_rows === 0) {
@@ -264,27 +283,76 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
     }
 
     if ($alloc_result->num_rows === 1) {
+        $alloc = $alloc_result->fetch_assoc();
+        $alloc_id = (int)$alloc['id'];
         $conn->query("
             UPDATE purchase_order_allocations
             SET serial_number = '{$serial_string_esc}',
                 received_qty = {$received_qty}
-            WHERE po_id = {$po_id}
-            AND family_code = '{$family_code_esc}'
-            {$branch_filter}
+            WHERE id = {$alloc_id}
         ");
-        return;
+    } else {
+        while ($alloc = $alloc_result->fetch_assoc()) {
+            $alloc_id = (int)$alloc['id'];
+            $alloc_model = trim($alloc['item_model'] ?? '');
+            // When item_model was provided, only touch matching (or blank) allocation rows
+            if (!empty($item_model) && $item_model !== '-') {
+                if ($alloc_model !== '' && $alloc_model !== '-' && strcasecmp($alloc_model, $item_model) !== 0) {
+                    continue;
+                }
+            }
+            if ((int)($alloc['received_qty'] ?? 0) > 0 || !empty($alloc['serial_number'])) {
+                $branch_qty = min($received_qty, (int)$alloc['quantity']);
+                $conn->query("
+                    UPDATE purchase_order_allocations
+                    SET serial_number = '{$serial_string_esc}',
+                        received_qty = {$branch_qty}
+                    WHERE id = {$alloc_id}
+                ");
+            }
+        }
     }
 
-    while ($alloc = $alloc_result->fetch_assoc()) {
-        $alloc_id = (int)$alloc['id'];
-        if ((int)($alloc['received_qty'] ?? 0) > 0 || !empty($alloc['serial_number'])) {
-            $branch_qty = min($received_qty, (int)$alloc['quantity']);
-            $conn->query("
-                UPDATE purchase_order_allocations
-                SET serial_number = '{$serial_string_esc}',
-                    received_qty = {$branch_qty}
-                WHERE id = {$alloc_id}
+    // Remove these serials from sibling allocations (same family, different item_model)
+    // so a prior bug that copied phone IMEIs onto a case row is repaired on next save
+    if (!empty($item_model) && $item_model !== '-' && $serial_string !== '') {
+        $item_model_esc = $conn->real_escape_string($item_model);
+        $serials_to_strip = parseSerialString($serial_string);
+        if (!empty($serials_to_strip)) {
+            $sibling_q = $conn->query("
+                SELECT id, serial_number
+                FROM purchase_order_allocations
+                WHERE po_id = {$po_id}
+                AND family_code = '{$family_code_esc}'
+                {$branch_filter}
+                AND item_model IS NOT NULL AND item_model != '' AND item_model != '-'
+                AND item_model COLLATE utf8mb4_general_ci != '{$item_model_esc}' COLLATE utf8mb4_general_ci
             ");
+            if ($sibling_q) {
+                while ($sib = $sibling_q->fetch_assoc()) {
+                    $sib_serials = parseSerialString($sib['serial_number'] ?? '');
+                    if (empty($sib_serials)) {
+                        continue;
+                    }
+                    $cleaned = array_values(array_filter($sib_serials, function ($s) use ($serials_to_strip) {
+                        foreach ($serials_to_strip as $strip) {
+                            if (strcasecmp($s, $strip) === 0) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }));
+                    if (count($cleaned) !== count($sib_serials)) {
+                        $cleaned_esc = $conn->real_escape_string(implode("\n", $cleaned));
+                        $sib_id = (int)$sib['id'];
+                        $conn->query("
+                            UPDATE purchase_order_allocations
+                            SET serial_number = '{$cleaned_esc}'
+                            WHERE id = {$sib_id}
+                        ");
+                    }
+                }
+            }
         }
     }
 }
@@ -378,7 +446,7 @@ try {
                 $serial_numbers_field = $item_data['serial_number'];
 
                 if (empty($serial_numbers_field)) {
-                    $allocation_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch);
+                    $allocation_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch, $item_model);
                     if (!empty($allocation_serials)) {
                         $serial_numbers_field = implode("\n", $allocation_serials);
                     }
@@ -653,7 +721,46 @@ try {
             $new_cost = (float)($item_qc['cost'] ?? 0);
             $new_total = $new_qty * $new_cost;
 
+            // Resolve item_model so sibling allocations sharing a family_code are not overwritten
+            $qc_item_model = '';
             if ($item_id > 0) {
+                $qc_lookup = $conn->query("
+                    SELECT poi.item_model, poi.family_code, poi.item_no, poi.serial_number,
+                           COALESCE(MAX(CASE
+                               WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                    AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
+                               THEN i.has_serial ELSE 0 END), MAX(i.has_serial), 0) as has_serial
+                    FROM purchase_order_items poi
+                    LEFT JOIN items i ON (
+                        (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                         AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
+                        OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+                    )
+                    WHERE poi.id = {$item_id} AND poi.po_id = {$po_id}
+                    GROUP BY poi.id
+                    LIMIT 1
+                ");
+                if ($qc_lookup && $qc_lookup->num_rows > 0) {
+                    $qc_row = $qc_lookup->fetch_assoc();
+                    $qc_item_model = trim($qc_row['item_model'] ?? '');
+                    if (empty($family_code_esc)) {
+                        $family_code_esc = $conn->real_escape_string($qc_row['family_code'] ?? '');
+                    }
+                    if ($item_no <= 0) {
+                        $item_no = (int)($qc_row['item_no'] ?? 0);
+                    }
+                    // Never shrink ordered qty below existing serial count on serialized items
+                    if ((int)($qc_row['has_serial'] ?? 0) === 1) {
+                        $existing_serial_count = count(parseSerialString($qc_row['serial_number'] ?? ''));
+                        if ($existing_serial_count === 0) {
+                            $existing_serial_count = count(getMergedAllocationSerials($conn, $po_id, $qc_row['family_code'] ?? '', $receiving_branch, $qc_item_model));
+                        }
+                        if ($existing_serial_count > 0 && $new_qty < $existing_serial_count) {
+                            $new_qty = (float)$existing_serial_count;
+                            $new_total = $new_qty * $new_cost;
+                        }
+                    }
+                }
                 $conn->query("
                     UPDATE purchase_order_items
                     SET quantity = {$new_qty},
@@ -662,6 +769,38 @@ try {
                     WHERE id = {$item_id} AND po_id = {$po_id}
                 ");
             } else {
+                $qc_lookup = $conn->query("
+                    SELECT poi.item_model, poi.serial_number, poi.family_code,
+                           COALESCE(MAX(CASE
+                               WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                    AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
+                               THEN i.has_serial ELSE 0 END), MAX(i.has_serial), 0) as has_serial
+                    FROM purchase_order_items poi
+                    LEFT JOIN items i ON (
+                        (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                         AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
+                        OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+                    )
+                    WHERE poi.po_id = {$po_id}
+                    AND poi.family_code = '{$family_code_esc}'
+                    AND poi.item_no = {$item_no}
+                    GROUP BY poi.id
+                    LIMIT 1
+                ");
+                if ($qc_lookup && $qc_lookup->num_rows > 0) {
+                    $qc_row = $qc_lookup->fetch_assoc();
+                    $qc_item_model = trim($qc_row['item_model'] ?? '');
+                    if ((int)($qc_row['has_serial'] ?? 0) === 1) {
+                        $existing_serial_count = count(parseSerialString($qc_row['serial_number'] ?? ''));
+                        if ($existing_serial_count === 0) {
+                            $existing_serial_count = count(getMergedAllocationSerials($conn, $po_id, $qc_row['family_code'] ?? '', $receiving_branch, $qc_item_model));
+                        }
+                        if ($existing_serial_count > 0 && $new_qty < $existing_serial_count) {
+                            $new_qty = (float)$existing_serial_count;
+                            $new_total = $new_qty * $new_cost;
+                        }
+                    }
+                }
                 $conn->query("
                     UPDATE purchase_order_items
                     SET quantity = {$new_qty},
@@ -673,12 +812,23 @@ try {
                 ");
             }
 
+            $alloc_where = "po_id = {$po_id} AND family_code = '{$family_code_esc}'";
+            if (!empty($receiving_branch)) {
+                $alloc_where .= " AND branch_name = '" . $conn->real_escape_string($receiving_branch) . "'";
+            }
+            if (!empty($qc_item_model) && $qc_item_model !== '-') {
+                $qc_model_esc = $conn->real_escape_string($qc_item_model);
+                $alloc_where .= " AND (
+                    item_model IS NULL OR item_model = '' OR item_model = '-'
+                    OR item_model COLLATE utf8mb4_general_ci = '{$qc_model_esc}' COLLATE utf8mb4_general_ci
+                )";
+            }
+
             $conn->query("
                 UPDATE purchase_order_allocations
                 SET quantity = {$new_qty},
                     cost = {$new_cost}
-                WHERE po_id = {$po_id}
-                AND family_code = '{$family_code_esc}'
+                WHERE {$alloc_where}
             ");
         }
     }
@@ -705,15 +855,25 @@ try {
             $family_code = $parsed_row['family_code'];
             $item_no = (int)$parsed_row['item_no'];
             $family_code_esc = $conn->real_escape_string($family_code);
+            $item_model = '';
             
             // Get the current item details and old serial numbers
             $current_item_query = $conn->query("
-                SELECT poi.*, i.has_serial 
+                SELECT poi.*, 
+                       COALESCE(MAX(CASE 
+                           WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
+                           THEN i.has_serial ELSE 0 END), MAX(i.has_serial), 0) as has_serial
                 FROM purchase_order_items poi 
-                LEFT JOIN items i ON poi.family_code = i.family_code 
+                LEFT JOIN items i ON (
+                    (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                     AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
+                    OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+                )
                 WHERE poi.po_id = {$po_id} 
                 AND poi.family_code = '{$family_code_esc}' 
                 AND poi.item_no = {$item_no} 
+                GROUP BY poi.id
                 LIMIT 1
             ");
             
@@ -727,7 +887,7 @@ try {
                 // Get old serial numbers as array
                 $old_serials = parseSerialString($old_serial_string);
                 if (empty($old_serials)) {
-                    $old_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch);
+                    $old_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch, $item_model);
                 }
                 
                 // Get new serial numbers (already in array)
@@ -778,7 +938,8 @@ try {
                 $family_code,
                 implode("\n", $item_serials),
                 count($item_serials),
-                $receiving_branch
+                $receiving_branch,
+                $item_model
             );
         }
     }
@@ -806,6 +967,19 @@ try {
 
             $imei2_string = $conn->real_escape_string(implode("\n", $item_imei2s));
 
+            // Resolve item_model to avoid overwriting sibling allocations that share family_code
+            $imei2_item_model = '';
+            $imei2_model_q = $conn->query("
+                SELECT item_model FROM purchase_order_items
+                WHERE po_id = {$po_id}
+                AND family_code = '{$family_code_esc}'
+                AND item_no = {$item_no}
+                LIMIT 1
+            ");
+            if ($imei2_model_q && $imei2_model_q->num_rows > 0) {
+                $imei2_item_model = trim($imei2_model_q->fetch_assoc()['item_model'] ?? '');
+            }
+
             // Update purchase_order_items.imei_2
             $conn->query("
                 UPDATE purchase_order_items
@@ -815,11 +989,18 @@ try {
                 AND item_no = {$item_no}
             ");
 
-            // Update purchase_order_allocations.imei_2
+            // Update purchase_order_allocations.imei_2 (scoped by branch + item_model)
             $alloc_filter = "";
             if (!empty($receiving_branch)) {
                 $receiving_branch_esc = $conn->real_escape_string($receiving_branch);
                 $alloc_filter = " AND branch_name = '{$receiving_branch_esc}'";
+            }
+            if (!empty($imei2_item_model) && $imei2_item_model !== '-') {
+                $imei2_model_esc = $conn->real_escape_string($imei2_item_model);
+                $alloc_filter .= " AND (
+                    item_model IS NULL OR item_model = '' OR item_model = '-'
+                    OR item_model COLLATE utf8mb4_general_ci = '{$imei2_model_esc}' COLLATE utf8mb4_general_ci
+                )";
             }
             $conn->query("
                 UPDATE purchase_order_allocations
@@ -1012,11 +1193,27 @@ try {
     if ($po_status_query && $po_status_row = $po_status_query->fetch_assoc()) {
         $current_po_status = $po_status_row['status'];
         if (!in_array(strtolower($current_po_status), ['canceled', 'cancelled', 'closed'])) {
+            // Count each PO item once (GROUP BY poi.id) — joining items by family_code alone
+            // duplicates rows when phone + case share a family, which falsely flips Completed → Incomplete.
             $all_items_q = $conn->query("
-                SELECT poi.quantity, poi.serial_number, poi.received_qty, i.has_serial
+                SELECT poi.id,
+                       poi.quantity,
+                       poi.serial_number,
+                       poi.received_qty,
+                       poi.family_code,
+                       poi.item_model,
+                       COALESCE(MAX(CASE
+                           WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
+                           THEN i.has_serial ELSE 0 END), MAX(i.has_serial), 0) as has_serial
                 FROM purchase_order_items poi
-                LEFT JOIN items i ON poi.family_code = i.family_code
+                LEFT JOIN items i ON (
+                    (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                     AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
+                    OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+                )
                 WHERE poi.po_id = {$po_id}
+                GROUP BY poi.id
             ");
             $calc_ordered = 0;
             $calc_received = 0;
@@ -1025,20 +1222,57 @@ try {
                     $calc_ordered += (int)$item_row['quantity'];
                     if ((int)($item_row['has_serial'] ?? 0) === 1) {
                         $sn = trim($item_row['serial_number'] ?? '');
-                        if (!empty($sn)) {
-                            $sn_arr = (strpos($sn, "\n") !== false) ? explode("\n", $sn) : explode(",", $sn);
-                            $calc_received += count(array_filter(array_map('trim', $sn_arr)));
+                        $sn_arr = !empty($sn) ? parseSerialString($sn) : [];
+                        if (empty($sn_arr)) {
+                            $sn_arr = getMergedAllocationSerials(
+                                $conn,
+                                $po_id,
+                                $item_row['family_code'] ?? '',
+                                $receiving_branch,
+                                $item_row['item_model'] ?? ''
+                            );
                         }
+                        $calc_received += count($sn_arr);
                     } else {
-                        $calc_received += (int)($item_row['received_qty'] ?? 0);
+                        $recv = (int)($item_row['received_qty'] ?? 0);
+                        if ($recv <= 0) {
+                            // Fall back to allocation received_qty for non-serialized items
+                            $fam_esc = $conn->real_escape_string($item_row['family_code'] ?? '');
+                            $model_esc = $conn->real_escape_string($item_row['item_model'] ?? '');
+                            $branch_filter = '';
+                            if (!empty($receiving_branch)) {
+                                $branch_filter = " AND branch_name = '" . $conn->real_escape_string($receiving_branch) . "'";
+                            }
+                            $model_filter = '';
+                            if (!empty($item_row['item_model']) && $item_row['item_model'] !== '-') {
+                                $model_filter = " AND (
+                                    item_model IS NULL OR item_model = '' OR item_model = '-'
+                                    OR item_model COLLATE utf8mb4_general_ci = '{$model_esc}' COLLATE utf8mb4_general_ci
+                                )";
+                            }
+                            $alloc_recv_q = $conn->query("
+                                SELECT COALESCE(SUM(received_qty), 0) as recv
+                                FROM purchase_order_allocations
+                                WHERE po_id = {$po_id}
+                                AND family_code = '{$fam_esc}'
+                                {$branch_filter}
+                                {$model_filter}
+                            ");
+                            if ($alloc_recv_q && $ar = $alloc_recv_q->fetch_assoc()) {
+                                $recv = (int)$ar['recv'];
+                            }
+                        }
+                        $calc_received += $recv;
                     }
                 }
             }
 
-            if ($calc_received < $calc_ordered && $calc_received > 0) {
-                $conn->query("UPDATE purchase_orders SET status = 'Incomplete' WHERE id = {$po_id}");
-            } elseif ($calc_received >= $calc_ordered && $calc_ordered > 0) {
+            if ($calc_received >= $calc_ordered && $calc_ordered > 0) {
+                // Fully received — keep/restore Received (IMEI-only edits must not demote)
                 $conn->query("UPDATE purchase_orders SET status = 'Received' WHERE id = {$po_id}");
+            } elseif ($calc_received < $calc_ordered && $calc_received > 0) {
+                // Only demote when truly under-received (not a false count from shared family_code)
+                $conn->query("UPDATE purchase_orders SET status = 'Incomplete' WHERE id = {$po_id}");
             }
         }
     }

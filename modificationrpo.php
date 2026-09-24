@@ -4497,37 +4497,37 @@ if ($edit_query && $edit_query->num_rows > 0) {
         }
 
         function updateQuantityDisplay(rowKey) {
-            // Find all rows and update the quantity column for this item
-            const rows = document.querySelectorAll('tr');
-            rows.forEach(row => {
-                const serialCell = row.querySelector('.serial-cell');
-                if (serialCell) {
-                    const cellFamilyCode = serialCell.getAttribute('data-family-code');
-                    const cellItemNo = serialCell.getAttribute('data-item-no');
-                    const cellRowKey = cellFamilyCode + '-' + cellItemNo;
+            // Only update the received count span — never replace the whole cell
+            // (replacing textContent/innerHTML destroys .item-qty-input and corrupts Save Modification)
+            const quantityCells = document.querySelectorAll('.quantity-cell');
+            quantityCells.forEach(cell => {
+                const cellFamilyCode = cell.getAttribute('data-family-code');
+                const cellItemNo = cell.getAttribute('data-item-no');
+                const cellRowKey = cellFamilyCode + '-' + cellItemNo;
 
-                    if (cellRowKey === rowKey) {
-                        // Find the quantity cell (should be the next sibling after action cell)
-                        const quantityCells = row.querySelectorAll('td');
-                        // Quantity column is at index 7 (0-indexed: No, Family, Model, Action, Desc, Serial, Action, Quantity)
-                        const quantityCell = quantityCells[7];
+                if (cellRowKey !== rowKey) return;
 
-                        if (quantityCell) {
-                            const hasSerial = parseInt(serialCell.getAttribute('data-has-serial')) || 0;
-                            let receivedCount = 0;
-                            if (hasSerial === 1) {
-                                const serialNumbers = _allSerialNumbers[rowKey] || [];
-                                receivedCount = serialNumbers.length;
-                            } else {
-                                receivedCount = parseInt(serialCell.getAttribute('data-received-qty')) || 0;
-                            }
-                            const totalQuantity = parseInt(serialCell.getAttribute('data-quantity')) || 0;
+                const serialCell = document.querySelector(
+                    `.serial-cell[data-family-code="${cellFamilyCode}"][data-item-no="${cellItemNo}"]`
+                );
+                const hasSerial = serialCell
+                    ? (parseInt(serialCell.getAttribute('data-has-serial')) || 0)
+                    : 0;
 
-                            // Update display in format: received/total
-                            quantityCell.textContent = receivedCount + '/' + totalQuantity;
-                        }
-                    }
+                let receivedCount = 0;
+                if (hasSerial === 1) {
+                    receivedCount = (_allSerialNumbers[rowKey] || []).length;
+                } else if (_allReceivedQty[rowKey] !== undefined && _allReceivedQty[rowKey] !== null) {
+                    receivedCount = parseInt(_allReceivedQty[rowKey]) || 0;
+                } else {
+                    receivedCount = parseInt(cell.getAttribute('data-received-qty')) || 0;
                 }
+
+                const receivedSpan = cell.querySelector('.received-count-span');
+                if (receivedSpan) {
+                    receivedSpan.textContent = receivedCount;
+                }
+                cell.setAttribute('data-received-qty', receivedCount);
             });
         }
 
@@ -5101,28 +5101,8 @@ if ($edit_query && $edit_query->num_rows > 0) {
             }
         }
 
-        // Add function to update quantity display after editing
-        function updateQuantityDisplay(rowKey) {
-            const { familyCode, itemNo } = parseRowKey(rowKey);
-
-            // Find the quantity cell for this row
-            const quantityCells = document.querySelectorAll('.quantity-cell');
-            quantityCells.forEach(cell => {
-                const cellFamilyCode = cell.getAttribute('data-family-code');
-                const cellItemNo = cell.getAttribute('data-item-no');
-                const cellRowKey = cellFamilyCode + '-' + cellItemNo;
-
-                if (cellRowKey === rowKey) {
-                    const quantity = parseInt(cell.getAttribute('data-quantity'));
-                    const receivedQty = _allReceivedQty[rowKey];
-
-                    if (receivedQty !== undefined && receivedQty !== null) {
-                        // Update the display with new received quantity
-                        cell.innerHTML = `${receivedQty}/${quantity}`;
-                    }
-                }
-            });
-        }
+        // updateQuantityDisplay is defined earlier — keep a single implementation that
+        // only updates .received-count-span and never destroys .item-qty-input.
 
         function showTemporaryMessage(message, type = 'success') {
             // Create a temporary message elemen  t
