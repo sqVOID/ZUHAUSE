@@ -190,8 +190,10 @@ $claim_inv = trim($sales_entry['invoice_no'] ?? '');
 $enriched_payment_data = $sales_entry['payment_data'];
 
 $preorder_id = null;
+$claimed_invoice_no = '';
+$preorder_invoice_no = '';
 $po_find = $conn->prepare("
-    SELECT id FROM preorders
+    SELECT id, invoice_no, claimed_invoice_no FROM preorders
     WHERE invoice_no = ? OR invoice_no = ? OR claimed_invoice_no = ?
     ORDER BY id DESC
     LIMIT 1
@@ -202,6 +204,8 @@ if ($po_find) {
     $po_res = $po_find->get_result();
     if ($po_res && $po_row = $po_res->fetch_assoc()) {
         $preorder_id = intval($po_row['id']);
+        $preorder_invoice_no = trim($po_row['invoice_no'] ?? '');
+        $claimed_invoice_no = trim($po_row['claimed_invoice_no'] ?? '');
     }
     $po_find->close();
 }
@@ -222,6 +226,19 @@ if (!$preorder_id && ($orig_inv !== '' || $claim_inv !== '')) {
         }
         $ph_find->close();
     }
+    if ($preorder_id > 0) {
+        $po2 = $conn->prepare("SELECT invoice_no, claimed_invoice_no FROM preorders WHERE id = ? LIMIT 1");
+        if ($po2) {
+            $po2->bind_param("i", $preorder_id);
+            $po2->execute();
+            $po2r = $po2->get_result();
+            if ($po2r && $po2row = $po2r->fetch_assoc()) {
+                $preorder_invoice_no = trim($po2row['invoice_no'] ?? '');
+                $claimed_invoice_no = trim($po2row['claimed_invoice_no'] ?? '');
+            }
+            $po2->close();
+        }
+    }
 }
 
 if ($preorder_id > 0) {
@@ -237,6 +254,8 @@ if ($preorder_id > 0) {
         $ph_stmt->execute();
         $ph_result = $ph_stmt->get_result();
         $history_payments = [];
+        $seen_invoices = [];
+        $preorder_stage_num = 0;
         while ($ph = $ph_result->fetch_assoc()) {
             $payment_history[] = $ph;
             $stage_pd = json_decode($ph['payment_data'] ?? '', true);
@@ -246,27 +265,52 @@ if ($preorder_id > 0) {
                     'amount' => $ph['amount'] ?? 0
                 ];
             }
-            // Expand nested multiple if a history row somehow wraps multiple
             $payment_date_raw = $ph['payment_date'] ?? '';
             $payment_date_fmt = '';
             if (!empty($payment_date_raw) && $payment_date_raw !== '0000-00-00 00:00:00') {
                 $ts = strtotime($payment_date_raw);
                 $payment_date_fmt = $ts ? date('Y-m-d', $ts) : substr($payment_date_raw, 0, 10);
             }
+
+            $ph_inv = trim($ph['invoice_no'] ?? '');
+            // Claim payment = new invoice that matches claimed_invoice_no and was NOT used in earlier payments.
+            // Fully-paid-then-claimed reuses original invoice — those stay PRE-ORDER / PRE-ORDER 2.
+            $is_claim_stage = (
+                $claimed_invoice_no !== ''
+                && $ph_inv !== ''
+                && $ph_inv === $claimed_invoice_no
+                && !in_array($ph_inv, $seen_invoices, true)
+                && count($seen_invoices) > 0
+            );
+
+            if ($is_claim_stage) {
+                $stage_label = 'CLAIM PRE-ORDER';
+            } else {
+                $preorder_stage_num++;
+                $stage_label = ($preorder_stage_num === 1) ? 'PRE-ORDER' : ('PRE-ORDER ' . $preorder_stage_num);
+            }
+            if ($ph_inv !== '') {
+                $seen_invoices[] = $ph_inv;
+            }
+
+            $stamp_stage = function (&$pay) use ($ph, $payment_date_fmt, $ph_inv, $is_claim_stage, $stage_label) {
+                $pay['block_invoice_no'] = $ph_inv;
+                $pay['block_payment_date'] = $payment_date_fmt;
+                $pay['payment_sequence'] = intval($ph['payment_sequence'] ?? 0);
+                $pay['is_preorder_stage'] = !$is_claim_stage;
+                $pay['is_claim_stage'] = $is_claim_stage ? 1 : 0;
+                $pay['stage_label'] = $stage_label;
+                $pay['status_after_payment'] = $ph['status_after_payment'] ?? '';
+            };
+
             if (isset($stage_pd['payment_type']) && $stage_pd['payment_type'] === 'multiple' && !empty($stage_pd['payments'])) {
                 foreach ((array) $stage_pd['payments'] as $sub) {
                     if (!is_array($sub)) continue;
-                    $sub['block_invoice_no'] = $ph['invoice_no'];
-                    $sub['block_payment_date'] = $payment_date_fmt;
-                    $sub['payment_sequence'] = intval($ph['payment_sequence'] ?? 0);
-                    $sub['is_preorder_stage'] = true;
+                    $stamp_stage($sub);
                     $history_payments[] = $sub;
                 }
             } else {
-                $stage_pd['block_invoice_no'] = $ph['invoice_no'];
-                $stage_pd['block_payment_date'] = $payment_date_fmt;
-                $stage_pd['payment_sequence'] = intval($ph['payment_sequence'] ?? 0);
-                $stage_pd['is_preorder_stage'] = true;
+                $stamp_stage($stage_pd);
                 $history_payments[] = $stage_pd;
             }
         }
@@ -304,6 +348,11 @@ if ($preorder_id > 0) {
                     if (empty($p['block_payment_date']) && !empty($payment_history[$i]['payment_date'])) {
                         $ts = strtotime($payment_history[$i]['payment_date']);
                         $p['block_payment_date'] = $ts ? date('Y-m-d', $ts) : substr($payment_history[$i]['payment_date'], 0, 10);
+                    }
+                    if (isset($history_payments[$i]['stage_label'])) {
+                        $p['stage_label'] = $history_payments[$i]['stage_label'];
+                        $p['is_claim_stage'] = $history_payments[$i]['is_claim_stage'] ?? 0;
+                        $p['is_preorder_stage'] = $history_payments[$i]['is_preorder_stage'] ?? 1;
                     }
                 }
                 unset($p);

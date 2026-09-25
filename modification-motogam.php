@@ -4380,35 +4380,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 const totalPayments = paymentData.payments.length;
 
                 paymentData.payments.forEach((p, idx) => {
-                    const isPreorder = idx < totalPayments - 1;
                     const origInvoice = window._currentOriginalInvoiceNo;
                     const curInvoice = window._currentInvoiceNo;
                     const effectiveInv = (p && typeof p === 'object' && p.block_invoice_no) ? (p.block_invoice_no || '') : '';
-
-                    let stageLabel = '';
-                    if (idx === totalPayments - 1) {
-                        const inv = effectiveInv || curInvoice;
-                        stageLabel = inv ? `Claim Order Breakdown (Claim — Invoice #${inv})` : `Claim Order Breakdown (Claim)`;
-                    } else {
-                        const ordinal = (n) => {
-                            const s = ['th', 'st', 'nd', 'rd'];
-                            const v = n % 100;
-                            return n + (s[(v - 20) % 10] || s[v] || s[0]);
-                        };
-                        const numLabel = ordinal(idx + 1);
-                        const preorderLabel = (idx === 0) ? 'Pre-order' : `Pre-order ${idx + 1}`;
-                        const inv = effectiveInv || (idx === 0 ? origInvoice : '') || origInvoice;
-                        stageLabel = inv
-                            ? `${numLabel} Order Breakdown (${preorderLabel} — Invoice #${inv})`
-                            : `${numLabel} Order Breakdown (${preorderLabel})`;
-                    }
+                    const meta = getPaymentStageMeta(p, idx, paymentData.payments);
+                    const isClaim = meta.isClaim;
+                    const inv = effectiveInv || (isClaim ? curInvoice : ((idx === 0 ? origInvoice : '') || origInvoice));
+                    const numLabel = paymentOrdinal(idx + 1);
+                    const stageName = meta.label || (isClaim ? 'CLAIM PRE-ORDER' : 'PRE-ORDER');
+                    const stageLabel = inv
+                        ? `${numLabel} Order Breakdown (${stageName} — Invoice #${inv})`
+                        : `${numLabel} Order Breakdown (${stageName})`;
 
                     // Add group header row in the table
                     const headerRow = document.createElement('tr');
-                    headerRow.style.background = isPreorder ? '#e3f0ff' : '#e8f5e9';
+                    headerRow.style.background = isClaim ? '#e8f5e9' : '#e3f0ff';
                     headerRow.style.fontWeight = 'bold';
                     headerRow.innerHTML = `
-                        <td colspan="5" style="padding: 8px 10px; border: 1px solid #dee2e6; color: ${isPreorder ? '#1565c0' : '#2e7d32'}; font-size: 13px;">
+                        <td colspan="5" style="padding: 8px 10px; border: 1px solid #dee2e6; color: ${isClaim ? '#2e7d32' : '#1565c0'}; font-size: 13px;">
                             ${stageLabel}
                         </td>
                     `;
@@ -6487,23 +6476,43 @@ if ($promos_result && $promos_result->num_rows > 0) {
             return '';
         }
 
-        function buildPaymentBlockHeader(idx, totalPayments, invoiceNo, paymentDate) {
-            const isClaimFlow = !!window._isClaimPreorder;
-            const ordNum = paymentOrdinal(idx + 1);
-            let headerPrefix = '';
-            if (isClaimFlow && totalPayments > 1) {
-                if (idx < totalPayments - 1) {
-                    const preorderLabel = (idx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${idx + 1}`;
-                    headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; ${preorderLabel}`;
-                } else {
-                    headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; CLAIM PRE-ORDER`;
+        function getPaymentStageMeta(p, idx, payments) {
+            const list = Array.isArray(payments) ? payments : [];
+            // Prefer backend stamp from payment history (accurate for preorder2 vs claim)
+            if (p && typeof p === 'object') {
+                if (p.stage_label) {
+                    const label = String(p.stage_label).trim().toUpperCase();
+                    const isClaim = !!p.is_claim_stage || label === 'CLAIM PRE-ORDER' || label.startsWith('CLAIM');
+                    return { label, isClaim };
                 }
-            } else {
-                headerPrefix = `${ordNum} Payment Method`;
+                if (p.is_claim_stage) {
+                    return { label: 'CLAIM PRE-ORDER', isClaim: true };
+                }
+            }
+            // Fallback: label by sequence among non-claim stages — NEVER assume last = claim
+            let preorderNum = 0;
+            for (let i = 0; i <= idx; i++) {
+                const cur = list[i];
+                if (cur && cur.is_claim_stage) continue;
+                preorderNum++;
+            }
+            const thisIsClaim = !!(p && p.is_claim_stage);
+            if (thisIsClaim) return { label: 'CLAIM PRE-ORDER', isClaim: true };
+            const label = preorderNum <= 1 ? 'PRE-ORDER' : `PRE-ORDER ${preorderNum}`;
+            return { label, isClaim: false };
+        }
+
+        function buildPaymentBlockHeader(idx, totalPayments, invoiceNo, paymentDate, paymentObj, paymentsList) {
+            const ordNum = paymentOrdinal(idx + 1);
+            const meta = getPaymentStageMeta(paymentObj || {}, idx, paymentsList || []);
+            let headerPrefix = `${ordNum} Payment Method`;
+            if (meta.label) {
+                headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; ${meta.label}`;
             }
             const dateVal = formatPaymentBlockDate(paymentDate);
             return `
-                <div class="payment-block-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div class="payment-block-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;"
+                    data-stage-label="${meta.label || ''}" data-is-claim="${meta.isClaim ? '1' : '0'}">
                     <h4 style="margin: 0; color: #333; font-size: 16px; font-weight: 600; white-space: nowrap;">${headerPrefix} -</h4>
                     <input type="text"
                         class="payment-block-invoice-input"
@@ -6544,12 +6553,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
             return window._paymentFormTemplate || '';
         }
 
-        function createEmptyPaymentBlock(idx, totalPayments, invoiceNo, paymentDate) {
+        function createEmptyPaymentBlock(idx, totalPayments, invoiceNo, paymentDate, paymentObj, paymentsList) {
             ensurePaymentFormTemplate();
             const block = document.createElement('div');
             block.className = 'payment-block';
             block.style.cssText = 'margin-bottom:25px; padding:20px; border:1px solid #ccc; border-radius:8px; background:#fff;';
-            block.innerHTML = buildPaymentBlockHeader(idx, totalPayments, invoiceNo, paymentDate) + (window._paymentFormTemplate || '');
+            if (paymentObj) {
+                block._paymentStageMeta = paymentObj;
+            }
+            block.innerHTML = buildPaymentBlockHeader(idx, totalPayments, invoiceNo, paymentDate, paymentObj, paymentsList) + (window._paymentFormTemplate || '');
             return block;
         }
 
@@ -6560,6 +6572,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             const total = blocks.length;
             const origInvoice = window._currentOriginalInvoiceNo || '';
             const curInvoice = window._currentInvoiceNo || '';
+            const paymentsList = Array.from(blocks).map(b => b._paymentStageMeta || {});
 
             blocks.forEach((block, idx) => {
                 const invInput = block.querySelector('.payment-block-invoice-input');
@@ -6572,7 +6585,16 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         ? ((idx === 0 ? origInvoice : '') || origInvoice)
                         : curInvoice;
                 }
-                const headerHtml = buildPaymentBlockHeader(idx, total, fallbackInv, currentDate);
+                const pMeta = block._paymentStageMeta || paymentsList[idx] || {};
+                // Keep stage labels stable when relabeling (don't flip last to CLAIM)
+                if (!pMeta.stage_label) {
+                    const meta = getPaymentStageMeta(pMeta, idx, paymentsList);
+                    pMeta.stage_label = meta.label;
+                    pMeta.is_claim_stage = meta.isClaim ? 1 : 0;
+                    block._paymentStageMeta = pMeta;
+                    paymentsList[idx] = pMeta;
+                }
+                const headerHtml = buildPaymentBlockHeader(idx, total, fallbackInv, currentDate, pMeta, paymentsList);
                 const oldHeader = block.querySelector('.payment-block-header');
                 if (oldHeader) {
                     const wrap = document.createElement('div');
@@ -6599,7 +6621,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             if (payments.length === 0) {
                 const today = formatPaymentBlockDate(new Date().toISOString());
-                const block = createEmptyPaymentBlock(0, 1, curInvoice || origInvoice || '', today);
+                const emptyMeta = { stage_label: 'PRE-ORDER', is_claim_stage: 0 };
+                const block = createEmptyPaymentBlock(0, 1, curInvoice || origInvoice || '', today, emptyMeta, [emptyMeta]);
                 multiContainer.appendChild(block);
                 initBlockListeners(block);
             } else {
@@ -6618,7 +6641,13 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const payDate = formatPaymentBlockDate(
                         (p && (p.block_payment_date || p.payment_date || p.date)) || ''
                     );
-                    const block = createEmptyPaymentBlock(idx, payments.length, inv, payDate);
+                    // Ensure stage_label from history (PRE-ORDER / PRE-ORDER 2 / CLAIM)
+                    if (p && !p.stage_label) {
+                        const meta = getPaymentStageMeta(p, idx, payments);
+                        p.stage_label = meta.label;
+                        p.is_claim_stage = meta.isClaim ? 1 : 0;
+                    }
+                    const block = createEmptyPaymentBlock(idx, payments.length, inv, payDate, p, payments);
                     multiContainer.appendChild(block);
                     initBlockListeners(block);
                     if (p) populatePaymentBlock(block, p);
@@ -6673,7 +6702,13 @@ if ($promos_result && $promos_result->num_rows > 0) {
             const blocks = multiContainer.querySelectorAll('.payment-block');
             const newIdx = blocks.length;
             const today = formatPaymentBlockDate(new Date().toISOString());
-            const block = createEmptyPaymentBlock(newIdx, newIdx + 1, window._currentInvoiceNo || '', today);
+            const paymentsList = Array.from(blocks).map(b => b._paymentStageMeta || {});
+            const newMeta = {
+                stage_label: (newIdx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${newIdx + 1}`,
+                is_claim_stage: 0
+            };
+            paymentsList.push(newMeta);
+            const block = createEmptyPaymentBlock(newIdx, newIdx + 1, window._currentInvoiceNo || '', today, newMeta, paymentsList);
             multiContainer.appendChild(block);
             initBlockListeners(block);
             relabelPaymentBlocks();
@@ -6792,14 +6827,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const curInvoice = window._currentInvoiceNo;
 
                     const effectiveInv = (p && typeof p === 'object' && p.block_invoice_no) ? (p.block_invoice_no || '') : '';
-                    const isPreorder = idx < totalPayments - 1;
-                    const headerColor = isPreorder ? '#1565c0' : '#2e7d32';
-                    const headerBg = isPreorder ? '#e3f0ff' : '#e8f5e9';
-                    const borderCol = isPreorder ? '#90caf9' : '#a5d6a7';
-                    const tag = isPreorder ? ((idx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${idx + 1}`) : 'CLAIM';
-                    const tagBg = isPreorder ? '#1565c0' : '#2e7d32';
+                    const meta = getPaymentStageMeta(p, idx, paymentData.payments);
+                    const isClaim = meta.isClaim;
+                    const headerColor = isClaim ? '#2e7d32' : '#1565c0';
+                    const headerBg = isClaim ? '#e8f5e9' : '#e3f0ff';
+                    const borderCol = isClaim ? '#a5d6a7' : '#90caf9';
+                    const tag = meta.label || (isClaim ? 'CLAIM' : 'PRE-ORDER');
+                    const tagBg = isClaim ? '#2e7d32' : '#1565c0';
 
-                    if (idx === totalPayments - 1) {
+                    if (isClaim) {
                         const inv = effectiveInv || curInvoice;
                         invLabel = inv ? ` — Invoice #${inv}` : '';
                     } else {
@@ -7534,6 +7570,17 @@ if ($promos_result && $promos_result->num_rows > 0) {
             const dateInput = block.querySelector('.payment-block-date-input');
             if (dateInput) {
                 data.block_payment_date = dateInput.value.trim();
+            }
+            // Preserve stage label (PRE-ORDER / PRE-ORDER 2 / CLAIM PRE-ORDER)
+            if (block._paymentStageMeta) {
+                if (block._paymentStageMeta.stage_label) data.stage_label = block._paymentStageMeta.stage_label;
+                if (block._paymentStageMeta.is_claim_stage != null) data.is_claim_stage = block._paymentStageMeta.is_claim_stage;
+            } else {
+                const hdr = block.querySelector('.payment-block-header');
+                if (hdr) {
+                    if (hdr.dataset.stageLabel) data.stage_label = hdr.dataset.stageLabel;
+                    data.is_claim_stage = hdr.dataset.isClaim === '1' ? 1 : 0;
+                }
             }
 
             return hasValues ? data : null;
