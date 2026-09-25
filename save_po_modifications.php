@@ -44,9 +44,20 @@ function syncSerializedStockForItem($conn, $po_number, $family_code_esc, $item_m
     $stock_branch_name_esc = $conn->real_escape_string($stock_branch_name);
     $po_number_esc = $conn->real_escape_string($po_number);
 
-    $old_serials = array_values($old_serials);
-    $new_serials = array_values($new_serials);
-    
+    // Normalize to unique lists (case-insensitive keys, preserve original casing)
+    $old_map = [];
+    foreach (array_values($old_serials) as $s) {
+        $s = trim((string)$s);
+        if ($s === '') continue;
+        $old_map[strtoupper($s)] = $s;
+    }
+    $new_map = [];
+    foreach (array_values($new_serials) as $s) {
+        $s = trim((string)$s);
+        if ($s === '') continue;
+        $new_map[strtoupper($s)] = $s;
+    }
+
     // Load item types from purchase_order_serial_types table
     $serial_types = [];
     if ($po_id > 0 && $item_no > 0) {
@@ -57,7 +68,7 @@ function syncSerializedStockForItem($conn, $po_number, $family_code_esc, $item_m
                                      AND item_no = {$item_no}");
         if ($types_query && $types_query->num_rows > 0) {
             while ($type_row = $types_query->fetch_assoc()) {
-                $serial_types[$type_row['serial_number']] = $type_row['item_type'];
+                $serial_types[strtoupper(trim($type_row['serial_number']))] = $type_row['item_type'];
             }
         }
     }
@@ -65,12 +76,13 @@ function syncSerializedStockForItem($conn, $po_number, $family_code_esc, $item_m
     $original_dr_date = date('Y-m-d H:i:s');
     $original_system_entry_date = date('Y-m-d H:i:s');
 
-    if (!empty($old_serials)) {
-        $first_old_esc = $conn->real_escape_string($old_serials[0]);
+    $date_seed = !empty($old_map) ? reset($old_map) : (!empty($new_map) ? reset($new_map) : '');
+    if ($date_seed !== '') {
+        $seed_esc = $conn->real_escape_string($date_seed);
         $original_dates_query = $conn->query("
             SELECT dr_date, system_entry_date, branch
             FROM stock_on_hand
-            WHERE imei = '{$first_old_esc}'
+            WHERE imei = '{$seed_esc}'
             AND dr_number = '{$po_number_esc}'
             LIMIT 1
         ");
@@ -93,110 +105,102 @@ function syncSerializedStockForItem($conn, $po_number, $family_code_esc, $item_m
         }
     }
 
-    $max_len = max(count($old_serials), count($new_serials));
-    for ($i = 0; $i < $max_len; $i++) {
-        $old_serial = $old_serials[$i] ?? null;
-        $new_serial = $new_serials[$i] ?? null;
-
-        if ($old_serial && $new_serial && $old_serial === $new_serial) {
-            $serial_esc = $conn->real_escape_string($old_serial);
-            
-            // Get the item status for this serial number
-            $item_status = isset($serial_types[$old_serial]) ? $serial_types[$old_serial] : 'Good Stock';
-            $item_status_esc = $conn->real_escape_string($item_status);
-            
-            $update_stock_sql = "UPDATE stock_on_hand
-                                SET item_code = '{$item_model_esc}',
-                                    description = '{$item_description_esc}',
-                                    family_code = '{$family_code_esc}',
-                                    branch = '{$stock_branch_name_esc}',
-                                    status = '{$item_status_esc}'
-                                WHERE imei = '{$serial_esc}'
-                                AND dr_number = '{$po_number_esc}'";
-
-            if (!$conn->query($update_stock_sql)) {
-                throw new Exception("Failed to update serial in stock: " . $conn->error);
-            }
+    // Unchanged serials — refresh metadata only when stock already matches this
+    // model (or is blank). Do not overwrite another model that also lists this IMEI.
+    foreach ($new_map as $key => $serial) {
+        if (!isset($old_map[$key])) {
             continue;
         }
+        $serial_esc = $conn->real_escape_string($serial);
+        $item_status = isset($serial_types[$key]) ? $serial_types[$key] : 'Good Stock';
+        $item_status_esc = $conn->real_escape_string($item_status);
 
-        if ($old_serial && $new_serial && $old_serial !== $new_serial) {
-            $old_serial_esc = $conn->real_escape_string($old_serial);
-            $new_serial_esc = $conn->real_escape_string($new_serial);
+        $conn->query("UPDATE stock_on_hand
+                      SET item_code = '{$item_model_esc}',
+                          description = '{$item_description_esc}',
+                          family_code = '{$family_code_esc}',
+                          branch = '{$stock_branch_name_esc}',
+                          status = '{$item_status_esc}'
+                      WHERE BINARY imei = BINARY '{$serial_esc}'
+                      AND BINARY dr_number = BINARY '{$po_number_esc}'
+                      AND (
+                          BINARY item_code = BINARY '{$item_model_esc}'
+                          OR item_code IS NULL OR item_code = '' OR item_code = '-'
+                      )");
+    }
 
-            $update_imei_sql = "UPDATE stock_on_hand
-                               SET imei = '{$new_serial_esc}',
-                                   item_code = '{$item_model_esc}',
-                                   description = '{$item_description_esc}',
-                                   family_code = '{$family_code_esc}',
-                                   branch = '{$stock_branch_name_esc}'
-                               WHERE imei = '{$old_serial_esc}'
-                               AND dr_number = '{$po_number_esc}'";
+    // Removed serials — delete from this PO's stock only (preserve imei2 for re-link below)
+    $preserved_imei2 = []; // upper(old_imei) => imei2 value
+    foreach ($old_map as $key => $serial) {
+        if (isset($new_map[$key])) {
+            continue;
+        }
+        $serial_esc = $conn->real_escape_string($serial);
+        $old_row_q = $conn->query("SELECT imei2 FROM stock_on_hand
+                                   WHERE BINARY imei = BINARY '{$serial_esc}'
+                                   AND BINARY dr_number = BINARY '{$po_number_esc}'
+                                   LIMIT 1");
+        if ($old_row_q && ($old_row = $old_row_q->fetch_assoc()) && !empty($old_row['imei2'])) {
+            $preserved_imei2[$key] = $old_row['imei2'];
+        }
+        if (!$conn->query("DELETE FROM stock_on_hand
+                          WHERE BINARY imei = BINARY '{$serial_esc}'
+                          AND BINARY dr_number = BINARY '{$po_number_esc}'")) {
+            throw new Exception("Failed to delete old serial from stock: " . $conn->error);
+        }
+    }
 
-            if (!$conn->query($update_imei_sql)) {
-                throw new Exception("Failed to update serial number in stock: " . $conn->error);
-            }
+    // Added serials — insert only if not already on this PO; block true external duplicates
+    foreach ($new_map as $key => $serial) {
+        if (isset($old_map[$key])) {
+            continue;
+        }
+        $serial_esc = $conn->real_escape_string($serial);
 
-            if ($conn->affected_rows === 0) {
-                $duplicate_check = $conn->query("SELECT id FROM stock_on_hand WHERE imei = '{$new_serial_esc}' LIMIT 1");
-                if ($duplicate_check && $duplicate_check->num_rows > 0) {
-                    throw new Exception("Serial number '{$new_serial}' already exists in stock.");
-                }
-                
-                // Get the item status for this serial number
-                $item_status = isset($serial_types[$new_serial]) ? $serial_types[$new_serial] : 'Good Stock';
+        $existing = $conn->query("
+            SELECT id, dr_number, imei2 FROM stock_on_hand
+            WHERE BINARY imei = BINARY '{$serial_esc}'
+            LIMIT 1
+        ");
+        if ($existing && $existing->num_rows > 0) {
+            $ex = $existing->fetch_assoc();
+            // Already belongs to this PO (e.g. received earlier) — keep it, refresh metadata
+            if (strcasecmp(trim($ex['dr_number'] ?? ''), $po_number) === 0) {
+                $item_status = isset($serial_types[$key]) ? $serial_types[$key] : 'Good Stock';
                 $item_status_esc = $conn->real_escape_string($item_status);
-
-                $insert_stock_sql = "INSERT INTO stock_on_hand
-                                    (item_code, description, item_type, imei, dr_number, branch,
-                                     dr_date, system_entry_date, status, quantity, family_code)
-                                    VALUES
-                                    ('{$item_model_esc}', '{$item_description_esc}', 'IMEI',
-                                     '{$new_serial_esc}', '{$po_number_esc}', '{$stock_branch_name_esc}',
-                                     '{$original_dr_date}', '{$original_system_entry_date}', '{$item_status_esc}', 1, '{$family_code_esc}')";
-
-                if (!$conn->query($insert_stock_sql)) {
-                    throw new Exception("Failed to add updated serial to stock: " . $conn->error);
-                }
+                $conn->query("UPDATE stock_on_hand
+                              SET item_code = '{$item_model_esc}',
+                                  description = '{$item_description_esc}',
+                                  family_code = '{$family_code_esc}',
+                                  branch = '{$stock_branch_name_esc}',
+                                  status = '{$item_status_esc}'
+                              WHERE id = " . (int)$ex['id']);
+                continue;
             }
-
-            continue;
+            throw new Exception("Serial number '{$serial}' already exists in stock.");
         }
 
-        if ($old_serial && !$new_serial) {
-            $old_serial_esc = $conn->real_escape_string($old_serial);
-            $delete_stock_sql = "DELETE FROM stock_on_hand
-                                WHERE imei = '{$old_serial_esc}'
-                                AND dr_number = '{$po_number_esc}'";
+        $item_status = isset($serial_types[$key]) ? $serial_types[$key] : 'Good Stock';
+        $item_status_esc = $conn->real_escape_string($item_status);
 
-            if (!$conn->query($delete_stock_sql)) {
-                throw new Exception("Failed to delete old serial from stock: " . $conn->error);
-            }
-            continue;
+        // Carry forward imei2 when replacing a single IMEI 1 (before IMEI2 block re-syncs)
+        $imei2_sql = "NULL";
+        if (count($preserved_imei2) === 1) {
+            $imei2_sql = "'" . $conn->real_escape_string(reset($preserved_imei2)) . "'";
+        } elseif (isset($preserved_imei2[$key])) {
+            $imei2_sql = "'" . $conn->real_escape_string($preserved_imei2[$key]) . "'";
         }
 
-        if (!$old_serial && $new_serial) {
-            $new_serial_esc = $conn->real_escape_string($new_serial);
-            $duplicate_check = $conn->query("SELECT id FROM stock_on_hand WHERE imei = '{$new_serial_esc}' LIMIT 1");
-            if ($duplicate_check && $duplicate_check->num_rows > 0) {
-                throw new Exception("Serial number '{$new_serial}' already exists in stock.");
-            }
-            
-            // Get the item status for this serial number
-            $item_status = isset($serial_types[$new_serial]) ? $serial_types[$new_serial] : 'Good Stock';
-            $item_status_esc = $conn->real_escape_string($item_status);
+        $insert_stock_sql = "INSERT INTO stock_on_hand
+                            (item_code, description, item_type, imei, imei2, dr_number, branch,
+                             dr_date, system_entry_date, status, quantity, family_code)
+                            VALUES
+                            ('{$item_model_esc}', '{$item_description_esc}', 'IMEI',
+                             '{$serial_esc}', {$imei2_sql}, '{$po_number_esc}', '{$stock_branch_name_esc}',
+                             '{$original_dr_date}', '{$original_system_entry_date}', '{$item_status_esc}', 1, '{$family_code_esc}')";
 
-            $insert_stock_sql = "INSERT INTO stock_on_hand
-                                (item_code, description, item_type, imei, dr_number, branch,
-                                 dr_date, system_entry_date, status, quantity, family_code)
-                                VALUES
-                                ('{$item_model_esc}', '{$item_description_esc}', 'IMEI',
-                                 '{$new_serial_esc}', '{$po_number_esc}', '{$stock_branch_name_esc}',
-                                 '{$original_dr_date}', '{$original_system_entry_date}', '{$item_status_esc}', 1, '{$family_code_esc}')";
-
-            if (!$conn->query($insert_stock_sql)) {
-                throw new Exception("Failed to add new serial to stock: " . $conn->error);
-            }
+        if (!$conn->query($insert_stock_sql)) {
+            throw new Exception("Failed to add new serial to stock: " . $conn->error);
         }
     }
 }
@@ -226,10 +230,8 @@ function getMergedAllocationSerials($conn, $po_id, $family_code, $branch_name = 
     $model_filter = '';
     if (!empty($item_model) && $item_model !== '-') {
         $item_model_esc = $conn->real_escape_string($item_model);
-        $model_filter = " AND (
-            item_model IS NULL OR item_model = '' OR item_model = '-'
-            OR item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci
-        )";
+        // Exact model match only — avoid pulling sibling IMEIs that share family_code
+        $model_filter = " AND item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci";
     }
 
     $result = $conn->query("
@@ -263,10 +265,7 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
     $model_filter = '';
     if (!empty($item_model) && $item_model !== '-') {
         $item_model_esc = $conn->real_escape_string($item_model);
-        $model_filter = " AND (
-            item_model IS NULL OR item_model = '' OR item_model = '-'
-            OR item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci
-        )";
+        $model_filter = " AND item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci";
     }
 
     $alloc_result = $conn->query("
@@ -313,14 +312,17 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
         }
     }
 
-    // Remove these serials from sibling allocations (same family, different item_model)
-    // so a prior bug that copied phone IMEIs onto a case row is repaired on next save
+    // Remove serials from sibling allocations only when repairing cross-model
+    // copies (e.g. phone IMEI on a case). Skip when sibling has the exact same
+    // serial list (duplicate shared IMEI) so Save Modification does not wipe
+    // IMEI from a unit that only had its item model edited.
     if (!empty($item_model) && $item_model !== '-' && $serial_string !== '') {
         $item_model_esc = $conn->real_escape_string($item_model);
         $serials_to_strip = parseSerialString($serial_string);
+
         if (!empty($serials_to_strip)) {
             $sibling_q = $conn->query("
-                SELECT id, serial_number
+                SELECT id, serial_number, item_model
                 FROM purchase_order_allocations
                 WHERE po_id = {$po_id}
                 AND family_code = '{$family_code_esc}'
@@ -334,6 +336,13 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
                     if (empty($sib_serials)) {
                         continue;
                     }
+                    $sib_upper = array_map('strtoupper', $sib_serials);
+                    $claim_upper = array_map('strtoupper', $serials_to_strip);
+                    sort($sib_upper);
+                    sort($claim_upper);
+                    if ($sib_upper === $claim_upper) {
+                        continue;
+                    }
                     $cleaned = array_values(array_filter($sib_serials, function ($s) use ($serials_to_strip) {
                         foreach ($serials_to_strip as $strip) {
                             if (strcasecmp($s, $strip) === 0) {
@@ -345,9 +354,11 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
                     if (count($cleaned) !== count($sib_serials)) {
                         $cleaned_esc = $conn->real_escape_string(implode("\n", $cleaned));
                         $sib_id = (int)$sib['id'];
+                        $new_recv = count($cleaned);
                         $conn->query("
                             UPDATE purchase_order_allocations
-                            SET serial_number = '{$cleaned_esc}'
+                            SET serial_number = '{$cleaned_esc}',
+                                received_qty = {$new_recv}
                             WHERE id = {$sib_id}
                         ");
                     }
@@ -429,21 +440,132 @@ $conn->begin_transaction();
 try {
     // Delete staged items if provided - ALSO DELETE FROM STOCK ON HAND
     if (!empty($deleted_items)) {
-        foreach ($deleted_items as $item_id) {
-            $item_id = (int)$item_id;
-            
-            // Get item details before deletion to remove from stock
-            $item_query = $conn->query("SELECT poi.*, i.has_serial 
-                                        FROM purchase_order_items poi 
-                                        LEFT JOIN items i ON poi.family_code = i.family_code 
-                                        WHERE poi.id = {$item_id} AND poi.po_id = {$po_id} LIMIT 1");
-            
-            if ($item_query && $item_query->num_rows > 0) {
-                $item_data = $item_query->fetch_assoc();
+        foreach ($deleted_items as $deleted_entry) {
+            // Support legacy [id, id] and rich [{id, allocation_id, family_code, item_no, item_model}, ...]
+            $item_id = 0;
+            $allocation_id = 0;
+            $del_family_code = '';
+            $del_item_no = 0;
+            $del_item_model = '';
+            if (is_array($deleted_entry)) {
+                $item_id = (int)($deleted_entry['id'] ?? 0);
+                $allocation_id = (int)($deleted_entry['allocation_id'] ?? 0);
+                $del_family_code = trim((string)($deleted_entry['family_code'] ?? ''));
+                $del_item_no = (int)($deleted_entry['item_no'] ?? 0);
+                $del_item_model = trim((string)($deleted_entry['item_model'] ?? ''));
+            } else {
+                $item_id = (int)$deleted_entry;
+            }
+
+            // Resolve the PO item row (by id, or by composite when id missing / family is blank/-)
+            $item_data = null;
+            if ($item_id > 0) {
+                $item_query = $conn->query("
+                    SELECT poi.*,
+                           COALESCE(MAX(CASE
+                               WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                    AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
+                               THEN i.has_serial ELSE 0 END), MAX(i.has_serial), 0) as has_serial
+                    FROM purchase_order_items poi
+                    LEFT JOIN items i ON (
+                        (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                         AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
+                        OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+                    )
+                    WHERE poi.id = {$item_id} AND poi.po_id = {$po_id}
+                    GROUP BY poi.id
+                    LIMIT 1
+                ");
+                if ($item_query && $item_query->num_rows > 0) {
+                    $item_data = $item_query->fetch_assoc();
+                }
+            }
+
+            if (!$item_data) {
+                $family_conds = [];
+                if ($del_family_code === '' || $del_family_code === '-') {
+                    $family_conds[] = "(poi.family_code IS NULL OR poi.family_code = '' OR poi.family_code = '-')";
+                } else {
+                    $fc_esc = $conn->real_escape_string($del_family_code);
+                    $family_conds[] = "poi.family_code = '{$fc_esc}'";
+                }
+                $model_cond = '';
+                if ($del_item_model !== '' && $del_item_model !== '-') {
+                    $im_esc = $conn->real_escape_string($del_item_model);
+                    $model_cond = " AND poi.item_model COLLATE utf8mb4_general_ci = '{$im_esc}' COLLATE utf8mb4_general_ci";
+                }
+                $item_query = $conn->query("
+                    SELECT poi.*,
+                           COALESCE(MAX(CASE
+                               WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                    AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
+                               THEN i.has_serial ELSE 0 END), MAX(i.has_serial), 0) as has_serial
+                    FROM purchase_order_items poi
+                    LEFT JOIN items i ON (
+                        (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                         AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
+                        OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+                    )
+                    WHERE poi.po_id = {$po_id}
+                    AND (" . implode(' OR ', $family_conds) . ")
+                    AND poi.item_no = {$del_item_no}
+                    {$model_cond}
+                    GROUP BY poi.id
+                    LIMIT 1
+                ");
+                if ($item_query && $item_query->num_rows > 0) {
+                    $item_data = $item_query->fetch_assoc();
+                    $item_id = (int)($item_data['id'] ?? 0);
+                }
+            }
+
+            if (!$item_data && $item_id <= 0) {
+                // Orphan allocation row (shown when alloc model has no matching PO item) — delete allocation only
+                $alloc_deleted = false;
+
+                if ($allocation_id > 0) {
+                    $alloc_del_sql = "DELETE FROM purchase_order_allocations WHERE id = {$allocation_id} AND po_id = {$po_id}";
+                    if (!$conn->query($alloc_del_sql)) {
+                        throw new Exception("Failed to delete allocation: " . $conn->error);
+                    }
+                    $alloc_deleted = ($conn->affected_rows > 0);
+                }
+
+                if (!$alloc_deleted && $del_item_model !== '' && $del_item_model !== '-') {
+                    $im_esc = $conn->real_escape_string($del_item_model);
+                    $alloc_del_sql = "DELETE FROM purchase_order_allocations
+                                      WHERE po_id = {$po_id}
+                                      AND item_model COLLATE utf8mb4_general_ci = '{$im_esc}' COLLATE utf8mb4_general_ci";
+                    if (!empty($receiving_branch)) {
+                        $alloc_del_sql .= " AND branch_name = '" . $conn->real_escape_string($receiving_branch) . "'";
+                    }
+                    // Prefer matching family when UI still has it; blank/- UI family means match any family for this model
+                    if ($del_family_code !== '' && $del_family_code !== '-') {
+                        $fc_esc = $conn->real_escape_string($del_family_code);
+                        $alloc_del_sql .= " AND family_code = '{$fc_esc}'";
+                    }
+                    $alloc_del_sql .= " LIMIT 1";
+                    if (!$conn->query($alloc_del_sql)) {
+                        throw new Exception("Failed to delete allocation: " . $conn->error);
+                    }
+                    $alloc_deleted = ($conn->affected_rows > 0);
+                }
+
+                if (!$alloc_deleted) {
+                    throw new Exception('Failed to delete item: item not found on this purchase order.');
+                }
+                continue; // allocation-only row removed; nothing else to do
+            }
+
+            if ($item_data) {
                 $family_code = $item_data['family_code'];
                 $item_model = $item_data['item_model'];
-                $has_serial = $item_data['has_serial'];
+                $has_serial = (int)($item_data['has_serial'] ?? 0);
                 $serial_numbers_field = $item_data['serial_number'];
+                $family_code_esc = $conn->real_escape_string($family_code ?? '');
+                $item_model_esc = $conn->real_escape_string($item_model ?? '');
+                $po_number_esc = $conn->real_escape_string($po_number);
+                $item_id = (int)($item_data['id'] ?? $item_id);
 
                 if (empty($serial_numbers_field)) {
                     $allocation_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch, $item_model);
@@ -454,107 +576,230 @@ try {
                 
                 // Remove from stock_on_hand based on serialization
                 if ($has_serial == 1 && !empty($serial_numbers_field)) {
-                    // Handle serialized items - delete each serial number
-                    $serials = trim($serial_numbers_field);
-                    if (strpos($serials, "\n") !== false) {
-                        $serial_array = explode("\n", $serials);
-                    } else {
-                        $serial_array = explode(",", $serials);
-                    }
-                    $serial_array = array_filter(array_map('trim', $serial_array));
+                    $serial_array = parseSerialString($serial_numbers_field);
                     
                     foreach ($serial_array as $serial) {
                         $serial_esc = $conn->real_escape_string($serial);
-                        $item_model_esc = $conn->real_escape_string($item_model);
-                        
+
+                        // Block delete if this IMEI was already sold (missing from stock but present in a non-voided sale)
+                        $in_stock = $conn->query("
+                            SELECT id FROM stock_on_hand
+                            WHERE imei = '{$serial_esc}'
+                            AND dr_number = '{$po_number_esc}'
+                            LIMIT 1
+                        ");
+                        $still_in_stock = ($in_stock && $in_stock->num_rows > 0);
+
+                        if (!$still_in_stock) {
+                            $sold_check = $conn->query("
+                                SELECT sei.id
+                                FROM sales_entry_items sei
+                                INNER JOIN sales_entry se ON se.id = sei.sales_entry_id
+                                WHERE TRIM(sei.imei) = '{$serial_esc}'
+                                AND (se.status IS NULL OR LOWER(se.status) NOT IN ('voided', 'void', 'cancelled', 'canceled'))
+                                LIMIT 1
+                            ");
+                            if ($sold_check && $sold_check->num_rows > 0) {
+                                throw new Exception("Cannot delete item — serial number '{$serial}' has already been sold.");
+                            }
+                        }
+
                         $delete_stock_sql = "DELETE FROM stock_on_hand 
                                             WHERE imei = '{$serial_esc}' 
-                                            AND item_code = '{$item_model_esc}' 
-                                            AND dr_number = '{$po_number}'";
+                                            AND dr_number = '{$po_number_esc}'";
                         
                         if (!$conn->query($delete_stock_sql)) {
                             throw new Exception("Failed to delete serialized item from stock: " . $conn->error);
                         }
                     }
                 } else {
-                    // Handle non-serialized items - delete quantity-based entry
-                    $family_code_esc = $conn->real_escape_string($family_code);
-                    
-                    $delete_stock_sql = "DELETE FROM stock_on_hand 
-                                        WHERE family_code = '{$family_code_esc}' 
-                                        AND dr_number = '{$po_number}'";
-                    
-                    if (!$conn->query($delete_stock_sql)) {
-                        throw new Exception("Failed to delete non-serialized item from stock: " . $conn->error);
+                    // Non-serialized: only remove this model's stock line for this PO
+                    // Avoid wiping all stock when family_code is blank/-
+                    if (!empty($item_model) && $item_model !== '-') {
+                        $delete_stock_sql = "DELETE FROM stock_on_hand 
+                                            WHERE item_code = '{$item_model_esc}' 
+                                            AND dr_number = '{$po_number_esc}'";
+                        if (!$conn->query($delete_stock_sql)) {
+                            throw new Exception("Failed to delete non-serialized item from stock: " . $conn->error);
+                        }
+                    } elseif (!empty($family_code) && $family_code !== '-') {
+                        $delete_stock_sql = "DELETE FROM stock_on_hand 
+                                            WHERE family_code = '{$family_code_esc}' 
+                                            AND dr_number = '{$po_number_esc}'";
+                        if (!$conn->query($delete_stock_sql)) {
+                            throw new Exception("Failed to delete non-serialized item from stock: " . $conn->error);
+                        }
                     }
                 }
+
+                // Remove matching allocation row(s) for this model/branch
+                if ($allocation_id > 0) {
+                    $conn->query("DELETE FROM purchase_order_allocations WHERE id = {$allocation_id} AND po_id = {$po_id}");
+                } else {
+                    $alloc_del = "DELETE FROM purchase_order_allocations WHERE po_id = {$po_id}";
+                    if (!empty($family_code) && $family_code !== '-') {
+                        $alloc_del .= " AND family_code = '{$family_code_esc}'";
+                    } else {
+                        $alloc_del .= " AND (family_code IS NULL OR family_code = '' OR family_code = '-')";
+                    }
+                    if (!empty($item_model) && $item_model !== '-') {
+                        $alloc_del .= " AND item_model COLLATE utf8mb4_general_ci = '{$item_model_esc}' COLLATE utf8mb4_general_ci";
+                    }
+                    if (!empty($receiving_branch)) {
+                        $alloc_del .= " AND branch_name = '" . $conn->real_escape_string($receiving_branch) . "'";
+                    }
+                    $conn->query($alloc_del);
+                }
+
+                // Clean serial type rows for this item
+                $item_no_del = (int)($item_data['item_no'] ?? 0);
+                $conn->query("DELETE FROM purchase_order_serial_types
+                              WHERE po_id = {$po_id}
+                              AND item_no = {$item_no_del}
+                              AND (
+                                  family_code = '{$family_code_esc}'
+                                  OR (('{$family_code_esc}' = '' OR '{$family_code_esc}' = '-')
+                                      AND (family_code IS NULL OR family_code = '' OR family_code = '-'))
+                              )");
             }
             
-            // Delete from purchase order items
-            $delete_sql = "DELETE FROM purchase_order_items WHERE id = {$item_id} AND po_id = {$po_id}";
+            // Delete from purchase order items (always by resolved id when available)
+            if ($item_id > 0) {
+                $delete_sql = "DELETE FROM purchase_order_items WHERE id = {$item_id} AND po_id = {$po_id}";
+            } else {
+                // Last-resort composite delete for blank/- family rows
+                $fc_esc = $conn->real_escape_string($del_family_code);
+                $im_esc = $conn->real_escape_string($del_item_model);
+                if ($del_family_code === '' || $del_family_code === '-') {
+                    $delete_sql = "DELETE FROM purchase_order_items
+                                   WHERE po_id = {$po_id}
+                                   AND (family_code IS NULL OR family_code = '' OR family_code = '-')
+                                   AND item_no = {$del_item_no}";
+                } else {
+                    $delete_sql = "DELETE FROM purchase_order_items
+                                   WHERE po_id = {$po_id}
+                                   AND family_code = '{$fc_esc}'
+                                   AND item_no = {$del_item_no}";
+                }
+                if ($del_item_model !== '' && $del_item_model !== '-') {
+                    $delete_sql .= " AND item_model COLLATE utf8mb4_general_ci = '{$im_esc}' COLLATE utf8mb4_general_ci";
+                }
+            }
             
             if (!$conn->query($delete_sql)) {
                 throw new Exception("Failed to delete item: " . $conn->error);
             }
+            if ($conn->affected_rows < 1) {
+                throw new Exception('Failed to delete item: no matching purchase order line was removed.');
+            }
         }
     }
     
-    // Update item models if provided - SYNC WITH STOCK ON HAND
+    // Update item models if provided - SYNC WITH STOCK ON HAND (IMEI-scoped, not whole family)
     if (!empty($item_models)) {
         foreach ($item_models as $row_key => $item_data) {
             $family_code_esc = $conn->real_escape_string($item_data['family_code']);
             $item_no = (int)$item_data['item_no'];
             $new_item_model_esc = $conn->real_escape_string($item_data['item_model']);
             $new_item_description_esc = $conn->real_escape_string($item_data['item_description']);
-            
-            // Get current item to find old item_model for stock update
-            $current_item_query = $conn->query("
-                SELECT poi.*, i.has_serial 
-                FROM purchase_order_items poi 
-                LEFT JOIN items i ON poi.family_code = i.family_code 
-                WHERE poi.po_id = {$po_id} 
-                AND poi.family_code = '{$family_code_esc}' 
-                AND poi.item_no = {$item_no} 
-                LIMIT 1
-            ");
-            
-            if ($current_item_query && $current_item_query->num_rows > 0) {
-                $current_item = $current_item_query->fetch_assoc();
-                $old_item_model = $current_item['item_model'];
-                $has_serial = $current_item['has_serial'];
-                
-                // Update stock_on_hand with new item_code (item_model) and description
-                if ($has_serial == 1) {
-                    // For serialized items, update by family_code and dr_number
-                    $update_stock_sql = "UPDATE stock_on_hand 
-                                        SET item_code = '{$new_item_model_esc}', 
-                                            description = '{$new_item_description_esc}'
-                                        WHERE family_code = '{$family_code_esc}' 
-                                        AND dr_number = '{$po_number}'";
-                } else {
-                    // For non-serialized items, update by family_code and dr_number
-                    $update_stock_sql = "UPDATE stock_on_hand 
-                                        SET item_code = '{$new_item_model_esc}', 
-                                            description = '{$new_item_description_esc}'
-                                        WHERE family_code = '{$family_code_esc}' 
-                                        AND dr_number = '{$po_number}'";
-                }
-                
-                if (!$conn->query($update_stock_sql)) {
-                    throw new Exception("Failed to update item model in stock: " . $conn->error);
+            $old_model_from_ui = isset($item_data['old_item_model']) ? trim($item_data['old_item_model']) : '';
+            $allocation_id_ui = isset($item_data['allocation_id']) ? (int)$item_data['allocation_id'] : 0;
+            $item_id_ui = isset($item_data['item_id']) ? (int)$item_data['item_id'] : 0;
+
+            $current_item = null;
+            if ($item_id_ui > 0) {
+                $current_item_query = $conn->query("
+                    SELECT poi.*, COALESCE(i.has_serial, 0) as has_serial
+                    FROM purchase_order_items poi
+                    LEFT JOIN items i ON BINARY poi.item_model = BINARY i.item_code AND i.status = 'Active'
+                    WHERE poi.id = {$item_id_ui} AND poi.po_id = {$po_id}
+                    LIMIT 1
+                ");
+                if ($current_item_query && $current_item_query->num_rows > 0) {
+                    $current_item = $current_item_query->fetch_assoc();
                 }
             }
-            
-            // Update purchase order items
-            $update_model_sql = "UPDATE purchase_order_items 
-                                SET item_model = '{$new_item_model_esc}',
-                                    item_description = '{$new_item_description_esc}'
-                                WHERE po_id = {$po_id} 
-                                AND family_code = '{$family_code_esc}' 
-                                AND item_no = {$item_no}";
-            
-            if (!$conn->query($update_model_sql)) {
-                throw new Exception("Failed to update item model: " . $conn->error);
+            if (!$current_item) {
+                $model_filter = '';
+                if ($old_model_from_ui !== '' && $old_model_from_ui !== '-') {
+                    $om_esc = $conn->real_escape_string($old_model_from_ui);
+                    $model_filter = " AND BINARY poi.item_model = BINARY '{$om_esc}'";
+                }
+                $current_item_query = $conn->query("
+                    SELECT poi.*, COALESCE(i.has_serial, 0) as has_serial
+                    FROM purchase_order_items poi
+                    LEFT JOIN items i ON BINARY poi.item_model = BINARY i.item_code AND i.status = 'Active'
+                    WHERE poi.po_id = {$po_id}
+                    AND poi.family_code = '{$family_code_esc}'
+                    AND poi.item_no = {$item_no}
+                    {$model_filter}
+                    LIMIT 1
+                ");
+                if ($current_item_query && $current_item_query->num_rows > 0) {
+                    $current_item = $current_item_query->fetch_assoc();
+                }
+            }
+
+            if ($current_item) {
+                $old_item_model = $current_item['item_model'];
+                $old_item_model_esc = $conn->real_escape_string($old_item_model);
+                $serials_for_stock = parseSerialString($current_item['serial_number'] ?? '');
+                if (empty($serials_for_stock) && $allocation_id_ui > 0) {
+                    $aq = $conn->query("SELECT serial_number FROM purchase_order_allocations WHERE id = {$allocation_id_ui} LIMIT 1");
+                    if ($aq && ($ar = $aq->fetch_assoc())) {
+                        $serials_for_stock = parseSerialString($ar['serial_number'] ?? '');
+                    }
+                }
+
+                // Update only this unit's stock rows (by IMEI), never the whole family
+                if (!empty($serials_for_stock)) {
+                    foreach ($serials_for_stock as $serial) {
+                        $serial_esc = $conn->real_escape_string($serial);
+                        $conn->query("UPDATE stock_on_hand
+                                      SET item_code = '{$new_item_model_esc}',
+                                          description = '{$new_item_description_esc}'
+                                      WHERE BINARY imei = BINARY '{$serial_esc}'
+                                      AND BINARY dr_number = BINARY '{$po_number}'");
+                    }
+                } elseif (!empty($old_item_model) && $old_item_model !== '-') {
+                    // Non-serialized fallback: update by old item_code only
+                    $conn->query("UPDATE stock_on_hand
+                                  SET item_code = '{$new_item_model_esc}',
+                                      description = '{$new_item_description_esc}'
+                                  WHERE BINARY item_code = BINARY '{$old_item_model_esc}'
+                                  AND BINARY dr_number = BINARY '{$po_number}'");
+                }
+
+                if ($item_id_ui > 0) {
+                    $update_model_sql = "UPDATE purchase_order_items
+                                        SET item_model = '{$new_item_model_esc}',
+                                            item_description = '{$new_item_description_esc}'
+                                        WHERE id = {$item_id_ui} AND po_id = {$po_id}
+                                        LIMIT 1";
+                } else {
+                    $update_model_sql = "UPDATE purchase_order_items
+                                        SET item_model = '{$new_item_model_esc}',
+                                            item_description = '{$new_item_description_esc}'
+                                        WHERE po_id = {$po_id}
+                                        AND family_code = '{$family_code_esc}'
+                                        AND item_no = {$item_no}";
+                    if (!empty($old_item_model) && $old_item_model !== '-') {
+                        $update_model_sql .= " AND BINARY item_model = BINARY '{$old_item_model_esc}'";
+                    }
+                    $update_model_sql .= " LIMIT 1";
+                }
+
+                if (!$conn->query($update_model_sql)) {
+                    throw new Exception("Failed to update item model: " . $conn->error);
+                }
+
+                if ($allocation_id_ui > 0) {
+                    $conn->query("UPDATE purchase_order_allocations
+                                  SET item_model = '{$new_item_model_esc}',
+                                      item_description = '{$new_item_description_esc}'
+                                  WHERE id = {$allocation_id_ui} AND po_id = {$po_id}
+                                  LIMIT 1");
+                }
             }
         }
     }
@@ -713,8 +958,21 @@ try {
     
     // Update quantities and costs if provided
     if (!empty($quantities_costs)) {
+        $deleted_ids_set = [];
+        if (!empty($deleted_items)) {
+            foreach ($deleted_items as $did) {
+                if (is_array($did)) {
+                    $deleted_ids_set[(int)($did['id'] ?? 0)] = true;
+                } else {
+                    $deleted_ids_set[(int)$did] = true;
+                }
+            }
+        }
         foreach ($quantities_costs as $item_qc) {
             $item_id = (int)($item_qc['id'] ?? 0);
+            if ($item_id > 0 && isset($deleted_ids_set[$item_id])) {
+                continue; // already deleted in this save
+            }
             $family_code_esc = $conn->real_escape_string($item_qc['family_code'] ?? '');
             $item_no = (int)($item_qc['item_no'] ?? 0);
             $new_qty = (float)($item_qc['quantity'] ?? 0);
@@ -855,7 +1113,6 @@ try {
             $family_code = $parsed_row['family_code'];
             $item_no = (int)$parsed_row['item_no'];
             $family_code_esc = $conn->real_escape_string($family_code);
-            $item_model = '';
             
             // Get the current item details and old serial numbers
             $current_item_query = $conn->query("
@@ -877,56 +1134,64 @@ try {
                 LIMIT 1
             ");
             
-            if ($current_item_query && $current_item_query->num_rows > 0) {
-                $current_item = $current_item_query->fetch_assoc();
-                $old_serial_string = $current_item['serial_number'];
-                $item_model = $current_item['item_model'];
-                $item_description = $current_item['item_description'];
-                $has_serial = $current_item['has_serial'];
-                
-                // Get old serial numbers as array
-                $old_serials = parseSerialString($old_serial_string);
-                if (empty($old_serials)) {
-                    $old_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch, $item_model);
-                }
-                
-                // Get new serial numbers (already in array)
-                $new_serials = $item_serials;
-                
-                // Only update stock if this is a serialized item
-                if ($has_serial == 1) {
-                    $stock_branch_name = resolveStockBranchName(
-                        $conn,
-                        $receiving_branch,
-                        $po_branch_name,
-                        $po_number,
-                        $family_code_esc
-                    );
+            // Skip rows already deleted in this save (or missing)
+            if (!$current_item_query || $current_item_query->num_rows === 0) {
+                continue;
+            }
 
-                    syncSerializedStockForItem(
-                        $conn,
-                        $po_number,
-                        $family_code_esc,
-                        $item_model,
-                        $item_description,
-                        $old_serials,
-                        $new_serials,
-                        $stock_branch_name,
-                        $po_id,
-                        $item_no
-                    );
-                }
+            $current_item = $current_item_query->fetch_assoc();
+            $old_serial_string = $current_item['serial_number'];
+            $item_model = $current_item['item_model'];
+            $item_description = $current_item['item_description'];
+            $has_serial = $current_item['has_serial'];
+            
+            // Get old serial numbers as array
+            $old_serials = parseSerialString($old_serial_string);
+            if (empty($old_serials)) {
+                $old_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch, $item_model);
+            }
+            
+            // Get new serial numbers (already in array)
+            $new_serials = $item_serials;
+            
+            // Only update stock if this is a serialized item
+            if ($has_serial == 1) {
+                $stock_branch_name = resolveStockBranchName(
+                    $conn,
+                    $receiving_branch,
+                    $po_branch_name,
+                    $po_number,
+                    $family_code_esc
+                );
+
+                syncSerializedStockForItem(
+                    $conn,
+                    $po_number,
+                    $family_code_esc,
+                    $item_model,
+                    $item_description,
+                    $old_serials,
+                    $new_serials,
+                    $stock_branch_name,
+                    $po_id,
+                    $item_no
+                );
             }
             
             // Join serial numbers with line breaks
             $serial_string = $conn->real_escape_string(implode("\n", $item_serials));
             
-            // Update purchase order items with new serial numbers
+            // Update purchase order items with new serial numbers (scoped by model when possible)
+            $item_model_esc2 = $conn->real_escape_string($item_model ?? '');
             $update_item_sql = "UPDATE purchase_order_items 
                                SET serial_number = '{$serial_string}' 
                                WHERE po_id = {$po_id} 
                                AND family_code = '{$family_code_esc}' 
                                AND item_no = {$item_no}";
+            if (!empty($item_model) && $item_model !== '-') {
+                $update_item_sql .= " AND BINARY item_model = BINARY '{$item_model_esc2}'";
+            }
+            $update_item_sql .= " LIMIT 1";
             
             if (!$conn->query($update_item_sql)) {
                 throw new Exception("Failed to update serial numbers: " . $conn->error);
@@ -980,14 +1245,19 @@ try {
                 $imei2_item_model = trim($imei2_model_q->fetch_assoc()['item_model'] ?? '');
             }
 
-            // Update purchase_order_items.imei_2
-            $conn->query("
+            // Update purchase_order_items.imei_2 (scoped by model when possible)
+            $imei2_model_esc = $conn->real_escape_string($imei2_item_model);
+            $poi_imei2_sql = "
                 UPDATE purchase_order_items
                 SET imei_2 = '{$imei2_string}'
                 WHERE po_id = {$po_id}
                 AND family_code = '{$family_code_esc}'
-                AND item_no = {$item_no}
-            ");
+                AND item_no = {$item_no}";
+            if (!empty($imei2_item_model) && $imei2_item_model !== '-') {
+                $poi_imei2_sql .= " AND BINARY item_model = BINARY '{$imei2_model_esc}'";
+            }
+            $poi_imei2_sql .= " LIMIT 1";
+            $conn->query($poi_imei2_sql);
 
             // Update purchase_order_allocations.imei_2 (scoped by branch + item_model)
             $alloc_filter = "";
@@ -996,7 +1266,6 @@ try {
                 $alloc_filter = " AND branch_name = '{$receiving_branch_esc}'";
             }
             if (!empty($imei2_item_model) && $imei2_item_model !== '-') {
-                $imei2_model_esc = $conn->real_escape_string($imei2_item_model);
                 $alloc_filter .= " AND (
                     item_model IS NULL OR item_model = '' OR item_model = '-'
                     OR item_model COLLATE utf8mb4_general_ci = '{$imei2_model_esc}' COLLATE utf8mb4_general_ci
@@ -1009,6 +1278,43 @@ try {
                 AND family_code COLLATE utf8mb4_general_ci = '{$family_code_esc}'
                 {$alloc_filter}
             ");
+
+            // Sync stock_on_hand.imei2 paired with primary IMEI (same index order)
+            $primary_serials = [];
+            $poi_ser_q = $conn->query("
+                SELECT serial_number FROM purchase_order_items
+                WHERE po_id = {$po_id}
+                AND family_code = '{$family_code_esc}'
+                AND item_no = {$item_no}" .
+                ((!empty($imei2_item_model) && $imei2_item_model !== '-')
+                    ? " AND BINARY item_model = BINARY '{$imei2_model_esc}'"
+                    : "") . "
+                LIMIT 1
+            ");
+            if ($poi_ser_q && ($poi_ser = $poi_ser_q->fetch_assoc())) {
+                $primary_serials = parseSerialString($poi_ser['serial_number'] ?? '');
+            }
+            if (empty($primary_serials) && !empty($receiving_branch)) {
+                $primary_serials = getMergedAllocationSerials($conn, $po_id, $family_code, $receiving_branch, $imei2_item_model);
+            }
+
+            $po_number_esc = $conn->real_escape_string($po_number);
+            foreach ($primary_serials as $idx => $primary_imei) {
+                $primary_esc = $conn->real_escape_string($primary_imei);
+                $paired_imei2 = isset($item_imei2s[$idx]) ? trim($item_imei2s[$idx]) : '';
+                if ($paired_imei2 === '') {
+                    $conn->query("UPDATE stock_on_hand
+                                  SET imei2 = NULL
+                                  WHERE BINARY imei = BINARY '{$primary_esc}'
+                                  AND BINARY dr_number = BINARY '{$po_number_esc}'");
+                } else {
+                    $paired_esc = $conn->real_escape_string($paired_imei2);
+                    $conn->query("UPDATE stock_on_hand
+                                  SET imei2 = '{$paired_esc}'
+                                  WHERE BINARY imei = BINARY '{$primary_esc}'
+                                  AND BINARY dr_number = BINARY '{$po_number_esc}'");
+                }
+            }
         }
     }
     

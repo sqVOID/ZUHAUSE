@@ -120,69 +120,140 @@ if ($is_branch_view) {
     $specific_branch_esc = $conn->real_escape_string($specific_branch);
 
     $allocated_items_sql = "
-        SELECT poi.id, poi.po_id, poi.po_number, poi.item_no, poi.family_code, poi.created_at,
-               COALESCE(MAX(CASE 
-                   WHEN poi.item_model IS NOT NULL 
-                       AND poi.item_model != '' 
-                       AND poi.item_model != '-' 
-                       AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
-                   THEN i.has_serial 
-                   ELSE 0 
-               END), MAX(i.has_serial), 0) as has_serial,
-               COALESCE(MAX(CASE 
-                   WHEN poi.item_model IS NOT NULL 
-                       AND poi.item_model != '' 
-                       AND poi.item_model != '-' 
-                       AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
-                   THEN i.has_serial_2 
-                   ELSE 0 
-               END), MAX(i.has_serial_2), 0) as has_serial_2,
-               COALESCE(MAX(CASE 
-                   WHEN poi.item_model IS NOT NULL 
-                       AND poi.item_model != '' 
-                       AND poi.item_model != '-' 
-                       AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci
-                   THEN i.has_serial_number 
-                   ELSE 0 
-               END), MAX(i.has_serial_number), 0) as has_serial_number,
-               COALESCE(MAX(i.department), '') as department,
+        SELECT poi.id,
+               poa.id as allocation_id,
+               poa.po_id,
+               COALESCE(poi.po_number, poa.po_number) as po_number,
+               COALESCE(poi.item_no, 0) as item_no,
+               COALESCE(NULLIF(poa.family_code, ''), poi.family_code) as family_code,
+               poi.created_at,
+               COALESCE(i.has_serial, 0) as has_serial,
+               COALESCE(i.has_serial_2, 0) as has_serial_2,
+               COALESCE(i.has_serial_number, 0) as has_serial_number,
+               COALESCE(i.department, '') as department,
                poa.quantity as allocated_quantity,
                poa.quantity as quantity,
                COALESCE(NULLIF(poa.cost, 0), poi.cost, 0) as cost,
                (poa.quantity * COALESCE(NULLIF(poa.cost, 0), poi.cost, 0)) as total,
                poa.branch_name,
-               COALESCE(NULLIF(poi.item_model, ''), NULLIF(poi.item_model, '-'), poa.item_model) as item_model,
-               COALESCE(NULLIF(poi.item_description, ''), NULLIF(poi.item_description, '-'), poa.item_description) as item_description,
+               CASE
+                   WHEN poa.item_model IS NOT NULL AND poa.item_model != '' AND poa.item_model != '-'
+                   THEN poa.item_model
+                   ELSE poi.item_model
+               END as item_model,
+               CASE
+                   WHEN poa.item_description IS NOT NULL AND poa.item_description != '' AND poa.item_description != '-'
+                   THEN poa.item_description
+                   ELSE poi.item_description
+               END as item_description,
                COALESCE(poa.serial_number, poi.serial_number) as serial_number,
                COALESCE(poa.imei_2, poi.imei_2) as imei_2,
                COALESCE(poa.received_qty, 0) as received_qty,
                0 as is_receive_added
-        FROM purchase_order_allocations poa
-        LEFT JOIN purchase_order_items poi ON poa.po_id = poi.po_id
-            AND poa.family_code COLLATE utf8mb4_general_ci = poi.family_code COLLATE utf8mb4_general_ci
-            AND (
-                poa.item_model IS NULL OR poa.item_model = '' OR poa.item_model = '-'
-                OR poi.item_model IS NULL OR poi.item_model = '' OR poi.item_model = '-'
-                OR poa.item_model COLLATE utf8mb4_general_ci = poi.item_model COLLATE utf8mb4_general_ci
-            )
+        FROM (
+            SELECT a.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY a.po_id, BINARY a.branch_name, BINARY a.family_code,
+                                    BINARY COALESCE(NULLIF(NULLIF(TRIM(a.item_model), ''), '-'), '')
+                       ORDER BY a.id
+                   ) AS model_rn
+            FROM purchase_order_allocations a
+            WHERE a.po_id = {$po_id}
+            AND BINARY a.branch_name = BINARY '{$specific_branch_esc}'
+        ) poa
+        LEFT JOIN (
+            SELECT p.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY p.po_id, BINARY p.family_code,
+                                    BINARY COALESCE(NULLIF(NULLIF(TRIM(p.item_model), ''), '-'), '')
+                       ORDER BY p.id
+                   ) AS model_rn
+            FROM purchase_order_items p
+            WHERE p.po_id = {$po_id}
+            AND COALESCE(p.is_receive_added, 0) = 0
+        ) poi ON poi.po_id = poa.po_id
+            AND BINARY poi.family_code = BINARY poa.family_code
+            AND BINARY COALESCE(NULLIF(NULLIF(TRIM(poi.item_model), ''), '-'), '')
+                = BINARY COALESCE(NULLIF(NULLIF(TRIM(poa.item_model), ''), '-'), '')
+            AND poi.model_rn = poa.model_rn
         LEFT JOIN items i ON (
-            (poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-' AND poi.item_model COLLATE utf8mb4_general_ci = i.item_code COLLATE utf8mb4_general_ci)
-            OR (poi.family_code COLLATE utf8mb4_general_ci = i.family_code COLLATE utf8mb4_general_ci)
+            BINARY CASE
+                WHEN poa.item_model IS NOT NULL AND poa.item_model != '' AND poa.item_model != '-'
+                THEN poa.item_model
+                ELSE poi.item_model
+            END = BINARY i.item_code
         ) AND i.status = 'Active'
-        WHERE poa.po_id = $po_id
-        AND poa.branch_name COLLATE utf8mb4_general_ci = '{$specific_branch_esc}' COLLATE utf8mb4_general_ci
-        GROUP BY poa.id, poi.id
-        ORDER BY poi.item_no ASC
+        ORDER BY COALESCE(poi.item_no, 0) ASC, poa.id ASC
     ";
-    $allocated_result = $conn->query($allocated_items_sql);
+    $allocated_result = false;
+    try {
+        $allocated_result = $conn->query($allocated_items_sql);
+    } catch (Throwable $e) {
+        $allocated_result = false;
+    }
+    if (!$allocated_result) {
+        // Fallback: allocations only (no poi cartesian / collation issues)
+        $allocated_items_sql = "
+            SELECT NULL as id,
+                   poa.id as allocation_id,
+                   poa.po_id,
+                   poa.po_number,
+                   0 as item_no,
+                   poa.family_code,
+                   poa.created_at,
+                   COALESCE(i.has_serial, 0) as has_serial,
+                   COALESCE(i.has_serial_2, 0) as has_serial_2,
+                   COALESCE(i.has_serial_number, 0) as has_serial_number,
+                   COALESCE(i.department, '') as department,
+                   poa.quantity as allocated_quantity,
+                   poa.quantity as quantity,
+                   COALESCE(poa.cost, 0) as cost,
+                   (poa.quantity * COALESCE(poa.cost, 0)) as total,
+                   poa.branch_name,
+                   poa.item_model,
+                   poa.item_description,
+                   poa.serial_number,
+                   poa.imei_2,
+                   COALESCE(poa.received_qty, 0) as received_qty,
+                   0 as is_receive_added
+            FROM purchase_order_allocations poa
+            LEFT JOIN items i ON poa.item_model IS NOT NULL AND poa.item_model != '' AND poa.item_model != '-'
+                AND BINARY poa.item_model = BINARY i.item_code AND i.status = 'Active'
+            WHERE poa.po_id = {$po_id}
+            AND BINARY poa.branch_name = BINARY '{$specific_branch_esc}'
+            ORDER BY poa.id ASC
+        ";
+        try {
+            $allocated_result = $conn->query($allocated_items_sql);
+        } catch (Throwable $e) {
+            $allocated_result = false;
+        }
+    }
     if ($allocated_result) {
         while ($row = $allocated_result->fetch_assoc()) {
+            // Resolve has_serial from items master when SQL join missed it (orphan alloc / collation fallback)
+            if ((int)($row['has_serial'] ?? 0) === 0 && !empty($row['item_model']) && $row['item_model'] !== '-') {
+                $im_esc = $conn->real_escape_string($row['item_model']);
+                $iq = $conn->query("SELECT has_serial, has_serial_2, has_serial_number, department
+                                    FROM items
+                                    WHERE BINARY item_code = BINARY '{$im_esc}'
+                                    AND status = 'Active'
+                                    LIMIT 1");
+                if ($iq && ($ir = $iq->fetch_assoc())) {
+                    $row['has_serial'] = (int)($ir['has_serial'] ?? 0);
+                    $row['has_serial_2'] = (int)($ir['has_serial_2'] ?? 0);
+                    $row['has_serial_number'] = (int)($ir['has_serial_number'] ?? 0);
+                    if (empty($row['department'])) {
+                        $row['department'] = $ir['department'] ?? '';
+                    }
+                }
+            }
             $raw_item_rows[] = $row;
         }
     }
 
     $receive_added_sql = "
-        SELECT poi.id, poi.po_id, poi.po_number, poi.item_no, poi.family_code, poi.created_at,
+        SELECT poi.id, 0 as allocation_id, poi.po_id, poi.po_number, poi.item_no, poi.family_code, poi.created_at,
                COALESCE(MAX(CASE 
                    WHEN poi.item_model IS NOT NULL 
                        AND poi.item_model != '' 
@@ -353,8 +424,18 @@ $grand_total = 0;
 $total_received_qty = 0;
 $total_ordered_qty = 0;
 $has_serialized_items = false;
+$seen_allocation_ids = [];
 
 foreach ($raw_item_rows as $item) {
+    // One display row per allocation — drop cartesian join duplicates
+    $alloc_id = (int)($item['allocation_id'] ?? 0);
+    if ($alloc_id > 0) {
+        if (isset($seen_allocation_ids[$alloc_id])) {
+            continue;
+        }
+        $seen_allocation_ids[$alloc_id] = true;
+    }
+
     $family_code = $item['family_code'] ?? '';
 
     // For non-branch views, merge allocation data when missing on PO items
@@ -2391,9 +2472,13 @@ if ($edit_query && $edit_query->num_rows > 0) {
                         </thead>
                         <tbody>
                             <?php foreach ($items as $item): ?>
-                                <tr data-item-id="<?php echo (int) $item['id']; ?>">
-                                    <td><?php echo (int) $item['item_no']; ?></td>
-                                    <td><strong><?php echo htmlspecialchars(strtoupper($item['family_code'] ?? '-')); ?></strong>
+                                <tr data-item-id="<?php echo (int) ($item['id'] ?? 0); ?>"
+                                    data-allocation-id="<?php echo (int) ($item['allocation_id'] ?? 0); ?>"
+                                    data-family-code="<?php echo htmlspecialchars($item['family_code'] ?? ''); ?>"
+                                    data-item-no="<?php echo (int) ($item['item_no'] ?? 0); ?>"
+                                    data-item-model="<?php echo htmlspecialchars($item['item_model'] ?? ''); ?>">
+                                    <td><?php echo (int) ($item['item_no'] ?? 0); ?></td>
+                                    <td><strong><?php echo htmlspecialchars(strtoupper(($item['family_code'] !== null && $item['family_code'] !== '') ? $item['family_code'] : '-')); ?></strong>
                                     </td>
                                     <td class="item-model-cell"
                                         data-family-code="<?php echo htmlspecialchars($item['family_code']); ?>"
@@ -2406,7 +2491,7 @@ if ($edit_query && $edit_query->num_rows > 0) {
                                         <?php if (!empty($item['item_model']) && $item['item_model'] !== '-'): ?>
                                             <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                                                 <button class="btn-edit-item-model"
-                                                    onclick="editItemModel('<?php echo htmlspecialchars($item['family_code']); ?>', <?php echo (int) $item['item_no']; ?>, '<?php echo htmlspecialchars($item['item_model'] ?? ''); ?>', '<?php echo htmlspecialchars($item['item_description'] ?? ''); ?>')"
+                                                    onclick="editItemModel('<?php echo htmlspecialchars($item['family_code'] ?? '', ENT_QUOTES); ?>', <?php echo (int) ($item['item_no'] ?? 0); ?>, '<?php echo htmlspecialchars($item['item_model'] ?? '', ENT_QUOTES); ?>', '<?php echo htmlspecialchars($item['item_description'] ?? '', ENT_QUOTES); ?>', <?php echo (int) ($item['allocation_id'] ?? 0); ?>, <?php echo (int) ($item['id'] ?? 0); ?>)"
                                                     title="Edit Item Model">
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                                         <path
@@ -2525,7 +2610,7 @@ if ($edit_query && $edit_query->num_rows > 0) {
                                     <td class="delete-action-cell">
                                         <div style="display: flex; justify-content: center; align-items: center;">
                                             <button class="btn-delete-item"
-                                                onclick="deleteItemRow(<?php echo (int) $item['id']; ?>, '<?php echo htmlspecialchars($item['family_code']); ?>', <?php echo (int) $item['item_no']; ?>)"
+                                                onclick="deleteItemRow(<?php echo (int) ($item['id'] ?? 0); ?>, '<?php echo htmlspecialchars($item['family_code'] ?? '', ENT_QUOTES); ?>', <?php echo (int) ($item['item_no'] ?? 0); ?>, '<?php echo htmlspecialchars($item['item_model'] ?? '', ENT_QUOTES); ?>', <?php echo (int) ($item['allocation_id'] ?? 0); ?>)"
                                                 title="Delete Item">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                                     <path
@@ -4312,40 +4397,70 @@ if ($edit_query && $edit_query->num_rows > 0) {
         function populateItemTypeStatusModal() {
             const displayItemModel = window._currentEditingItemTypeStatus.itemModel || window._currentEditingItemTypeStatus.familyCode;
             const serialNumbers = window._currentEditingItemTypeStatus.serialNumbers;
+            const savedTypes = window._currentEditingItemTypeStatus.types || {};
 
-            // Populate the table
+            // Case-insensitive lookup for types loaded from DB
+            const typesByUpper = {};
+            Object.keys(savedTypes).forEach(k => {
+                typesByUpper[String(k).toUpperCase()] = savedTypes[k];
+            });
+
             const tableBody = document.getElementById('itemTypeStatusTableBody');
             tableBody.innerHTML = '';
 
             serialNumbers.forEach((serialNum, index) => {
-                const currentType = window._currentEditingItemTypeStatus.types[serialNum] || 'Good Stock';
+                const currentType = typesByUpper[String(serialNum).toUpperCase()] || 'Good Stock';
+                window._currentEditingItemTypeStatus.types[serialNum] = currentType;
 
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td style="text-align: left; padding-left: 15px; font-weight: 600;">${escapeHtml(displayItemModel)}</td>
-                    <td style="text-align: left; padding-left: 15px;">${escapeHtml(serialNum)}</td>
-                    <td>
-                        <select class="item-type-dropdown" data-serial="${escapeHtml(serialNum)}" onchange="updateItemType('${serialNum.replace(/'/g, "\\'")}', this.value)">
-                            <option value="Good Stock" ${currentType === 'Good Stock' ? 'selected' : ''}>Good Stock</option>
-                            <option value="Defective" ${currentType === 'Defective' ? 'selected' : ''}>Defective</option>
-                            <option value="Demo" ${currentType === 'Demo' ? 'selected' : ''}>Demo</option>
-                            <option value="Serviced" ${currentType === 'Serviced' ? 'selected' : ''}>Serviced</option>
-                        </select>
-                    </td>
-                    <td>
-                        <button class="btn-remove-from-list" onclick="removeItemTypeRow(${index})">Remove</button>
-                    </td>
-                `;
+                const tdNo = document.createElement('td');
+                tdNo.textContent = String(index + 1);
+                const tdModel = document.createElement('td');
+                tdModel.style.cssText = 'text-align: left; padding-left: 15px; font-weight: 600;';
+                tdModel.textContent = displayItemModel;
+                const tdImei = document.createElement('td');
+                tdImei.style.cssText = 'text-align: left; padding-left: 15px;';
+                tdImei.textContent = serialNum;
+                const tdType = document.createElement('td');
+                const select = document.createElement('select');
+                select.className = 'item-type-dropdown';
+                select.dataset.serial = serialNum;
+                ['Good Stock', 'Defective', 'Demo', 'Serviced'].forEach(optVal => {
+                    const opt = document.createElement('option');
+                    opt.value = optVal;
+                    opt.textContent = optVal;
+                    if (optVal === currentType) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                select.addEventListener('change', function () {
+                    updateItemType(serialNum, this.value);
+                });
+                tdType.appendChild(select);
+                const tdAction = document.createElement('td');
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove-from-list';
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', function () {
+                    removeItemTypeRow(index);
+                });
+                tdAction.appendChild(removeBtn);
+
+                row.appendChild(tdNo);
+                row.appendChild(tdModel);
+                row.appendChild(tdImei);
+                row.appendChild(tdType);
+                row.appendChild(tdAction);
                 tableBody.appendChild(row);
             });
 
-            // Show the modal
             document.getElementById('itemTypeStatusModal').style.display = 'flex';
         }
 
         function updateItemType(serialNumber, type) {
             if (window._currentEditingItemTypeStatus) {
+                if (!window._currentEditingItemTypeStatus.types) {
+                    window._currentEditingItemTypeStatus.types = {};
+                }
                 window._currentEditingItemTypeStatus.types[serialNumber] = type;
             }
         }
@@ -4355,51 +4470,18 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 return;
             }
 
-            // Get the serial number being removed
             const serialNumber = window._currentEditingItemTypeStatus.serialNumbers[index];
-
-            // Remove from serial numbers array
             window._currentEditingItemTypeStatus.serialNumbers.splice(index, 1);
-
-            // Remove from types object
-            if (window._currentEditingItemTypeStatus.types[serialNumber]) {
+            if (window._currentEditingItemTypeStatus.types && window._currentEditingItemTypeStatus.types[serialNumber]) {
                 delete window._currentEditingItemTypeStatus.types[serialNumber];
             }
 
-            // Re-render the table
-            const tableBody = document.getElementById('itemTypeStatusTableBody');
-            tableBody.innerHTML = '';
-
-            const displayItemModel = window._currentEditingItemTypeStatus.itemModel || window._currentEditingItemTypeStatus.familyCode;
-
-            window._currentEditingItemTypeStatus.serialNumbers.forEach((serialNum, idx) => {
-                const currentType = window._currentEditingItemTypeStatus.types[serialNum] || 'Good Stock';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${idx + 1}</td>
-                    <td style="text-align: left; padding-left: 15px; font-weight: 600;">${escapeHtml(displayItemModel)}</td>
-                    <td style="text-align: left; padding-left: 15px;">${escapeHtml(serialNum)}</td>
-                    <td>
-                        <select class="item-type-dropdown" data-serial="${escapeHtml(serialNum)}" onchange="updateItemType('${escapeHtml(serialNum)}', this.value)">
-                            <option value="Good Stock" ${currentType === 'Good Stock' ? 'selected' : ''}>Good Stock</option>
-                            <option value="Defective" ${currentType === 'Defective' ? 'selected' : ''}>Defective</option>
-                            <option value="Demo" ${currentType === 'Demo' ? 'selected' : ''}>Demo</option>
-                            <option value="Serviced" ${currentType === 'Serviced' ? 'selected' : ''}>Serviced</option>
-                        </select>
-                    </td>
-                    <td>
-                        <button class="btn-remove-from-list" onclick="removeItemTypeRow(${idx})">Remove</button>
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            });
-
-            // If all items removed, close the modal
             if (window._currentEditingItemTypeStatus.serialNumbers.length === 0) {
                 alert('All items removed.');
                 closeItemTypeStatusModal();
+                return;
             }
+            populateItemTypeStatusModal();
         }
 
         function closeItemTypeStatusModal() {
@@ -4418,18 +4500,33 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 return;
             }
 
-            const { rowKey, familyCode, itemNo, types } = window._currentEditingItemTypeStatus;
+            const { rowKey, familyCode, itemNo } = window._currentEditingItemTypeStatus;
             const poId = <?php echo $po_id; ?>;
 
-            // Initialize storage if needed
+            // Always read current dropdown values from the DOM (reliable even if onchange missed)
+            const types = {};
+            document.querySelectorAll('#itemTypeStatusTableBody .item-type-dropdown').forEach(sel => {
+                const serial = sel.dataset.serial || sel.getAttribute('data-serial') || '';
+                if (serial) {
+                    types[serial] = sel.value || 'Good Stock';
+                }
+            });
+            // Fallback to in-memory map if DOM empty
+            if (Object.keys(types).length === 0 && window._currentEditingItemTypeStatus.types) {
+                Object.assign(types, window._currentEditingItemTypeStatus.types);
+            }
+            if (Object.keys(types).length === 0) {
+                alert('No IMEI/type rows to save.');
+                return;
+            }
+
+            window._currentEditingItemTypeStatus.types = { ...types };
+
             if (!window._itemTypeStatusStorage) {
                 window._itemTypeStatusStorage = {};
             }
-
-            // Save the types to memory first
             window._itemTypeStatusStorage[rowKey] = { ...types };
 
-            // Send to backend to save in database
             fetch('save_item_type_status.php', {
                 method: 'POST',
                 headers: {
@@ -4446,7 +4543,6 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 .then(data => {
                     if (data.success) {
                         alert('Item types/status saved successfully!');
-                        // Close modal
                         closeItemTypeStatusModal();
                     } else {
                         alert('Error saving data: ' + data.message);
@@ -4573,14 +4669,37 @@ if ($edit_query && $edit_query->num_rows > 0) {
             }
         }
 
-        function editItemModel(familyCode, itemNo, currentItemModel, itemDescription) {
+        function editItemModel(familyCode, itemNo, currentItemModel, itemDescription, allocationId, itemId) {
             // Set editing mode flag
             _isEditingExistingItem = true;
             _currentEditingRowKey = familyCode + '-' + itemNo;
             _currentEditingFamilyCode = familyCode;
+            _currentEditingOldItemModel = currentItemModel || '';
+            _currentEditingAllocationId = parseInt(allocationId) || 0;
+            _currentEditingItemId = parseInt(itemId) || 0;
+
+            // Prefer IDs from the actual table row when available
+            const row = Array.from(document.querySelectorAll('.items-table tbody tr')).find(r => {
+                if (_currentEditingAllocationId > 0) {
+                    return parseInt(r.getAttribute('data-allocation-id') || '0') === _currentEditingAllocationId;
+                }
+                if (_currentEditingItemId > 0) {
+                    return parseInt(r.getAttribute('data-item-id') || '0') === _currentEditingItemId;
+                }
+                return String(r.getAttribute('data-family-code') || '') === String(familyCode || '')
+                    && parseInt(r.getAttribute('data-item-no') || '0') === parseInt(itemNo)
+                    && String(r.getAttribute('data-item-model') || '') === String(currentItemModel || '');
+            });
+            if (row) {
+                _currentEditingAllocationId = parseInt(row.getAttribute('data-allocation-id') || '0') || _currentEditingAllocationId;
+                _currentEditingItemId = parseInt(row.getAttribute('data-item-id') || '0') || _currentEditingItemId;
+                _currentEditingOldItemModel = row.getAttribute('data-item-model') || _currentEditingOldItemModel;
+            }
 
             // Get the current quantity and has_serial for this specific row
-            const serialCell = document.querySelector(`.serial-cell[data-family-code="${familyCode}"][data-item-no="${itemNo}"]`);
+            const serialCell = row
+                ? row.querySelector('.serial-cell')
+                : document.querySelector(`.serial-cell[data-family-code="${familyCode}"][data-item-no="${itemNo}"]`);
             let hasSerial = 0;
             let receivedQty = 0;
             if (serialCell) {
@@ -4640,6 +4759,9 @@ if ($edit_query && $edit_query->num_rows > 0) {
             formData.append('item_no', itemNo);
             formData.append('item_model', '-');
             formData.append('item_description', '-');
+            <?php if (!empty($specific_branch)): ?>
+            formData.append('receiving_branch', '<?php echo addslashes($specific_branch); ?>');
+            <?php endif; ?>
 
             fetch('update_po_item_model.php', {
                 method: 'POST',
@@ -4665,21 +4787,76 @@ if ($edit_query && $edit_query->num_rows > 0) {
         }
 
         // Array to track items staged for deletion
-        let stagedDeletions = [];
+        let stagedDeletions = []; // array of {id, family_code, item_no, item_model}
+        let _stagedSerialBackups = {}; // restore serials if user undoes delete
 
-        function deleteItemRow(itemId, familyCode, itemNo) {
-            // Find the row
-            const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+        function findStagedDeletionIndex(itemId, familyCode, itemNo, itemModel, allocationId) {
+            return stagedDeletions.findIndex(d => {
+                if (allocationId > 0 && (d.allocation_id || 0) > 0) {
+                    return parseInt(d.allocation_id) === allocationId;
+                }
+                if (itemId > 0 && d.id > 0) {
+                    return d.id === itemId;
+                }
+                return String(d.family_code || '') === String(familyCode || '')
+                    && parseInt(d.item_no) === parseInt(itemNo)
+                    && String(d.item_model || '') === String(itemModel || '');
+            });
+        }
+
+        function deleteItemRow(itemId, familyCode, itemNo, itemModel, allocationId) {
+            itemId = parseInt(itemId) || 0;
+            familyCode = familyCode == null ? '' : String(familyCode);
+            itemNo = parseInt(itemNo) || 0;
+            itemModel = itemModel == null ? '' : String(itemModel);
+            allocationId = parseInt(allocationId) || 0;
+
+            // Prefer row lookup by allocation id (orphan alloc rows), then item id, then composite
+            let row = null;
+            if (allocationId > 0) {
+                row = document.querySelector(`tr[data-allocation-id="${allocationId}"]`);
+            }
+            if (!row && itemId > 0) {
+                row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+            }
+            if (!row) {
+                row = Array.from(document.querySelectorAll('.items-table tbody tr[data-item-id]')).find(r => {
+                    return String(r.getAttribute('data-family-code') || '') === familyCode
+                        && parseInt(r.getAttribute('data-item-no') || '0') === itemNo
+                        && String(r.getAttribute('data-item-model') || '') === itemModel;
+                }) || null;
+            }
             if (!row) {
                 alert('Item row not found.');
                 return;
             }
 
+            // Re-read attributes from the row (authoritative)
+            itemId = parseInt(row.getAttribute('data-item-id')) || 0;
+            allocationId = parseInt(row.getAttribute('data-allocation-id')) || allocationId || 0;
+            familyCode = row.getAttribute('data-family-code') || familyCode || '';
+            itemNo = parseInt(row.getAttribute('data-item-no') || itemNo) || 0;
+            itemModel = row.getAttribute('data-item-model') || itemModel || '';
+
+            const rowKey = familyCode + '-' + itemNo;
+            const stagedIdx = findStagedDeletionIndex(itemId, familyCode, itemNo, itemModel, allocationId);
+
             // Check if already staged for deletion
-            if (stagedDeletions.includes(itemId)) {
+            if (stagedIdx >= 0) {
                 // Undo deletion - restore the row
                 row.classList.remove('staged-for-deletion');
-                stagedDeletions = stagedDeletions.filter(id => id !== itemId);
+                stagedDeletions.splice(stagedIdx, 1);
+
+                // Restore serials removed when staging delete
+                if (_stagedSerialBackups[rowKey]) {
+                    if (_stagedSerialBackups[rowKey].s1) {
+                        _allSerialNumbers[rowKey] = _stagedSerialBackups[rowKey].s1;
+                    }
+                    if (_stagedSerialBackups[rowKey].s2) {
+                        _allSerialNumbers2[rowKey] = _stagedSerialBackups[rowKey].s2;
+                    }
+                    delete _stagedSerialBackups[rowKey];
+                }
 
                 // Update delete button to show "Delete Item"
                 const deleteBtn = row.querySelector('.btn-delete-item');
@@ -4695,7 +4872,21 @@ if ($edit_query && $edit_query->num_rows > 0) {
             } else {
                 // Stage for deletion
                 row.classList.add('staged-for-deletion');
-                stagedDeletions.push(itemId);
+                stagedDeletions.push({
+                    id: itemId,
+                    allocation_id: allocationId,
+                    family_code: familyCode,
+                    item_no: itemNo,
+                    item_model: itemModel
+                });
+
+                // Backup then drop staged serials so Save Modification won't re-sync them
+                _stagedSerialBackups[rowKey] = {
+                    s1: _allSerialNumbers[rowKey] ? [..._allSerialNumbers[rowKey]] : null,
+                    s2: _allSerialNumbers2[rowKey] ? [..._allSerialNumbers2[rowKey]] : null
+                };
+                delete _allSerialNumbers[rowKey];
+                delete _allSerialNumbers2[rowKey];
 
                 // Update delete button to show "Undo Delete"
                 const deleteBtn = row.querySelector('.btn-delete-item');
@@ -4734,8 +4925,20 @@ if ($edit_query && $edit_query->num_rows > 0) {
         let _selectedItemDescription = '';
         let _searchTimeout = null;
         let _currentEditingFamilyCode = ''; // Store current family code for filtering search
+        let _currentEditingOldItemModel = '';
+        let _currentEditingAllocationId = 0;
+        let _currentEditingItemId = 0;
         let _tempSelectedItems = []; // Track multiple selected items in modal
         let _originalQuantity = 0; // Store the original/max quantity for validation
+
+        function appendItemModelTargetFields(formData) {
+            formData.append('old_item_model', _currentEditingOldItemModel || '');
+            formData.append('allocation_id', _currentEditingAllocationId || 0);
+            formData.append('item_id', _currentEditingItemId || 0);
+            <?php if (!empty($specific_branch)): ?>
+            formData.append('receiving_branch', '<?php echo addslashes($specific_branch); ?>');
+            <?php endif; ?>
+        }
 
         function openItemModelModal(familyCode, itemNo, currentItemModel, itemDescription) {
             _currentEditingRowKey = familyCode + '-' + itemNo;
@@ -4786,6 +4989,9 @@ if ($edit_query && $edit_query->num_rows > 0) {
             document.getElementById('itemModelModal').style.display = 'none';
             _currentEditingRowKey = '';
             _currentEditingFamilyCode = '';
+            _currentEditingOldItemModel = '';
+            _currentEditingAllocationId = 0;
+            _currentEditingItemId = 0;
             _selectedItemModel = '';
             _selectedItemDescription = '';
             _tempSelectedItems = [];
@@ -4904,14 +5110,28 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 return;
             }
 
-            // Add to temporary selected items array with default quantity and received qty
-            _tempSelectedItems.push({
-                itemCode: itemCode,
-                itemDescription: itemDescription,
-                quantity: 1,  // Default quantity (ordered)
-                hasSerial: hasSerial || 0,  // Track if serialized
-                receivedQty: hasSerial ? 0 : 1  // Default received qty (only for non-serialized)
-            });
+            // Edit mode: replace the current selection instead of appending a second model
+            if (_isEditingExistingItem) {
+                const prevQty = (_tempSelectedItems[0] && _tempSelectedItems[0].quantity)
+                    ? parseInt(_tempSelectedItems[0].quantity) || _originalQuantity || 1
+                    : (_originalQuantity || 1);
+                _tempSelectedItems = [{
+                    itemCode: itemCode,
+                    itemDescription: itemDescription,
+                    quantity: prevQty,
+                    hasSerial: hasSerial || 0,
+                    receivedQty: hasSerial ? 0 : prevQty
+                }];
+            } else {
+                // Add to temporary selected items array with default quantity and received qty
+                _tempSelectedItems.push({
+                    itemCode: itemCode,
+                    itemDescription: itemDescription,
+                    quantity: 1,  // Default quantity (ordered)
+                    hasSerial: hasSerial || 0,  // Track if serialized
+                    receivedQty: hasSerial ? 0 : 1  // Default received qty (only for non-serialized)
+                });
+            }
 
             // Update the selected items list display
             updateSelectedItemsList();
@@ -4924,7 +5144,12 @@ if ($edit_query && $edit_query->num_rows > 0) {
             // Keep the search results visible so user can continue selecting
 
             // Show success message
-            showTemporaryMessage('Item added! You can select more items or click "Save All Items" to finish.', 'success');
+            showTemporaryMessage(
+                _isEditingExistingItem
+                    ? 'Item replaced! Click "Update Item" to save.'
+                    : 'Item added! You can select more items or click "Save All Items" to finish.',
+                'success'
+            );
         }
 
         function updateSelectedItemsList() {
@@ -5177,6 +5402,7 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 formData.append('item_model', item.itemCode);
                 formData.append('item_description', item.itemDescription);
                 formData.append('quantity', parseInt(item.quantity) || 1);
+                appendItemModelTargetFields(formData);
 
                 // Add received_qty for non-serialized items
                 if (!item.hasSerial && item.receivedQty !== undefined) {
@@ -5221,6 +5447,7 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 formData.append('item_model', item.itemCode);
                 formData.append('item_description', item.itemDescription);
                 formData.append('quantity', parseInt(item.quantity) || 1);
+                appendItemModelTargetFields(formData);
 
                 // Add received_qty for non-serialized items
                 if (!item.hasSerial && item.receivedQty !== undefined) {
@@ -5261,6 +5488,7 @@ if ($edit_query && $edit_query->num_rows > 0) {
             updateFormData.append('item_model', firstItem.itemCode);
             updateFormData.append('item_description', firstItem.itemDescription);
             updateFormData.append('quantity', parseInt(firstItem.quantity) || 1);
+            appendItemModelTargetFields(updateFormData);
 
             // Add received_qty for non-serialized items
             if (!firstItem.hasSerial && firstItem.receivedQty !== undefined) {
@@ -5662,9 +5890,28 @@ if ($edit_query && $edit_query->num_rows > 0) {
             formData.append('status', '<?php echo addslashes($status); ?>'); // Keep current status
             formData.append('is_modification', '1');
 
-            // Collect all serial numbers
+            // Row keys staged for deletion — do not re-sync their serials/qty
+            const deletedRowKeys = new Set();
+            const deletedItemIds = new Set();
+            stagedDeletions.forEach(d => {
+                const id = typeof d === 'object' ? (parseInt(d.id) || 0) : (parseInt(d) || 0);
+                if (id > 0) deletedItemIds.add(id);
+                const familyCode = typeof d === 'object' ? (d.family_code || '') : '';
+                const itemNo = typeof d === 'object' ? d.item_no : '';
+                if (familyCode !== '' || itemNo !== '') {
+                    deletedRowKeys.add(familyCode + '-' + itemNo);
+                }
+                // Also mark dash/empty family keys used in memory
+                if (typeof d === 'object') {
+                    deletedRowKeys.add((d.family_code || '') + '-' + (d.item_no || 0));
+                    deletedRowKeys.add('-' + '-' + (d.item_no || 0));
+                }
+            });
+
+            // Collect all serial numbers (skip deleted rows)
             let serialNumbers = [];
             for (let rowKey in _allSerialNumbers) {
+                if (deletedRowKeys.has(rowKey)) continue;
                 const { familyCode, itemNo } = parseRowKey(rowKey);
                 _allSerialNumbers[rowKey].forEach(serial => {
                     serialNumbers.push({
@@ -5679,9 +5926,10 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 formData.append('serial_numbers', JSON.stringify(serialNumbers));
             }
 
-            // Collect all IMEI 2 / S/N values
+            // Collect all IMEI 2 / S/N values (skip deleted rows)
             let serialNumbers2 = [];
             for (let rowKey in _allSerialNumbers2) {
+                if (deletedRowKeys.has(rowKey)) continue;
                 const { familyCode, itemNo } = parseRowKey(rowKey);
                 (_allSerialNumbers2[rowKey] || []).forEach(serial2 => {
                     serialNumbers2.push({
@@ -5696,10 +5944,11 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 formData.append('serial_numbers_2', JSON.stringify(serialNumbers2));
             }
 
-            // Collect all item models
+            // Collect all item models (skip deleted rows)
             if (Object.keys(_allItemModels).length > 0) {
                 const itemModelData = {};
                 for (let rowKey in _allItemModels) {
+                    if (deletedRowKeys.has(rowKey)) continue;
                     const { familyCode, itemNo } = parseRowKey(rowKey);
                     itemModelData[rowKey] = {
                         family_code: familyCode,
@@ -5708,7 +5957,9 @@ if ($edit_query && $edit_query->num_rows > 0) {
                         item_description: _allItemDescriptions[rowKey] || ''
                     };
                 }
-                formData.append('item_models', JSON.stringify(itemModelData));
+                if (Object.keys(itemModelData).length > 0) {
+                    formData.append('item_models', JSON.stringify(itemModelData));
+                }
             }
 
             // Collect all received quantities for non-serialized items
@@ -5725,15 +5976,17 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 formData.append('received_quantities', JSON.stringify(receivedQtyData));
             }
 
-            // Collect updated quantities and costs
+            // Collect updated quantities and costs (skip staged deletions)
             const itemQuantitiesCosts = [];
             document.querySelectorAll('.items-table tbody tr[data-item-id]').forEach(row => {
-                const itemId = row.getAttribute('data-item-id');
+                if (row.classList.contains('staged-for-deletion')) return;
+                const itemId = parseInt(row.getAttribute('data-item-id')) || 0;
+                if (itemId > 0 && deletedItemIds.has(itemId)) return;
                 const qtyInput = row.querySelector('.item-qty-input');
                 const costInput = row.querySelector('.item-cost-input');
                 if (qtyInput && costInput) {
                     itemQuantitiesCosts.push({
-                        id: parseInt(itemId),
+                        id: itemId,
                         family_code: qtyInput.getAttribute('data-family-code'),
                         item_no: parseInt(qtyInput.getAttribute('data-item-no')),
                         quantity: parseFloat(qtyInput.value) || 0,

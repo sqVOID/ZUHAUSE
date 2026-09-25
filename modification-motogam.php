@@ -2686,6 +2686,10 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             <input type="text" id="voucherField" style="background-color: #e0e0e0;" readonly>
                         </div>
                         <div class="total-row">
+                            <label>Token:</label>
+                            <input type="text" id="tokenField" style="background-color: #e0e0e0;" readonly>
+                        </div>
+                        <div class="total-row">
                             <label>Total:</label>
                             <input type="text" id="totalAmount" readonly>
                         </div>
@@ -2758,6 +2762,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                         style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-size: 14px; color: #dc3545;">
                                         -₱0.00</td>
                                 </tr>
+                                <tr style="background: #e9ecef; ">
+                                    <td colspan="4"
+                                        style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-size: 14px; font-weight: 600;">
+                                        Token:</td>
+                                    <td id="breakdownToken"
+                                        style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-size: 14px; color: #dc3545;">
+                                        -₱0.00</td>
+                                </tr>
                                 <tr style="background: #d4edda; font-weight: 700;">
                                     <td colspan="4"
                                         style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-size: 15px;">
@@ -2821,38 +2833,136 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             <table class="items-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 30%;">Item Description</th>
-                                        <th style="width: 30%;">IMEI</th>
-                                        <th style="width: 15%;">Quantity</th>
-                                        <th style="width: 15%;">Price</th>
-                                        <th style="width: 10%;">Action</th>
+                                        <th style="width: 22%;">Item Description</th>
+                                        <th style="width: 16%;">IMEI</th>
+                                        <th style="width: 8%;">Qty</th>
+                                        <th style="width: 10%;">Price</th>
+                                        <th style="width: 10%;">Discount</th>
+                                        <th style="width: 10%;">Voucher</th>
+                                        <th style="width: 10%;">Token</th>
+                                        <th style="width: 14%;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     <tr id="no-items-row">
-                                        <td colspan="5" style="text-align:center; padding: 20px;">No items loaded</td>
+                                        <td colspan="8" style="text-align:center; padding: 20px;">No items loaded</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
 
+                        <!-- Trade-In Details Section (Only shown if sales is from salestrade-in.php) -->
+                        <div id="tradeInDetailsSection" class="item-selection-container"
+                            style="margin-top: 20px; padding: 20px; background: #f9f9f9; border: 1px solid #dee2e6; border-radius: 6px; display: none;">
+                            <h4 style="margin: 0 0 15px 0; color: #1E455D; font-size: 16px; font-weight: 700; border-bottom: 2px solid #1E455D; padding-bottom: 10px;">
+                                Trade-In Details</h4>
+                            
+                            <div style="background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Value:</label>
+                                        <input type="number" id="tradeInValueEdit" step="0.01" min="0" 
+                                            style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%; font-weight: 700; color: #1E455D;"
+                                            placeholder="0.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Qty:</label>
+                                        <input type="number" id="tradeInQtyEdit" min="0" readonly
+                                            style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5; width: 100%; cursor: not-allowed;">
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In IMEI:</label>
+                                        <input type="text" id="tradeInIMEIEdit" 
+                                            style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                            placeholder="Enter IMEI" oninput="this.value = this.value.toUpperCase()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Brand:</label>
+                                        <input type="text" id="tradeInBrandEdit" 
+                                            style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                            placeholder="Enter Brand" oninput="this.value = this.value.toUpperCase()">
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Item Code:</label>
+                                        <input type="text" id="tradeInItemCodeEdit" 
+                                            style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                            placeholder="Enter Item Code" oninput="this.value = this.value.toUpperCase()">
+                                    </div>
+                                </div>
+
+                                <!-- TITU Voucher Section -->
+                                <div style="border-top: 2px solid #dee2e6; padding-top: 15px; margin-top: 15px;">
+                                    <h5 style="margin: 0 0 12px 0; color: #1E455D; font-size: 15px; font-weight: 600;">TITU Voucher Details</h5>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU Control:</label>
+                                            <input type="text" id="tituControlEdit" 
+                                                style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                                placeholder="Enter TITU Control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU Token:</label>
+                                            <input type="text" id="tituTokenEdit" 
+                                                style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                                placeholder="Enter TITU Token">
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU Voucher Total:</label>
+                                            <input type="number" id="tituVoucherTotalEdit" step="0.01" min="0"
+                                                style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%; font-weight: 700; color: #1E455D;"
+                                                placeholder="0.00">
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Cross Sell:</label>
+                                            <input type="number" id="crossSellEdit" step="0.01" min="0"
+                                                style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                                placeholder="0.00">
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Voucher:</label>
+                                            <input type="number" id="tradeInVoucherEdit" step="0.01" min="0"
+                                                style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
+                                                placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Editable Fields Section -->
                         <div class="breakdown-edit-fields"
                             style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #dee2e6;">
-                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
                                 <div class="breakdown-input-group">
                                     <label
-                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Discount:</label>
-                                    <input type="number" id="modifyDiscount" placeholder="Enter discount"
-                                        style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;"
-                                        step="0.01" min="0">
+                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Discount <span style="font-weight:400;color:#888;">(from items)</span>:</label>
+                                    <input type="number" id="modifyDiscount" placeholder="0.00"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: #f8f9fa;"
+                                        step="0.01" min="0" readonly>
                                 </div>
                                 <div class="breakdown-input-group">
                                     <label
-                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Voucher:</label>
-                                    <input type="number" id="modifyVoucher" placeholder="Enter voucher"
-                                        style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;"
-                                        step="0.01" min="0">
+                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Voucher <span style="font-weight:400;color:#888;">(from items)</span>:</label>
+                                    <input type="number" id="modifyVoucher" placeholder="0.00"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: #f8f9fa;"
+                                        step="0.01" min="0" readonly>
+                                </div>
+                                <div class="breakdown-input-group">
+                                    <label
+                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Token <span style="font-weight:400;color:#888;">(from items)</span>:</label>
+                                    <input type="number" id="modifyToken" placeholder="0.00"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: #f8f9fa;"
+                                        step="0.01" min="0" readonly>
                                 </div>
                                 <div class="breakdown-input-group">
                                     <label
@@ -2894,9 +3004,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #a8a8a8ff;">
 
                             <!-- Payment Method Header -->
-                            <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff;">
+                            <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                                 <h4 style="margin: 0; color: #333; font-size: 16px; font-weight: 600;">Payment Method
                                 </h4>
+                                <button type="button" id="btnAddPayment" onclick="addPaymentBlock()"
+                                    style="padding: 8px 16px; background: #1E455D; color: #fff; border: none; border-radius: 5px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;"
+                                    onmouseover="this.style.backgroundColor='#163447'"
+                                    onmouseout="this.style.backgroundColor='#1E455D'">
+                                    Add Payment
+                                </button>
                             </div>
 
                             <!-- Dynamic multi-payment sections rendered here for PRE-ORDER / CLAIM scenarios -->
@@ -3757,13 +3873,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 filterTable();
             <?php endif; ?>
 
-            // Add event listener for modifyDiscount field to update breakdown table
-            const modifyDiscountField = document.getElementById('modifyDiscount');
-            if (modifyDiscountField) {
-                modifyDiscountField.addEventListener('input', function () {
-                    updateBreakdownTable();
-                });
-            }
+            // Header Discount/Voucher/Token are readonly totals (summed from per-item fields)
+            // Points/Commission remain editable at header level.
 
             // Check if there's an invoice parameter in the URL (for page refresh persistence)
             const urlParams = new URLSearchParams(window.location.search);
@@ -3881,6 +3992,10 @@ if ($promos_result && $promos_result->num_rows > 0) {
             // Store invoice numbers for payment breakdown display
             window._currentInvoiceNo = data.invoice_no || '';
             window._currentOriginalInvoiceNo = data.original_invoice_no || '';
+            window._paymentHistory = Array.isArray(data.payment_history) ? data.payment_history : [];
+            window._isClaimPreorder = (String(data.page_type || '').toLowerCase() === 'claimpreorder')
+                || (window._paymentHistory.length > 0)
+                || !!(data.original_invoice_no && String(data.original_invoice_no).trim() !== '');
 
             // Clear items edited flag
             window._itemsEdited = false;
@@ -4023,34 +4138,53 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 reentryButton.style.display = 'none';
             }
 
-            // Load items
+            // Load items — each item keeps its own discount/voucher/token
             itemsArray = data.items || [];
+            const headerDiscount = parseFloat(data.discount) || 0;
+            const headerVoucher = parseFloat(data.voucher_amount) || 0;
             itemsArray.forEach(item => {
                 if (item.base_price === undefined || item.base_price === null) {
                     item.base_price = (parseFloat(item.price) > 0) ? parseFloat(item.price) : (parseFloat(item.srp) || parseFloat(item.price) || 0);
                 }
+                item.has_discount = parseInt(item.has_discount) || 0;
+                item.has_voucher = parseInt(item.has_voucher) || 0;
+                item.has_token = parseInt(item.has_token) || 0;
+                item.discount_amount = parseFloat(item.discount_amount) || 0;
+                item.voucher_amount = parseFloat(item.voucher_amount) || 0;
+                item.token_amount = parseFloat(item.token_amount) || 0;
+
+                // Prefill from itemreg only when this item has no saved amount yet
+                if (item.has_voucher === 1 && item.voucher_amount <= 0 && parseFloat(item.reg_voucher_amount) > 0) {
+                    item.voucher_amount = parseFloat(item.reg_voucher_amount) || 0;
+                }
+                if (item.has_token === 1 && item.token_amount <= 0 && parseFloat(item.reg_token_amount) > 0) {
+                    item.token_amount = parseFloat(item.reg_token_amount) || 0;
+                }
             });
+
+            // Legacy: only map header discount if NO per-item discounts exist yet
+            const itemsDiscountSum = itemsArray.reduce((s, it) => s + (parseFloat(it.discount_amount) || 0), 0);
+            if (headerDiscount > 0 && itemsDiscountSum <= 0 && itemsArray.length > 0) {
+                // Prefer items flagged for discount; if several, put on first flagged only as starting point
+                // (user can then split/edit per row — each row is independently editable)
+                const discIdx = itemsArray.findIndex(i => parseInt(i.has_discount) === 1);
+                itemsArray[discIdx >= 0 ? discIdx : 0].discount_amount = headerDiscount;
+            }
+
+            // Legacy: header voucher with no per-item voucher yet
+            const itemsVoucherSum = itemsArray.reduce((s, it) => s + (parseFloat(it.voucher_amount) || 0), 0);
+            if (headerVoucher > 0 && itemsVoucherSum <= 0 && itemsArray.length > 0) {
+                const vouchIdx = itemsArray.findIndex(i => parseInt(i.has_voucher) === 1);
+                itemsArray[vouchIdx >= 0 ? vouchIdx : 0].voucher_amount = headerVoucher;
+            }
+
             reevaluateCartPromo();
 
-            // Load totals
+            // Load totals (Discount/Voucher/Token come from per-item sync below)
             document.getElementById('totalQty').value = data.total_qty || 0;
-            document.getElementById('discountField').value = formatCurrency(data.discount || 0);
-            document.getElementById('voucherField').value = formatCurrency(data.voucher_amount || 0);
             document.getElementById('totalAmount').value = formatCurrency(data.total_amount || 0);
             document.getElementById('pointsField').value = data.points || 0;
             document.getElementById('commissionField').value = formatCurrency(data.commission || 0);
-
-            // Also populate the modifyDiscount field in the Payment Details section
-            const modifyDiscountField = document.getElementById('modifyDiscount');
-            if (modifyDiscountField) {
-                modifyDiscountField.value = data.discount || 0;
-            }
-
-            // Also populate the modifyVoucher field in the Payment Details section
-            const modifyVoucherField = document.getElementById('modifyVoucher');
-            if (modifyVoucherField) {
-                modifyVoucherField.value = data.voucher_amount || 0;
-            }
 
             // Also populate the modifyPoints field in the Payment Details section
             const modifyPointsField = document.getElementById('modifyPoints');
@@ -4062,6 +4196,47 @@ if ($promos_result && $promos_result->num_rows > 0) {
             const modifyCommissionField = document.getElementById('modifyCommission');
             if (modifyCommissionField) {
                 modifyCommissionField.value = data.commission || 0;
+            }
+
+            syncItemDeductionTotals();
+
+            // Handle Trade-In Details Section - Show only if from salestrade-in.php
+            const tradeInSection = document.getElementById('tradeInDetailsSection');
+            const hasTradeInData = data.page_type === 'salestrade-in' || 
+                                   (data.tradein_value && parseFloat(data.tradein_value) > 0) ||
+                                   (data.tradein_imei && data.tradein_imei.trim() !== '');
+            
+            if (tradeInSection && hasTradeInData) {
+                tradeInSection.style.display = 'block';
+                
+                // Populate Trade-In fields (editable)
+                const tradeInValue = parseFloat(data.tradein_value || 0);
+                const tradeInQty = tradeInValue > 0 ? 1 : 0;
+                
+                document.getElementById('tradeInValueEdit').value = tradeInValue;
+                document.getElementById('tradeInQtyEdit').value = tradeInQty;
+                document.getElementById('tradeInIMEIEdit').value = data.tradein_imei || '';
+                document.getElementById('tradeInBrandEdit').value = data.tradein_brand || '';
+                document.getElementById('tradeInItemCodeEdit').value = data.tradein_item_code || '';
+                
+                // Populate TITU Voucher fields (editable)
+                document.getElementById('tituControlEdit').value = data.titu_control || '';
+                document.getElementById('tituTokenEdit').value = data.titu_token || '';
+                document.getElementById('tituVoucherTotalEdit').value = parseFloat(data.titu_voucher_total || 0);
+                document.getElementById('crossSellEdit').value = parseFloat(data.cross_sell || 0);
+                document.getElementById('tradeInVoucherEdit').value = parseFloat(data.trade_in_voucher || 0);
+                
+                // Add event listener to auto-calculate Trade-In Qty when value changes
+                const tradeInValueInput = document.getElementById('tradeInValueEdit');
+                const tradeInQtyInput = document.getElementById('tradeInQtyEdit');
+                if (tradeInValueInput && tradeInQtyInput) {
+                    tradeInValueInput.addEventListener('input', function() {
+                        const value = parseFloat(this.value) || 0;
+                        tradeInQtyInput.value = value > 0 ? 1 : 0;
+                    });
+                }
+            } else if (tradeInSection) {
+                tradeInSection.style.display = 'none';
             }
 
             // Update breakdown table again after discount is set
@@ -4086,23 +4261,75 @@ if ($promos_result && $promos_result->num_rows > 0) {
             initializePaymentSection();
         }
 
+        function syncItemDeductionTotals() {
+            let totalDiscount = 0;
+            let totalVoucher = 0;
+            let totalToken = 0;
+
+            itemsArray.forEach(item => {
+                totalDiscount += parseFloat(item.discount_amount) || 0;
+                totalVoucher += parseFloat(item.voucher_amount) || 0;
+                totalToken += parseFloat(item.token_amount) || 0;
+            });
+
+            const modifyDiscountField = document.getElementById('modifyDiscount');
+            const modifyVoucherField = document.getElementById('modifyVoucher');
+            const modifyTokenField = document.getElementById('modifyToken');
+            const discountField = document.getElementById('discountField');
+            const voucherField = document.getElementById('voucherField');
+            const tokenField = document.getElementById('tokenField');
+
+            if (modifyDiscountField) modifyDiscountField.value = totalDiscount;
+            if (modifyVoucherField) modifyVoucherField.value = totalVoucher;
+            if (modifyTokenField) modifyTokenField.value = totalToken;
+            if (discountField) discountField.value = formatCurrency(totalDiscount);
+            if (voucherField) voucherField.value = formatCurrency(totalVoucher);
+            if (tokenField) tokenField.value = formatCurrency(totalToken);
+        }
+
+        function updateItemDeduction(index, field, value) {
+            if (!itemsArray[index]) return;
+            itemsArray[index][field] = parseFloat(value) || 0;
+            window._itemsEdited = true;
+            syncItemDeductionTotals();
+            updateBreakdownTable();
+        }
+
         function renderItemsTable() {
             const tbody = document.getElementById('itemsTableBody');
             tbody.innerHTML = '';
 
             if (itemsArray.length === 0) {
-                tbody.innerHTML = '<tr id="no-items-row"><td colspan="6" style="text-align:center; padding: 20px;">No items loaded</td></tr>';
+                tbody.innerHTML = '<tr id="no-items-row"><td colspan="8" style="text-align:center; padding: 20px;">No items loaded</td></tr>';
+                syncItemDeductionTotals();
                 updateBreakdownTable();
                 return;
             }
 
             itemsArray.forEach((item, index) => {
+                const discountVal = parseFloat(item.discount_amount) || 0;
+                const voucherVal = parseFloat(item.voucher_amount) || 0;
+                const tokenVal = parseFloat(item.token_amount) || 0;
+                const openStyle = 'background-color: #ffffff; cursor: text;';
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="text" id="desc_${index}" value="${item.item_description}" style="width: 100%;"></td>
-                    <td><input type="text" id="imei_${index}" value="${item.imei || ''}" style="width: 100%;"></td>
+                    <td><input type="text" id="desc_${index}" value="${(item.item_description || '').replace(/"/g, '&quot;')}" style="width: 100%;"></td>
+                    <td><input type="text" id="imei_${index}" value="${(item.imei || '').replace(/"/g, '&quot;')}" style="width: 100%;"></td>
                     <td><input type="number" id="qty_${index}" value="${item.quantity}" min="1" style="width: 100%;"></td>
                     <td><input type="number" id="price_${index}" value="${item.price}" step="0.01" min="0" style="width: 100%;"></td>
+                    <td><input type="number" id="discount_${index}" value="${discountVal}" step="0.01" min="0"
+                        style="width: 100%; ${openStyle}"
+                        title="Discount for this item only"
+                        oninput="updateItemDeduction(${index}, 'discount_amount', this.value)"></td>
+                    <td><input type="number" id="voucher_${index}" value="${voucherVal}" step="0.01" min="0"
+                        style="width: 100%; ${openStyle}"
+                        title="Voucher for this item only"
+                        oninput="updateItemDeduction(${index}, 'voucher_amount', this.value)"></td>
+                    <td><input type="number" id="token_${index}" value="${tokenVal}" step="0.01" min="0"
+                        style="width: 100%; ${openStyle}"
+                        title="Token for this item only"
+                        oninput="updateItemDeduction(${index}, 'token_amount', this.value)"></td>
                     <td style="display: flex; gap: 0px; justify-content: center; border: none;">
                         <button class="btn-update-item" onclick="updateRowItem(${index})" title="Update item">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -4115,6 +4342,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 tbody.appendChild(row);
             });
 
+            syncItemDeductionTotals();
             calculateTotals();
             updateBreakdownTable();
             if (typeof filterBanksByTerminalId === 'function') {
@@ -4160,7 +4388,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     let stageLabel = '';
                     if (idx === totalPayments - 1) {
                         const inv = effectiveInv || curInvoice;
-                        stageLabel = inv ? `2nd Order Breakdown (Claim — Invoice #${inv})` : `2nd Order Breakdown (Claim)`;
+                        stageLabel = inv ? `Claim Order Breakdown (Claim — Invoice #${inv})` : `Claim Order Breakdown (Claim)`;
                     } else {
                         const ordinal = (n) => {
                             const s = ['th', 'st', 'nd', 'rd'];
@@ -4168,8 +4396,11 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             return n + (s[(v - 20) % 10] || s[v] || s[0]);
                         };
                         const numLabel = ordinal(idx + 1);
-                        const inv = effectiveInv || origInvoice;
-                        stageLabel = inv ? `${numLabel} Order Breakdown (Pre-order — Invoice #${inv})` : `${numLabel} Order Breakdown (Pre-order)`;
+                        const preorderLabel = (idx === 0) ? 'Pre-order' : `Pre-order ${idx + 1}`;
+                        const inv = effectiveInv || (idx === 0 ? origInvoice : '') || origInvoice;
+                        stageLabel = inv
+                            ? `${numLabel} Order Breakdown (${preorderLabel} — Invoice #${inv})`
+                            : `${numLabel} Order Breakdown (${preorderLabel})`;
                     }
 
                     // Add group header row in the table
@@ -4220,29 +4451,35 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     });
                 });
 
-                // Get discount from modifyDiscount field
+                // Get discount/voucher/token from per-item totals (header fields are sums)
                 const modifyDiscountField = document.getElementById('modifyDiscount');
                 let discountValue = modifyDiscountField ? parseFloat(modifyDiscountField.value) || 0 : 0;
                 if (discountValue === 0) {
-                    const discountField = document.getElementById('discountField');
-                    discountValue = discountField ? parseFloat(discountField.value.replace(/,/g, '')) || 0 : 0;
+                    discountValue = itemsArray.reduce((s, it) => s + (parseFloat(it.discount_amount) || 0), 0);
                 }
 
-                // Get voucher from modifyVoucher field
                 const modifyVoucherField = document.getElementById('modifyVoucher');
                 let voucherValue = modifyVoucherField ? parseFloat(modifyVoucherField.value) || 0 : 0;
                 if (voucherValue === 0) {
-                    const voucherField = document.getElementById('voucherField');
-                    voucherValue = voucherField ? parseFloat(voucherField.value.replace(/,/g, '')) || 0 : 0;
+                    voucherValue = itemsArray.reduce((s, it) => s + (parseFloat(it.voucher_amount) || 0), 0);
                 }
 
-                const grandTotal = totalAmount - discountValue - voucherValue;
+                const modifyTokenField = document.getElementById('modifyToken');
+                let tokenValue = modifyTokenField ? parseFloat(modifyTokenField.value) || 0 : 0;
+                if (tokenValue === 0) {
+                    tokenValue = itemsArray.reduce((s, it) => s + (parseFloat(it.token_amount) || 0), 0);
+                }
+
+                const grandTotal = totalAmount - discountValue - voucherValue - tokenValue;
 
                 if (breakdownTotal) breakdownTotal.textContent = '₱' + totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 if (breakdownDiscount) breakdownDiscount.textContent = '-₱' + discountValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
                 const breakdownVoucher = document.getElementById('breakdownVoucher');
                 if (breakdownVoucher) breakdownVoucher.textContent = '-₱' + voucherValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const breakdownToken = document.getElementById('breakdownToken');
+                if (breakdownToken) breakdownToken.textContent = '-₱' + tokenValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
                 if (breakdownGrandTotal) breakdownGrandTotal.textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -4285,33 +4522,34 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 breakdownTbody.appendChild(row);
             });
 
-            // Get discount from the modifyDiscount field (in Payment Details section)
+            // Get discount/voucher/token from per-item totals
+            let discountValue = itemsArray.reduce((s, it) => s + (parseFloat(it.discount_amount) || 0), 0);
+            let voucherValue = itemsArray.reduce((s, it) => s + (parseFloat(it.voucher_amount) || 0), 0);
+            let tokenValue = itemsArray.reduce((s, it) => s + (parseFloat(it.token_amount) || 0), 0);
+
             const modifyDiscountField = document.getElementById('modifyDiscount');
-            let discountValue = modifyDiscountField ? parseFloat(modifyDiscountField.value) || 0 : 0;
-
-            // If modifyDiscount is empty/0, fall back to discountField
-            if (discountValue === 0) {
-                const discountField = document.getElementById('discountField');
-                discountValue = discountField ? parseFloat(discountField.value.replace(/,/g, '')) || 0 : 0;
+            if (modifyDiscountField && (parseFloat(modifyDiscountField.value) || 0) > 0) {
+                discountValue = parseFloat(modifyDiscountField.value) || discountValue;
             }
-
-            // Get voucher from the modifyVoucher field (in Payment Details section)
             const modifyVoucherField = document.getElementById('modifyVoucher');
-            let voucherValue = modifyVoucherField ? parseFloat(modifyVoucherField.value) || 0 : 0;
-
-            // If modifyVoucher is empty/0, fall back to voucherField
-            if (voucherValue === 0) {
-                const voucherField = document.getElementById('voucherField');
-                voucherValue = voucherField ? parseFloat(voucherField.value.replace(/,/g, '')) || 0 : 0;
+            if (modifyVoucherField && (parseFloat(modifyVoucherField.value) || 0) > 0) {
+                voucherValue = parseFloat(modifyVoucherField.value) || voucherValue;
+            }
+            const modifyTokenField = document.getElementById('modifyToken');
+            if (modifyTokenField && (parseFloat(modifyTokenField.value) || 0) > 0) {
+                tokenValue = parseFloat(modifyTokenField.value) || tokenValue;
             }
 
-            const grandTotal = totalAmount - discountValue - voucherValue;
+            const grandTotal = totalAmount - discountValue - voucherValue - tokenValue;
 
             if (breakdownTotal) breakdownTotal.textContent = '₱' + totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             if (breakdownDiscount) breakdownDiscount.textContent = '-₱' + discountValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             const breakdownVoucher = document.getElementById('breakdownVoucher');
             if (breakdownVoucher) breakdownVoucher.textContent = '-₱' + voucherValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const breakdownToken = document.getElementById('breakdownToken');
+            if (breakdownToken) breakdownToken.textContent = '-₱' + tokenValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             if (breakdownGrandTotal) breakdownGrandTotal.textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -4434,14 +4672,44 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     price: price,
                     base_price: price,
                     prices: window._lastSelectedItemPrices || {},
-                    others_bank_enabled: window._lastSelectedItemOthersBankEnabled || false
+                    others_bank_enabled: window._lastSelectedItemOthersBankEnabled || false,
+                    has_discount: 0,
+                    has_voucher: 0,
+                    has_token: 0,
+                    discount_amount: 0,
+                    voucher_amount: 0,
+                    token_amount: 0
                 };
                 window._lastSelectedItemPrices = null;
                 window._lastSelectedItemOthersBankEnabled = null;
 
-                window._itemsEdited = true;
-                itemsArray.push(newItem);
-                reevaluateCartPromo();
+                // Load itemreg discount/voucher/token flags for this specific item
+                Promise.all([
+                    fetch(`check_item_details.php?item_code=${encodeURIComponent(itemCode)}`).then(r => r.json()).catch(() => null),
+                    fetch(`check_discount_permission.php?item_code=${encodeURIComponent(itemCode)}`).then(r => r.json()).catch(() => null)
+                ]).then(([det, disc]) => {
+                    if (det && det.status === 'success') {
+                        newItem.has_voucher = parseInt(det.has_voucher) || 0;
+                        newItem.has_token = parseInt(det.has_token) || 0;
+                        newItem.voucher_amount = (newItem.has_voucher === 1) ? (parseFloat(det.voucher_amount) || 0) : 0;
+                        newItem.token_amount = (newItem.has_token === 1) ? (parseFloat(det.token_amount) || 0) : 0;
+                    }
+                    if (disc && disc.status === 'success') {
+                        newItem.has_discount = disc.discount_editable ? 1 : 0;
+                    }
+
+                    window._itemsEdited = true;
+                    itemsArray.push(newItem);
+                    reevaluateCartPromo();
+                    syncItemDeductionTotals();
+                    showAlert('Item added successfully', 'success');
+                }).catch(() => {
+                    window._itemsEdited = true;
+                    itemsArray.push(newItem);
+                    reevaluateCartPromo();
+                    syncItemDeductionTotals();
+                    showAlert('Item added successfully', 'success');
+                });
 
                 // Clear inputs
                 const itemCodeInput = document.getElementById('item_code');
@@ -4463,8 +4731,6 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 priceInput.removeAttribute('readonly');
                 priceInput.style.backgroundColor = '#ffffff';
                 priceInput.style.cursor = 'text';
-
-                showAlert('Item added successfully', 'success');
             }
         }
 
@@ -4473,6 +4739,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 window._itemsEdited = true;
                 itemsArray.splice(index, 1);
                 reevaluateCartPromo();
+                syncItemDeductionTotals();
             }
         }
 
@@ -5099,6 +5366,13 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         if (imeiInput) itemsArray[index].imei = imeiInput.value.trim();
                         if (qtyInput) itemsArray[index].quantity = parseFloat(qtyInput.value) || 0;
                         if (priceInput) itemsArray[index].price = parseFloat(priceInput.value) || 0;
+
+                        const discInput = document.getElementById(`discount_${index}`);
+                        const vouchInput = document.getElementById(`voucher_${index}`);
+                        const tokenInput = document.getElementById(`token_${index}`);
+                        if (discInput) itemsArray[index].discount_amount = parseFloat(discInput.value) || 0;
+                        if (vouchInput) itemsArray[index].voucher_amount = parseFloat(vouchInput.value) || 0;
+                        if (tokenInput) itemsArray[index].token_amount = parseFloat(tokenInput.value) || 0;
                     }
                 });
             }
@@ -5198,6 +5472,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 }
             } catch (e) { }
 
+            // Sync per-item deduction inputs from the table before save
+            itemsArray.forEach((item, index) => {
+                const discInput = document.getElementById(`discount_${index}`);
+                const vouchInput = document.getElementById(`voucher_${index}`);
+                const tokenInput = document.getElementById(`token_${index}`);
+                if (discInput) item.discount_amount = parseFloat(discInput.value) || 0;
+                if (vouchInput) item.voucher_amount = parseFloat(vouchInput.value) || 0;
+                if (tokenInput) item.token_amount = parseFloat(tokenInput.value) || 0;
+            });
+            syncItemDeductionTotals();
+
+            const totalDiscount = itemsArray.reduce((s, it) => s + (parseFloat(it.discount_amount) || 0), 0);
+            const totalVoucher = itemsArray.reduce((s, it) => s + (parseFloat(it.voucher_amount) || 0), 0);
+            const totalToken = itemsArray.reduce((s, it) => s + (parseFloat(it.token_amount) || 0), 0);
+
             const updateData = {
                 sales_entry_id: salesEntryId,
                 invoice_no: claimInvoiceOverride || document.getElementById('invoice_no').value,
@@ -5215,12 +5504,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 promo_usage_number: document.getElementById('promo_usage_number')?.value.trim() || null,
                 items: itemsArray,
                 total_qty: document.getElementById('totalQty').value,
-                discount: parseFloat(document.getElementById('modifyDiscount')?.value || document.getElementById('discountField').value.replace(/,/g, '')) || 0,
-                voucher_amount: parseFloat(document.getElementById('modifyVoucher')?.value || document.getElementById('voucherField').value.replace(/,/g, '')) || 0,
+                discount: totalDiscount,
+                voucher_amount: totalVoucher,
+                token: totalToken,
                 total_amount: totalAmountToSave,
                 points: parseFloat(document.getElementById('modifyPoints')?.value || document.getElementById('pointsField').value) || 0,
                 commission: parseFloat(document.getElementById('modifyCommission')?.value || document.getElementById('commissionField').value.replace(/,/g, '')) || 0,
-                payment_data: document.getElementById('payment_data').value
+                payment_data: document.getElementById('payment_data').value,
+                
+                // Trade-In Details (only include if section is visible/exists)
+                tradein_value: document.getElementById('tradeInValueEdit') ? (parseFloat(document.getElementById('tradeInValueEdit').value) || 0) : null,
+                tradein_imei: document.getElementById('tradeInIMEIEdit') ? document.getElementById('tradeInIMEIEdit').value.trim() : null,
+                tradein_item_code: document.getElementById('tradeInItemCodeEdit') ? document.getElementById('tradeInItemCodeEdit').value.trim() : null,
+                tradein_brand: document.getElementById('tradeInBrandEdit') ? document.getElementById('tradeInBrandEdit').value.trim() : null,
+                titu_control: document.getElementById('tituControlEdit') ? document.getElementById('tituControlEdit').value.trim() : null,
+                titu_token: document.getElementById('tituTokenEdit') ? document.getElementById('tituTokenEdit').value.trim() : null,
+                titu_voucher_total: document.getElementById('tituVoucherTotalEdit') ? (parseFloat(document.getElementById('tituVoucherTotalEdit').value) || 0) : null,
+                cross_sell: document.getElementById('crossSellEdit') ? (parseFloat(document.getElementById('crossSellEdit').value) || 0) : null,
+                trade_in_voucher: document.getElementById('tradeInVoucherEdit') ? (parseFloat(document.getElementById('tradeInVoucherEdit').value) || 0) : null
             };
 
             if (claimInvoiceOverride) {
@@ -5476,7 +5777,10 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     populatePaymentModal(paymentData);
                 } catch (e) {
                     console.error('Error parsing payment data:', e);
+                    updateAddPaymentButtonLabel();
                 }
+            } else {
+                updateAddPaymentButtonLabel();
             }
         }
 
@@ -6138,82 +6442,280 @@ if ($promos_result && $promos_result->num_rows > 0) {
             }
         }
 
+        function paymentOrdinal(n) {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+
+        function getPaymentBlockCount() {
+            const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
+            if (multiContainer && multiContainer.style.display === 'block') {
+                return multiContainer.querySelectorAll('.payment-block').length;
+            }
+            const singleSection = document.getElementById('singlePaymentSection');
+            if (singleSection && singleSection.style.display !== 'none') {
+                const checked = singleSection.querySelector('input[name="payment_method"]:checked');
+                const visibleSec = singleSection.querySelector(
+                    '.home-credit-section[style*="display: block"], .credit-card-section[style*="display: block"], .debit-card-section[style*="display: block"], .qr-ph-section[style*="display: block"], .starpay-qr-section[style*="display: block"], .ewallet-section[style*="display: block"], .online-banking-section[style*="display: block"], .cash-section[style*="display: block"]'
+                );
+                return (checked || visibleSec) ? 1 : 0;
+            }
+            return 0;
+        }
+
+        function updateAddPaymentButtonLabel() {
+            const btn = document.getElementById('btnAddPayment');
+            if (!btn) return;
+            btn.textContent = getPaymentBlockCount() > 0 ? 'Add More Payment' : 'Add Payment';
+        }
+
+        function formatPaymentBlockDate(raw) {
+            if (!raw) return '';
+            const str = String(raw).trim();
+            if (!str || str.startsWith('0000-00-00')) return '';
+            // Prefer YYYY-MM-DD for input[type=date]
+            const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
+            if (m) return m[1];
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+            return '';
+        }
+
+        function buildPaymentBlockHeader(idx, totalPayments, invoiceNo, paymentDate) {
+            const isClaimFlow = !!window._isClaimPreorder;
+            const ordNum = paymentOrdinal(idx + 1);
+            let headerPrefix = '';
+            if (isClaimFlow && totalPayments > 1) {
+                if (idx < totalPayments - 1) {
+                    const preorderLabel = (idx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${idx + 1}`;
+                    headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; ${preorderLabel}`;
+                } else {
+                    headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; CLAIM PRE-ORDER`;
+                }
+            } else {
+                headerPrefix = `${ordNum} Payment Method`;
+            }
+            const dateVal = formatPaymentBlockDate(paymentDate);
+            return `
+                <div class="payment-block-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <h4 style="margin: 0; color: #333; font-size: 16px; font-weight: 600; white-space: nowrap;">${headerPrefix} -</h4>
+                    <input type="text"
+                        class="payment-block-invoice-input"
+                        value="${invoiceNo || ''}"
+                        placeholder="Invoice No."
+                        style="font-size: 15px; font-weight: 700; color: #1565c0; border: 1.5px solid #90caf9; border-radius: 5px; padding: 4px 10px; background: #e3f2fd; outline: none; min-width: 100px; max-width: 200px; letter-spacing: 0.5px;"
+                        oninput="this.style.width = Math.max(100, this.value.length * 10) + 'px';"
+                    >
+                    <label style="display:flex; align-items:center; gap:6px; margin:0; font-size:13px; font-weight:600; color:#555; white-space:nowrap;">
+                        Date:
+                        <input type="date"
+                            class="payment-block-date-input"
+                            value="${dateVal}"
+                            style="font-size: 14px; font-weight: 600; color: #1565c0; border: 1.5px solid #90caf9; border-radius: 5px; padding: 4px 8px; background: #e3f2fd; outline: none;"
+                        >
+                    </label>
+                    <button type="button" class="btn-remove-payment-block" onclick="removePaymentBlock(this)"
+                        title="Remove this payment"
+                        style="margin-left: auto; padding: 6px 12px; background: #c62828; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                        Remove
+                    </button>
+                </div>
+            `;
+        }
+
+        function ensurePaymentFormTemplate() {
+            const singleSection = document.getElementById('singlePaymentSection');
+            if (singleSection && !window._paymentFormTemplate) {
+                const clone = singleSection.cloneNode(true);
+                clone.removeAttribute('id');
+                clone.querySelectorAll('input').forEach(inp => {
+                    if (inp.type !== 'checkbox' && inp.type !== 'radio') inp.value = '';
+                    else inp.checked = false;
+                });
+                clone.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
+                window._paymentFormTemplate = clone.innerHTML;
+            }
+            return window._paymentFormTemplate || '';
+        }
+
+        function createEmptyPaymentBlock(idx, totalPayments, invoiceNo, paymentDate) {
+            ensurePaymentFormTemplate();
+            const block = document.createElement('div');
+            block.className = 'payment-block';
+            block.style.cssText = 'margin-bottom:25px; padding:20px; border:1px solid #ccc; border-radius:8px; background:#fff;';
+            block.innerHTML = buildPaymentBlockHeader(idx, totalPayments, invoiceNo, paymentDate) + (window._paymentFormTemplate || '');
+            return block;
+        }
+
+        function relabelPaymentBlocks() {
+            const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
+            if (!multiContainer) return;
+            const blocks = multiContainer.querySelectorAll('.payment-block');
+            const total = blocks.length;
+            const origInvoice = window._currentOriginalInvoiceNo || '';
+            const curInvoice = window._currentInvoiceNo || '';
+
+            blocks.forEach((block, idx) => {
+                const invInput = block.querySelector('.payment-block-invoice-input');
+                const dateInput = block.querySelector('.payment-block-date-input');
+                const currentInv = invInput ? invInput.value.trim() : '';
+                const currentDate = dateInput ? dateInput.value.trim() : '';
+                let fallbackInv = currentInv;
+                if (!fallbackInv && window._isClaimPreorder && total > 1) {
+                    fallbackInv = (idx < total - 1)
+                        ? ((idx === 0 ? origInvoice : '') || origInvoice)
+                        : curInvoice;
+                }
+                const headerHtml = buildPaymentBlockHeader(idx, total, fallbackInv, currentDate);
+                const oldHeader = block.querySelector('.payment-block-header');
+                if (oldHeader) {
+                    const wrap = document.createElement('div');
+                    wrap.innerHTML = headerHtml;
+                    oldHeader.replaceWith(wrap.firstElementChild);
+                }
+            });
+            updateAddPaymentButtonLabel();
+        }
+
+        function switchToMultiPaymentMode(existingPayments) {
+            ensurePaymentFormTemplate();
+            const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
+            const singleSection = document.getElementById('singlePaymentSection');
+            if (!multiContainer) return;
+
+            multiContainer.style.display = 'block';
+            multiContainer.innerHTML = '';
+            if (singleSection) singleSection.style.display = 'none';
+
+            const payments = Array.isArray(existingPayments) ? existingPayments : [];
+            const origInvoice = window._currentOriginalInvoiceNo || '';
+            const curInvoice = window._currentInvoiceNo || '';
+
+            if (payments.length === 0) {
+                const today = formatPaymentBlockDate(new Date().toISOString());
+                const block = createEmptyPaymentBlock(0, 1, curInvoice || origInvoice || '', today);
+                multiContainer.appendChild(block);
+                initBlockListeners(block);
+            } else {
+                payments.forEach((p, idx) => {
+                    const blockInv = (p && p.block_invoice_no) ? String(p.block_invoice_no).trim() : '';
+                    let inv = blockInv;
+                    if (!inv) {
+                        if (window._isClaimPreorder && payments.length > 1) {
+                            inv = (idx < payments.length - 1)
+                                ? ((idx === 0 ? origInvoice : '') || origInvoice)
+                                : curInvoice;
+                        } else {
+                            inv = curInvoice || origInvoice || '';
+                        }
+                    }
+                    const payDate = formatPaymentBlockDate(
+                        (p && (p.block_payment_date || p.payment_date || p.date)) || ''
+                    );
+                    const block = createEmptyPaymentBlock(idx, payments.length, inv, payDate);
+                    multiContainer.appendChild(block);
+                    initBlockListeners(block);
+                    if (p) populatePaymentBlock(block, p);
+                });
+            }
+            relabelPaymentBlocks();
+            calculateGlobalTotal();
+        }
+
+        function addPaymentBlock() {
+            ensurePaymentFormTemplate();
+            const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
+            const singleSection = document.getElementById('singlePaymentSection');
+            if (!multiContainer) return;
+
+            const wasSingle = !multiContainer.style.display || multiContainer.style.display === 'none';
+            if (wasSingle) {
+                let existing = [];
+                if (singleSection && singleSection.style.display !== 'none') {
+                    try {
+                        const collected = collectDataFromBlock(singleSection);
+                        if (collected && collected.payment_type) {
+                            collected.block_invoice_no = window._currentInvoiceNo || window._currentOriginalInvoiceNo || '';
+                            existing.push(collected);
+                        }
+                    } catch (e) { }
+                }
+                if (existing.length === 0) {
+                    const paymentDataInput = document.getElementById('payment_data');
+                    if (paymentDataInput && paymentDataInput.value) {
+                        try {
+                            const pd = JSON.parse(paymentDataInput.value);
+                            if (pd && pd.payment_type === 'multiple' && Array.isArray(pd.payments)) {
+                                existing = pd.payments;
+                            } else if (pd && pd.payment_type) {
+                                existing = [pd];
+                            }
+                        } catch (e) { }
+                    }
+                }
+                switchToMultiPaymentMode(existing);
+                // No prior payment: switch already created one empty block ("Add Payment")
+                if (existing.length === 0) {
+                    const first = multiContainer.querySelector('.payment-block');
+                    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    updateAddPaymentButtonLabel();
+                    return;
+                }
+                // Had an existing payment converted — fall through to add one more below
+            }
+
+            const blocks = multiContainer.querySelectorAll('.payment-block');
+            const newIdx = blocks.length;
+            const today = formatPaymentBlockDate(new Date().toISOString());
+            const block = createEmptyPaymentBlock(newIdx, newIdx + 1, window._currentInvoiceNo || '', today);
+            multiContainer.appendChild(block);
+            initBlockListeners(block);
+            relabelPaymentBlocks();
+            calculateGlobalTotal();
+            block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateAddPaymentButtonLabel();
+        }
+
+        function removePaymentBlock(btn) {
+            const block = btn ? btn.closest('.payment-block') : null;
+            const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
+            if (!block || !multiContainer) return;
+            if (!confirm('Remove this payment block?')) return;
+
+            block.remove();
+            const remaining = multiContainer.querySelectorAll('.payment-block');
+            if (remaining.length === 0) {
+                multiContainer.style.display = 'none';
+                multiContainer.innerHTML = '';
+                const singleSection = document.getElementById('singlePaymentSection');
+                if (singleSection) singleSection.style.display = 'block';
+            } else {
+                relabelPaymentBlocks();
+            }
+            calculateGlobalTotal();
+            updateAddPaymentButtonLabel();
+        }
+
         function populatePaymentModal(paymentData) {
             console.log('=== POPULATE PAYMENT MODAL ===');
             console.log('Received paymentData:', paymentData);
 
             if (!paymentData || typeof paymentData !== 'object') {
                 console.log('Invalid payment data - not an object or null');
+                updateAddPaymentButtonLabel();
                 return;
             }
 
             // ---------- MULTIPLE PAYMENT MODE (PRE-ORDER / CLAIM) ----------
             if (paymentData.payment_type === 'multiple' && Array.isArray(paymentData.payments) && paymentData.payments.length > 1) {
-                const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
-                const singleSection = document.getElementById('singlePaymentSection');
-                if (multiContainer) {
-                    multiContainer.style.display = 'block';
-                    multiContainer.innerHTML = '';
-                }
-                if (singleSection) singleSection.style.display = 'none';
-
-                const payments = paymentData.payments;
-                const totalPayments = payments.length;
-                const origInvoice = window._currentOriginalInvoiceNo || '';
-                const curInvoice = window._currentInvoiceNo || '';
-
-                const ordinal = (n) => {
-                    const s = ['th', 'st', 'nd', 'rd'];
-                    const v = n % 100;
-                    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-                };
-
-                payments.forEach((p, idx) => {
-                    const isPreorder = idx < totalPayments - 1;
-                    // Build editable header: split label prefix from invoice number
-                    let headerPrefix = '';
-                    let headerInvoice = '';
-                    const blockInv = (p && typeof p === 'object' && p.block_invoice_no) ? (p.block_invoice_no || '').trim() : '';
-                    if (isPreorder) {
-                        const ordNum = ordinal(idx + 1);
-                        headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; PRE-ORDER`;
-                        headerInvoice = blockInv || origInvoice || '';
-                    } else {
-                        const ordNum = ordinal(idx + 1);
-                        headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; CLAIM PRE-ORDER`;
-                        headerInvoice = blockInv || curInvoice || '';
-                    }
-
-                    // Create the payment block wrapping the original form markup
-                    const block = document.createElement('div');
-                    block.className = 'payment-block';
-                    block.style.cssText = `margin-bottom:25px; padding:20px; border:1px solid #ccc; border-radius:8px; background:#fff;`;
-                    block.innerHTML = `
-                        <div class="payment-block-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <h4 style="margin: 0; color: #333; font-size: 16px; font-weight: 600; white-space: nowrap;">${headerPrefix} -</h4>
-                            <input type="text"
-                                class="payment-block-invoice-input"
-                                value="${headerInvoice}"
-                                placeholder="Invoice No."
-                                style="font-size: 15px; font-weight: 700; color: #1565c0; border: 1.5px solid #90caf9; border-radius: 5px; padding: 4px 10px; background: #e3f2fd; outline: none; min-width: 100px; max-width: 200px; letter-spacing: 0.5px;"
-                                oninput="this.style.width = Math.max(100, this.value.length * 10) + 'px';"
-                            >
-                        </div>
-                        ${window._paymentFormTemplate}
-                    `;
-                    multiContainer.appendChild(block);
-
-                    // Initialize dynamic listeners inside this block
-                    initBlockListeners(block);
-
-                    // Populate elements inside this block
-                    populatePaymentBlock(block, p);
-
-                    // All blocks are editable
-                });
-
-                // Calculate and display totals
-                calculateGlobalTotal();
+                switchToMultiPaymentMode(paymentData.payments);
+                updateAddPaymentButtonLabel();
                 return; // Done for multiple payment mode
             }
 
@@ -6290,20 +6792,20 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const curInvoice = window._currentInvoiceNo;
 
                     const effectiveInv = (p && typeof p === 'object' && p.block_invoice_no) ? (p.block_invoice_no || '') : '';
-                    if (idx === totalPayments - 1) {
-                        const inv = effectiveInv || curInvoice;
-                        invLabel = inv ? ` — Invoice #${inv}` : '';
-                    } else {
-                        const inv = effectiveInv || origInvoice;
-                        invLabel = inv ? ` — Invoice #${inv}` : '';
-                    }
-
                     const isPreorder = idx < totalPayments - 1;
                     const headerColor = isPreorder ? '#1565c0' : '#2e7d32';
                     const headerBg = isPreorder ? '#e3f0ff' : '#e8f5e9';
                     const borderCol = isPreorder ? '#90caf9' : '#a5d6a7';
-                    const tag = isPreorder ? 'PRE-ORDER' : 'CLAIM';
+                    const tag = isPreorder ? ((idx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${idx + 1}`) : 'CLAIM';
                     const tagBg = isPreorder ? '#1565c0' : '#2e7d32';
+
+                    if (idx === totalPayments - 1) {
+                        const inv = effectiveInv || curInvoice;
+                        invLabel = inv ? ` — Invoice #${inv}` : '';
+                    } else {
+                        const inv = effectiveInv || (idx === 0 ? origInvoice : '') || origInvoice;
+                        invLabel = inv ? ` — Invoice #${inv}` : '';
+                    }
 
                     const amt = parseAmount(p.amount || p.Amount || p.Total || p.total || 0);
                     const formattedAmt = amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -6376,6 +6878,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             // Calculate and display total payment
             calculateGlobalTotal();
+            updateAddPaymentButtonLabel();
             console.log('=== END POPULATE PAYMENT MODAL ===');
         }
 
@@ -7023,10 +7526,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 data.amount = data.Total;
             }
 
-            // Capture the editable invoice number from the block header
+            // Capture the editable invoice number and date from the block header
             const invoiceInput = block.querySelector('.payment-block-invoice-input');
             if (invoiceInput) {
                 data.block_invoice_no = invoiceInput.value.trim();
+            }
+            const dateInput = block.querySelector('.payment-block-date-input');
+            if (dateInput) {
+                data.block_payment_date = dateInput.value.trim();
             }
 
             return hasValues ? data : null;

@@ -114,45 +114,46 @@ $table_check = $conn->query("SHOW TABLES LIKE 'purchase_order_allocations'");
 $branch_allocations = [];
 
 if ($table_check && $table_check->num_rows > 0) {
-    $collate = 'utf8mb4_unicode_ci';
-    $detail_query = $conn->query("
-        SELECT
-            poa.id AS poa_id,
-            poa.branch_name AS branch,
-            poa.quantity AS allocated_qty,
-            COALESCE(poa.received_qty, 0) AS poa_received_qty,
-            COALESCE(poa.serial_number, poi.serial_number) AS serial_number,
-            COALESCE(MAX(CASE 
-                WHEN poi.item_model IS NOT NULL 
-                    AND poi.item_model != '' 
-                    AND poi.item_model != '-' 
-                    AND poi.item_model COLLATE {$collate} = i.item_code COLLATE {$collate}
-                THEN i.has_serial 
-                ELSE 0 
-            END), 0) AS has_serial,
-            COALESCE(NULLIF(poa.cost, 0), poi.cost, 0) AS cost,
-            poa.received_by,
-            poa.received_at
-        FROM purchase_order_allocations poa
-        LEFT JOIN purchase_order_items poi
-               ON poa.po_id = poi.po_id
-              AND poa.family_code COLLATE {$collate} = poi.family_code COLLATE {$collate}
-              AND COALESCE(poi.is_receive_added, 0) = 0
-              AND (
-                  poa.item_model IS NULL OR poa.item_model = '' OR poa.item_model = '-'
-                  OR poi.item_model IS NULL OR poi.item_model = '' OR poi.item_model = '-'
-                  OR poa.item_model COLLATE {$collate} = poi.item_model COLLATE {$collate}
-              )
-        LEFT JOIN items i ON poa.family_code COLLATE {$collate} = i.family_code COLLATE {$collate}
-            AND i.status = 'Active'
-        WHERE poa.po_id = {$po_id}
-        GROUP BY poa.id, poi.id
-        ORDER BY poa.branch_name ASC
-    ");
+    // One row per allocation — do NOT join PO items by family/model (that cartesian-duplicates
+    // qty when multiple units share the same model, e.g. after editing BLACK→BLUE).
+    $detail_query = false;
+    try {
+        $detail_query = $conn->query("
+            SELECT
+                poa.id AS poa_id,
+                poa.branch_name AS branch,
+                poa.quantity AS allocated_qty,
+                COALESCE(poa.received_qty, 0) AS poa_received_qty,
+                poa.serial_number AS serial_number,
+                COALESCE(i.has_serial, 0) AS has_serial,
+                COALESCE(NULLIF(poa.cost, 0), 0) AS cost,
+                poa.received_by,
+                poa.received_at
+            FROM purchase_order_allocations poa
+            LEFT JOIN items i ON poa.item_model IS NOT NULL
+                AND poa.item_model != ''
+                AND poa.item_model != '-'
+                AND BINARY poa.item_model = BINARY i.item_code
+                AND i.status = 'Active'
+            WHERE poa.po_id = {$po_id}
+            ORDER BY poa.branch_name ASC, poa.id ASC
+        ");
+    } catch (Throwable $e) {
+        $detail_query = false;
+    }
 
     $branch_totals = [];
+    $seen_poa_ids = [];
     if ($detail_query && $detail_query->num_rows > 0) {
         while ($drow = $detail_query->fetch_assoc()) {
+            $poa_id = (int)($drow['poa_id'] ?? 0);
+            if ($poa_id > 0) {
+                if (isset($seen_poa_ids[$poa_id])) {
+                    continue;
+                }
+                $seen_poa_ids[$poa_id] = true;
+            }
+
             $bn = $drow['branch'];
             if (!isset($branch_totals[$bn])) {
                 $branch_totals[$bn] = ['total_allocation_qty' => 0, 'received_qty' => 0, 'total_cost_allocated' => 0.0];

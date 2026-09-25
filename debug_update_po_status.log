@@ -11,7 +11,7 @@ POST data: Array
 
 PO ID: 133
 New Status: Received
-Serial Numbers Raw: [{"family_code":"CLICK 125 V4","item_no":1,"serial_number":"1111111111111"}]
+Serial Numbers Raw: [{"family_code":"CLICK 125 V4","item_no":1,"serial_number":"11111111111 11"}]
 Serial Numbers Decoded: Array
 (
     [0] => Array
@@ -50327,5 +50327,665 @@ Loaded serial types: Array
 
 Adding serial to stock: C124C124 (imei2: C1C1412C4124) with status: Good Stock
 Serial C124C124 already exists in stock, skipping
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-25 08:35:58 ===
+POST data: Array
+(
+    [po_id] => 245
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => testtt
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"QWIEOSURCQIWHQC"},{"family_code":"IPHONE 15 128GB","item_no":2,"serial_number":"QWVRQWRCWAQRXQW"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"ASVFASFASDASXDX"},{"family_code":"IPHONE 16 128GB","item_no":3,"serial_number":"ZXVAVQWEQWVEQWC"}]
+    [serial_numbers_2] => [{"family_code":"IPHONE 16 128GB","item_no":3,"imei_2":"EXQWEZSEASXRQWC"}]
+)
+
+PO ID: 245
+New Status: Received
+Invoice Number: testtt
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"QWIEOSURCQIWHQC"},{"family_code":"IPHONE 15 128GB","item_no":2,"serial_number":"QWVRQWRCWAQRXQW"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"ASVFASFASDASXDX"},{"family_code":"IPHONE 16 128GB","item_no":3,"serial_number":"ZXVAVQWEQWVEQWC"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => QWIEOSURCQIWHQC
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 2
+            [serial_number] => QWVRQWRCWAQRXQW
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => ASVFASFASDASXDX
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [serial_number] => ZXVAVQWEQWVEQWC
+        )
+
+)
+
+Serial Numbers Count: 4
+Serial Numbers 2 Raw: [{"family_code":"IPHONE 16 128GB","item_no":3,"imei_2":"EXQWEZSEASXRQWC"}]
+Serial Numbers 2 Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [imei_2] => EXQWEZSEASXRQWC
+        )
+
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Setting received_by for first time: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    received_by = 'INFANTA',
+                    received_at = '2026-09-25 08:35:58',
+                    received_by_branch = 'ZUHINFA',
+                    invoice_number = 'testtt' WHERE id = 245
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 15 128GB-1 (has_serial=1) with serials: 'QWIEOSURCQIWHQC', imei2: NULL
+Updating row IPHONE 15 128GB-2 (has_serial=1) with serials: 'QWVRQWRCWAQRXQW', imei2: NULL
+Updating row IPHONE 16 128GB-2 (has_serial=1) with serials: 'ASVFASFASDASXDX', imei2: NULL
+Updating row IPHONE 16 128GB-3 (has_serial=1) with serials: 'ZXVAVQWEQWVEQWC', imei2: 'EXQWEZSEASXRQWC'
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 245 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 4 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 715
+    [po_id] => 245
+    [po_number] => PO-2026-030
+    [item_no] => 1
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-BLACK
+    [item_description] => IPHONE 15 128GB BLACK
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 2
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:34:39
+    [received_qty] => 
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-15-128GB-BLACK, Desc: IPHONE 15 128GB BLACK, FC: IPHONE 15 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => QWIEOSURCQIWHQC
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: QWIEOSURCQIWHQC (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLACK', 'IPHONE 15 128GB BLACK', 'IMEI', 
+                                       'QWIEOSURCQIWHQC', NULL, 'PO-2026-030', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:35:58', '2026-09-25 08:35:58', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 717
+    [po_id] => 245
+    [po_number] => PO-2026-030
+    [item_no] => 2
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-PINK
+    [item_description] => IPHONE 15 128GB PINKS
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 0
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:35:21
+    [received_qty] => 0
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-15-128GB-PINK, Desc: IPHONE 15 128GB PINKS, FC: IPHONE 15 128GB, ItemNo: 2, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 2
+            [serial_number] => QWVRQWRCWAQRXQW
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: QWVRQWRCWAQRXQW (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-PINK', 'IPHONE 15 128GB PINKS', 'IMEI', 
+                                       'QWVRQWRCWAQRXQW', NULL, 'PO-2026-030', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:35:58', '2026-09-25 08:35:58', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 716
+    [po_id] => 245
+    [po_number] => PO-2026-030
+    [item_no] => 2
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 2
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:34:39
+    [received_qty] => 
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 2, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => ASVFASFASDASXDX
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: ASVFASFASDASXDX (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'ASVFASFASDASXDX', NULL, 'PO-2026-030', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:35:58', '2026-09-25 08:35:58', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 718
+    [po_id] => 245
+    [po_number] => PO-2026-030
+    [item_no] => 3
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-WHITE
+    [item_description] => IPHONE 16 128GB WHITE
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 0
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:35:25
+    [received_qty] => 0
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-WHITE, Desc: IPHONE 16 128GB WHITE, FC: IPHONE 16 128GB, ItemNo: 3, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [serial_number] => ZXVAVQWEQWVEQWC
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [imei_2] => EXQWEZSEASXRQWC
+        )
+
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: ZXVAVQWEQWVEQWC (imei2: EXQWEZSEASXRQWC) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-WHITE', 'IPHONE 16 128GB WHITE', 'IMEI', 
+                                       'ZXVAVQWEQWVEQWC', 'EXQWEZSEASXRQWC', 'PO-2026-030', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:35:58', '2026-09-25 08:35:58', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-25 08:50:42 ===
+POST data: Array
+(
+    [po_id] => 246
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => testttt
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"test11111111111"},{"family_code":"IPHONE 15 128GB","item_no":2,"serial_number":"test22222222222"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"testtttt3333333"},{"family_code":"IPHONE 16 128GB","item_no":3,"serial_number":"testtttttt44444"}]
+    [serial_numbers_2] => [{"family_code":"IPHONE 16 128GB","item_no":3,"imei_2":"testtttttttt455"}]
+)
+
+PO ID: 246
+New Status: Received
+Invoice Number: testttt
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"test11111111111"},{"family_code":"IPHONE 15 128GB","item_no":2,"serial_number":"test22222222222"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"testtttt3333333"},{"family_code":"IPHONE 16 128GB","item_no":3,"serial_number":"testtttttt44444"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => test11111111111
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 2
+            [serial_number] => test22222222222
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => testtttt3333333
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [serial_number] => testtttttt44444
+        )
+
+)
+
+Serial Numbers Count: 4
+Serial Numbers 2 Raw: [{"family_code":"IPHONE 16 128GB","item_no":3,"imei_2":"testtttttttt455"}]
+Serial Numbers 2 Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [imei_2] => testtttttttt455
+        )
+
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Setting received_by for first time: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    received_by = 'INFANTA',
+                    received_at = '2026-09-25 08:50:42',
+                    received_by_branch = 'ZUHINFA',
+                    invoice_number = 'testttt' WHERE id = 246
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 15 128GB-1 (has_serial=1) with serials: 'test11111111111', imei2: NULL
+Updating row IPHONE 15 128GB-2 (has_serial=1) with serials: 'test22222222222', imei2: NULL
+Updating row IPHONE 16 128GB-2 (has_serial=1) with serials: 'testtttt3333333', imei2: NULL
+Updating row IPHONE 16 128GB-3 (has_serial=1) with serials: 'testtttttt44444', imei2: 'testtttttttt455'
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 246 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 4 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 719
+    [po_id] => 246
+    [po_number] => PO-2026-031
+    [item_no] => 1
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-BLACK
+    [item_description] => IPHONE 15 128GB BLACK
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 2
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:49:39
+    [received_qty] => 
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-15-128GB-BLACK, Desc: IPHONE 15 128GB BLACK, FC: IPHONE 15 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => test11111111111
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: test11111111111 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLACK', 'IPHONE 15 128GB BLACK', 'IMEI', 
+                                       'test11111111111', NULL, 'PO-2026-031', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:50:42', '2026-09-25 08:50:42', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 721
+    [po_id] => 246
+    [po_number] => PO-2026-031
+    [item_no] => 2
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-BLUE
+    [item_description] => IPHONE 15 128GB BLUE
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 0
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:50:02
+    [received_qty] => 0
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-15-128GB-BLUE, Desc: IPHONE 15 128GB BLUE, FC: IPHONE 15 128GB, ItemNo: 2, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 2
+            [serial_number] => test22222222222
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: test22222222222 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'test22222222222', NULL, 'PO-2026-031', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:50:42', '2026-09-25 08:50:42', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 720
+    [po_id] => 246
+    [po_number] => PO-2026-031
+    [item_no] => 2
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 2
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:49:39
+    [received_qty] => 
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 2, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => testtttt3333333
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: testtttt3333333 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'testtttt3333333', NULL, 'PO-2026-031', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:50:42', '2026-09-25 08:50:42', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Processing item for stock: Array
+(
+    [id] => 722
+    [po_id] => 246
+    [po_number] => PO-2026-031
+    [item_no] => 3
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-WHITE
+    [item_description] => IPHONE 16 128GB WHITE
+    [serial_number] => 
+    [quantity] => 1
+    [allocated_quantity] => 0
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-25 08:50:05
+    [received_qty] => 0
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-WHITE, Desc: IPHONE 16 128GB WHITE, FC: IPHONE 16 128GB, ItemNo: 3, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [serial_number] => testtttttt44444
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 3
+            [imei_2] => testtttttttt455
+        )
+
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: testtttttt44444 (imei2: testtttttttt455) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-WHITE', 'IPHONE 16 128GB WHITE', 'IMEI', 
+                                       'testtttttt44444', 'testtttttttt455', 'PO-2026-031', 'ZUHAUSE INFANTA', 
+                                       '2026-09-25 08:50:42', '2026-09-25 08:50:42', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
 Updating purchase_order_allocations with received quantities and invoice number
 === TRANSACTION COMMITTED SUCCESSFULLY ===

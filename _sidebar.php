@@ -788,7 +788,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
 
     <?php
     // Sub admin menu section - ONLY for Sub-admin users
-    $subadmin_labels = ['Late Entry', 'Modification Sales'];
+    $subadmin_labels = ['Late Entry', 'Modification Sales', 'Modification Upgrade', 'Modification Refund', 'Modification Claim Pre-Orders', 'Modification Pre-orders'];
     $subadmin_visible = false;
     // Only show for Sub-admin users
     if (strcasecmp($user_system_level, 'Sub-admin') === 0) {
@@ -822,6 +822,30 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         style="text-decoration:none;">• Modification Sales</a>
                     <?php
                 endif; ?>
+                <?php if (!in_array('Modification Upgrade', $sidebar_hidden)): ?>
+                    <a href="modification-upgrade.php"
+                        class="menu-item<?php echo ($current_page === 'modification-upgrade.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Upgrade</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Modification Refund', $sidebar_hidden)): ?>
+                    <a href="modification-refund.php"
+                        class="menu-item<?php echo ($current_page === 'modification-refund.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Refund</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Modification Claim Pre-Orders', $sidebar_hidden)): ?>
+                    <a href="modification-claim-preorder.php"
+                        class="menu-item<?php echo ($current_page === 'modification-claim-preorder.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Claim Pre-Orders</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Modification Pre-orders', $sidebar_hidden)): ?>
+                    <a href="modification-preorders.php"
+                        class="menu-item<?php echo ($current_page === 'modification-preorders.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Pre-orders</a>
+                    <?php
+                endif; ?>
             </div>
         </div>
         <?php
@@ -829,7 +853,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
 
     <?php
     // Super Admin menu section - ONLY for Super-Admin users
-    $superadmin_labels = ['Modification Sales', 'Modification Claim Item'];
+    $superadmin_labels = ['Modification Sales', 'Modification Claim Item', 'Modification Upgrade', 'Modification Refund', 'Modification Claim Pre-Orders', 'Modification Pre-orders', 'Revert Void Sales'];
     $superadmin_visible = false;
     // Only show for Super-Admin users
     if (strcasecmp($user_system_level, 'Super-Admin') === 0) {
@@ -861,6 +885,36 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                     <a href="modification-claimitem.php"
                         class="menu-item<?php echo ($current_page === 'modification-claimitem.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">• Modification Claim Item</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Modification Upgrade', $sidebar_hidden)): ?>
+                    <a href="modification-upgrade.php"
+                        class="menu-item<?php echo ($current_page === 'modification-upgrade.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Upgrade</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Modification Refund', $sidebar_hidden)): ?>
+                    <a href="modification-refund.php"
+                        class="menu-item<?php echo ($current_page === 'modification-refund.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Refund</a>
+                    <?php   
+                endif; ?>
+                <?php if (!in_array('Modification Claim Pre-Orders', $sidebar_hidden)): ?>
+                    <a href="modification-claim-preorder.php"
+                        class="menu-item<?php echo ($current_page === 'modification-claim-preorder.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Claim Pre-Orders</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Modification Pre-orders', $sidebar_hidden)): ?>
+                    <a href="modification-preorders.php"
+                        class="menu-item<?php echo ($current_page === 'modification-preorders.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Modification Pre-orders</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Revert Void Sales', $sidebar_hidden)): ?>
+                    <a href="revert-voidsales.php"
+                        class="menu-item<?php echo ($current_page === 'revert-voidsales.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Revert Void Sales</a>
                     <?php
                 endif; ?>
             </div>

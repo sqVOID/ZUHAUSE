@@ -12,6 +12,10 @@ if (session_status() === PHP_SESSION_NONE) {
 ob_clean();
 header('Content-Type: application/json');
 
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS voucher_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER is_promo_item");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS token_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER voucher_amount");
+$conn->query("ALTER TABLE sales_entry_items ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER token_amount");
+
 $data = json_decode(file_get_contents('php://input'), true);
 
 if (json_last_error() !== JSON_ERROR_NONE) {
@@ -333,7 +337,16 @@ try {
             commission = ?,
             payment_data = ?,
             cash_payments = ?,
-            card_bank_type = ?
+            card_bank_type = ?,
+            tradein_value = ?,
+            tradein_imei = ?,
+            tradein_item_code = ?,
+            tradein_brand = ?,
+            titu_control = ?,
+            titu_token = ?,
+            titu_voucher_total = ?,
+            cross_sell = ?,
+            trade_in_voucher = ?
         WHERE id = ?
     ");
 
@@ -362,9 +375,20 @@ try {
     $total_amount = $data['total_amount'] ?? 0;
     $points = $data['points'] ?? 0;
     $commission = $data['commission'] ?? 0;
+    
+    // Trade-In fields
+    $tradein_value = isset($data['tradein_value']) ? floatval($data['tradein_value']) : null;
+    $tradein_imei = isset($data['tradein_imei']) ? strtoupper(trim($data['tradein_imei'])) : null;
+    $tradein_item_code = isset($data['tradein_item_code']) ? strtoupper(trim($data['tradein_item_code'])) : null;
+    $tradein_brand = isset($data['tradein_brand']) ? strtoupper(trim($data['tradein_brand'])) : null;
+    $titu_control = isset($data['titu_control']) ? trim($data['titu_control']) : null;
+    $titu_token = isset($data['titu_token']) ? trim($data['titu_token']) : null;
+    $titu_voucher_total = isset($data['titu_voucher_total']) ? floatval($data['titu_voucher_total']) : null;
+    $cross_sell = isset($data['cross_sell']) ? floatval($data['cross_sell']) : null;
+    $trade_in_voucher = isset($data['trade_in_voucher']) ? floatval($data['trade_in_voucher']) : null;
 
     $update_stmt->bind_param(
-        "ssssssssssisidddddsdsi",
+        "ssssssssssisidddddsdsdsssssdddi",
         $invoice_no,
         $original_invoice_no,
         $first_name,
@@ -386,6 +410,15 @@ try {
         $payment_data_json,
         $cash_payments,
         $card_bank_type,
+        $tradein_value,
+        $tradein_imei,
+        $tradein_item_code,
+        $tradein_brand,
+        $titu_control,
+        $titu_token,
+        $titu_voucher_total,
+        $cross_sell,
+        $trade_in_voucher,
         $sales_entry_id
     );
 
@@ -609,8 +642,11 @@ try {
             price,
             item_code,
             dr_number,
-            is_promo_item
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            is_promo_item,
+            voucher_amount,
+            token_amount,
+            discount_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     foreach ($data['items'] as $item) {
@@ -620,6 +656,9 @@ try {
         $price = $item['price'];
         $item_code = isset($item['item_code']) ? trim(strtoupper($item['item_code'])) : '';
         $is_promo_item = isset($item['is_promo_item']) ? intval($item['is_promo_item']) : 0;
+        $item_voucher = isset($item['voucher_amount']) ? floatval($item['voucher_amount']) : 0.00;
+        $item_token = isset($item['token_amount']) ? floatval($item['token_amount']) : 0.00;
+        $item_discount = isset($item['discount_amount']) ? floatval($item['discount_amount']) : 0.00;
 
         // Capture DR number before stock deduction
         $original_dr_number = '';
@@ -671,7 +710,7 @@ try {
         }
 
         $stmt_items->bind_param(
-            "issidssi",
+            "issidssiddd",
             $sales_entry_id,
             $item_description,
             $imei,
@@ -679,7 +718,10 @@ try {
             $price,
             $item_code,
             $original_dr_number,
-            $is_promo_item
+            $is_promo_item,
+            $item_voucher,
+            $item_token,
+            $item_discount
         );
         $stmt_items->execute();
 
