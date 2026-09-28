@@ -2583,24 +2583,21 @@ if ($edit_query && $edit_query->num_rows > 0) {
                                             <span
                                                 class="received-count-span"><?php echo (int) $item['calculated_received_qty']; ?></span>
                                             /
-                                            <input type="number" class="item-qty-input" min="0"
-                                                style="width: 65px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 13px; font-weight: 600;"
+                                            <span class="item-qty-input" 
+                                                style="padding: 4px 6px; text-align: center; font-size: 13px; font-weight: 600;"
                                                 data-item-id="<?php echo (int) $item['id']; ?>"
                                                 data-family-code="<?php echo htmlspecialchars($item['family_code']); ?>"
-                                                data-item-no="<?php echo (int) $item['item_no']; ?>"
-                                                value="<?php echo (int) $item['quantity']; ?>" oninput="updateRowTotal(this)" />
+                                                data-item-no="<?php echo (int) $item['item_no']; ?>"><?php echo (int) $item['quantity']; ?></span>
                                         </div>
                                     </td>
                                     <td class="cost-cell">
                                         <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
                                             <span>&#8369;</span>
-                                            <input type="number" step="0.01" min="0" class="item-cost-input"
-                                                style="width: 90px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; text-align: right; font-size: 13px; font-weight: 600;"
+                                            <span class="item-cost-input"
+                                                style="padding: 4px 6px; text-align: right; font-size: 13px; font-weight: 600;"
                                                 data-item-id="<?php echo (int) $item['id']; ?>"
                                                 data-family-code="<?php echo htmlspecialchars($item['family_code']); ?>"
-                                                data-item-no="<?php echo (int) $item['item_no']; ?>"
-                                                value="<?php echo number_format((float) $item['cost'], 2, '.', ''); ?>"
-                                                oninput="updateRowTotal(this)" />
+                                                data-item-no="<?php echo (int) $item['item_no']; ?>"><?php echo number_format((float) $item['cost'], 2, '.', ''); ?></span>
                                         </div>
                                     </td>
                                     <td class="total-cell">

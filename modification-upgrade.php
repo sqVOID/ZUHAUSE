@@ -505,86 +505,81 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
         .modal {
             display: none;
             position: fixed;
-            z-index: 2000;
+            z-index: 10000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0, 0, 0, 0.5);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.show {
-            display: flex;
+            background-color: rgba(0, 0, 0, 0.6);
         }
 
         .modal-content {
             background-color: #fefefe;
-            margin: auto;
+            margin: 3% auto;
+            padding: 0;
             border: 1px solid #888;
-            width: 90%;
-            max-width: 1200px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.3s;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease-out;
         }
 
         @keyframes slideDown {
             from {
-                opacity: 0;
                 transform: translateY(-50px);
+                opacity: 0;
             }
+
             to {
-                opacity: 1;
                 transform: translateY(0);
+                opacity: 1;
             }
         }
 
         .modal-header {
             padding: 20px 25px;
-            border-bottom: 1px solid #eee;
+            background-color: #000000ff;
+            color: white;
+            border-radius: 8px 8px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--color-navy);
-            color: white;
-            border-radius: 8px 8px 0 0;
         }
 
-        .modal-header h3 {
+        .modal-header h2 {
             margin: 0;
             font-size: 20px;
             font-weight: 600;
         }
 
-        .close-modal {
+        .modal-close {
             color: white;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
+            line-height: 1;
             cursor: pointer;
+            transition: color 0.2s;
             background: none;
             border: none;
-            width: 30px;
-            height: 30px;
+            padding: 0;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 4px;
         }
 
-        .close-modal:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .modal-close:hover,
+        .modal-close:focus {
+            color: #ffcccc;
         }
 
         .modal-body {
-            padding: 25px;
+            padding: 0;
+            max-height: calc(90vh - 120px);
             overflow-y: auto;
-            flex: 1;
         }
 
         .form-section {
@@ -797,12 +792,7 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
             color: #2e7d32;
         }
 
-        /* Revert Modal Styles */
-        .revert-modal-content {
-            max-width: 600px;
-        }
-
-        .revert-details {
+        /* Revert Details Styles */        .revert-details {
             background: #f5f5f5;
             padding: 15px;
             border-radius: 6px;
@@ -1054,215 +1044,219 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
     <div id="modificationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Modify Upgrade Transaction</h3>
-                <button class="close-modal" onclick="closeModificationModal()">&times;</button>
+                <h2>Modify Upgrade Transaction</h2>
+                <button class="modal-close" onclick="closeModificationModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert-warning">
-                    <strong>⚠️ Warning:</strong> You are about to modify an existing upgrade transaction. Please ensure all changes are accurate before saving.
-                </div>
+                <div style="padding: 25px;">
+                    <div class="alert-warning">
+                        <strong>⚠️ Warning:</strong> You are about to modify an existing upgrade transaction. Please ensure all changes are accurate before saving.
+                    </div>
 
-                <!-- Transaction Info Section -->
-                <div class="form-section">
-                    <div class="form-section-title">Transaction Information</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Invoice No</label>
-                            <input type="text" id="mod_invoice_no" readonly>
+                    <!-- Transaction Info Section -->
+                    <div class="form-section">
+                        <div class="form-section-title">Transaction Information</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Invoice No</label>
+                                <input type="text" id="mod_invoice_no" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Transaction Date</label>
+                                <input type="date" id="mod_transaction_date">
+                            </div>
+                            <div class="form-group">
+                                <label>Branch</label>
+                                <select id="mod_branch">
+                                    <option value="Main Branch">Main Branch</option>
+                                    <option value="Branch 2">Branch 2</option>
+                                    <option value="Branch 3">Branch 3</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Transaction Date</label>
-                            <input type="date" id="mod_transaction_date">
+                    </div>
+
+                    <!-- Customer Information Section -->
+                    <div class="form-section">
+                        <div class="form-section-title">Customer Information</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Customer Name <span style="color:red">*</span></label>
+                                <input type="text" id="mod_customer_name" placeholder="Enter customer name">
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number</label>
+                                <input type="text" id="mod_contact_number" placeholder="09XX XXX XXXX">
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="mod_email" placeholder="customer@email.com">
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Address</label>
+                                <textarea id="mod_address" placeholder="Enter complete address"></textarea>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Branch</label>
-                            <select id="mod_branch">
-                                <option value="Main Branch">Main Branch</option>
-                                <option value="Branch 2">Branch 2</option>
-                                <option value="Branch 3">Branch 3</option>
-                            </select>
+                    </div>
+
+                    <!-- Old Device Information -->
+                    <div class="form-section">
+                        <div class="form-section-title">Old Device Information (Trade-In)</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Old IMEI <span style="color:red">*</span></label>
+                                <input type="text" id="mod_old_imei" placeholder="Enter 15-digit IMEI">
+                            </div>
+                            <div class="form-group">
+                                <label>Old Item Model <span style="color:red">*</span></label>
+                                <input type="text" id="mod_old_model" placeholder="Enter old model">
+                            </div>
+                            <div class="form-group">
+                                <label>Old Device Value</label>
+                                <input type="number" id="mod_old_value" placeholder="0.00" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New Device Information -->
+                    <div class="form-section">
+                        <div class="form-section-title">New Device Information (Upgrade)</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>New IMEI <span style="color:red">*</span></label>
+                                <input type="text" id="mod_new_imei" placeholder="Enter 15-digit IMEI">
+                            </div>
+                            <div class="form-group">
+                                <label>New Item Model <span style="color:red">*</span></label>
+                                <input type="text" id="mod_new_model" placeholder="Enter new model">
+                            </div>
+                            <div class="form-group">
+                                <label>New Device Price</label>
+                                <input type="number" id="mod_new_price" placeholder="0.00" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Information -->
+                    <div class="form-section">
+                        <div class="form-section-title">Financial Information</div>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Upgrade Amount (Additional Payment)</label>
+                                <input type="number" id="mod_upgrade_amount" placeholder="0.00" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Payment Method</label>
+                                <select id="mod_payment_method">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Credit Card">Credit Card</option>
+                                    <option value="Debit Card">Debit Card</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="Home Credit">Home Credit</option>
+                                    <option value="GCash">GCash</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upgrade Reason -->
+                    <div class="form-section">
+                        <div class="form-section-title">Upgrade Reason & Remarks</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Reason for Upgrade <span style="color:red">*</span></label>
+                                <select id="mod_reason">
+                                    <option value="">Select reason</option>
+                                    <option value="Customer Upgrade">Customer Upgrade</option>
+                                    <option value="Trade-in Upgrade">Trade-in Upgrade</option>
+                                    <option value="Warranty Upgrade">Warranty Upgrade</option>
+                                    <option value="Customer Request">Customer Request</option>
+                                    <option value="Defective Unit Replacement">Defective Unit Replacement</option>
+                                    <option value="Promo Upgrade">Promo Upgrade</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Remarks / Additional Notes</label>
+                                <textarea id="mod_remarks" placeholder="Enter any additional notes or remarks about this modification"></textarea>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Reason for Modification <span style="color:red">*</span></label>
+                                <textarea id="mod_modification_reason" placeholder="Explain why you are modifying this transaction" required></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Customer Information Section -->
-                <div class="form-section">
-                    <div class="form-section-title">Customer Information</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Customer Name <span style="color:red">*</span></label>
-                            <input type="text" id="mod_customer_name" placeholder="Enter customer name">
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Number</label>
-                            <input type="text" id="mod_contact_number" placeholder="09XX XXX XXXX">
-                        </div>
-                        <div class="form-group">
-                            <label>Email Address</label>
-                            <input type="email" id="mod_email" placeholder="customer@email.com">
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Address</label>
-                            <textarea id="mod_address" placeholder="Enter complete address"></textarea>
-                        </div>
-                    </div>
+                <div style="padding: 20px 25px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+                    <button class="btn-cancel" onclick="closeModificationModal()">Cancel</button>
+                    <button class="btn-save-changes" onclick="saveModification()">Save Changes</button>
                 </div>
-
-                <!-- Old Device Information -->
-                <div class="form-section">
-                    <div class="form-section-title">Old Device Information (Trade-In)</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Old IMEI <span style="color:red">*</span></label>
-                            <input type="text" id="mod_old_imei" placeholder="Enter 15-digit IMEI">
-                        </div>
-                        <div class="form-group">
-                            <label>Old Item Model <span style="color:red">*</span></label>
-                            <input type="text" id="mod_old_model" placeholder="Enter old model">
-                        </div>
-                        <div class="form-group">
-                            <label>Old Device Value</label>
-                            <input type="number" id="mod_old_value" placeholder="0.00" step="0.01">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- New Device Information -->
-                <div class="form-section">
-                    <div class="form-section-title">New Device Information (Upgrade)</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>New IMEI <span style="color:red">*</span></label>
-                            <input type="text" id="mod_new_imei" placeholder="Enter 15-digit IMEI">
-                        </div>
-                        <div class="form-group">
-                            <label>New Item Model <span style="color:red">*</span></label>
-                            <input type="text" id="mod_new_model" placeholder="Enter new model">
-                        </div>
-                        <div class="form-group">
-                            <label>New Device Price</label>
-                            <input type="number" id="mod_new_price" placeholder="0.00" step="0.01">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Financial Information -->
-                <div class="form-section">
-                    <div class="form-section-title">Financial Information</div>
-                    <div class="form-grid-2">
-                        <div class="form-group">
-                            <label>Upgrade Amount (Additional Payment)</label>
-                            <input type="number" id="mod_upgrade_amount" placeholder="0.00" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Payment Method</label>
-                            <select id="mod_payment_method">
-                                <option value="Cash">Cash</option>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="Debit Card">Debit Card</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Home Credit">Home Credit</option>
-                                <option value="GCash">GCash</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Upgrade Reason -->
-                <div class="form-section">
-                    <div class="form-section-title">Upgrade Reason & Remarks</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Reason for Upgrade <span style="color:red">*</span></label>
-                            <select id="mod_reason">
-                                <option value="">Select reason</option>
-                                <option value="Customer Upgrade">Customer Upgrade</option>
-                                <option value="Trade-in Upgrade">Trade-in Upgrade</option>
-                                <option value="Warranty Upgrade">Warranty Upgrade</option>
-                                <option value="Customer Request">Customer Request</option>
-                                <option value="Defective Unit Replacement">Defective Unit Replacement</option>
-                                <option value="Promo Upgrade">Promo Upgrade</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Remarks / Additional Notes</label>
-                            <textarea id="mod_remarks" placeholder="Enter any additional notes or remarks about this modification"></textarea>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Reason for Modification <span style="color:red">*</span></label>
-                            <textarea id="mod_modification_reason" placeholder="Explain why you are modifying this transaction" required></textarea>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeModificationModal()">Cancel</button>
-                <button class="btn-save-changes" onclick="saveModification()">Save Changes</button>
             </div>
         </div>
     </div>
 
     <!-- Revert/Cancel Upgrade Modal -->
     <div id="revertModal" class="modal">
-        <div class="modal-content revert-modal-content">
+        <div class="modal-content">
             <div class="modal-header">
-                <h3>⚠️ Revert Upgrade Transaction</h3>
-                <button class="close-modal" onclick="closeRevertModal()">&times;</button>
+                <h2>⚠️ Revert Upgrade Transaction</h2>
+                <button class="modal-close" onclick="closeRevertModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert-danger">
-                    <strong>⛔ WARNING: This action will cancel the upgrade transaction!</strong>
-                    <ul>
-                        <li>The new device will be returned to inventory</li>
-                        <li>The old device will be returned to customer</li>
-                        <li>Payment will be refunded to customer</li>
-                        <li>This action cannot be easily undone</li>
-                    </ul>
+                <div style="padding: 25px;">
+                    <div class="alert-danger">
+                        <strong>⛔ WARNING: This action will cancel the upgrade transaction!</strong>
+                        <ul>
+                            <li>The new device will be returned to inventory</li>
+                            <li>The old device will be returned to customer</li>
+                            <li>Payment will be refunded to customer</li>
+                            <li>This action cannot be easily undone</li>
+                        </ul>
+                    </div>
+
+                    <div class="revert-details">
+                        <h4 style="margin-top:0; color:#d32f2f;">Transaction to be Reverted:</h4>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">Invoice No:</span>
+                            <span class="revert-detail-value" id="revert_invoice_no">-</span>
+                        </div>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">Date:</span>
+                            <span class="revert-detail-value" id="revert_date">-</span>
+                        </div>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">Customer:</span>
+                            <span class="revert-detail-value" id="revert_customer">-</span>
+                        </div>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">Branch:</span>
+                            <span class="revert-detail-value" id="revert_branch">-</span>
+                        </div>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">Old Device:</span>
+                            <span class="revert-detail-value" id="revert_old_device">-</span>
+                        </div>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">New Device:</span>
+                            <span class="revert-detail-value" id="revert_new_device">-</span>
+                        </div>
+                        <div class="revert-detail-row">
+                            <span class="revert-detail-label">Amount:</span>
+                            <span class="revert-detail-value" id="revert_amount">-</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><strong>Reason for Reverting this Transaction <span style="color:red">*</span></strong></label>
+                        <textarea id="revert_reason" placeholder="Please provide a detailed reason for reverting this upgrade transaction..." style="width:100%; min-height:100px; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:14px; margin-top:8px;" required></textarea>
+                    </div>
                 </div>
 
-                <div class="revert-details">
-                    <h4 style="margin-top:0; color:#d32f2f;">Transaction to be Reverted:</h4>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">Invoice No:</span>
-                        <span class="revert-detail-value" id="revert_invoice_no">-</span>
-                    </div>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">Date:</span>
-                        <span class="revert-detail-value" id="revert_date">-</span>
-                    </div>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">Customer:</span>
-                        <span class="revert-detail-value" id="revert_customer">-</span>
-                    </div>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">Branch:</span>
-                        <span class="revert-detail-value" id="revert_branch">-</span>
-                    </div>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">Old Device:</span>
-                        <span class="revert-detail-value" id="revert_old_device">-</span>
-                    </div>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">New Device:</span>
-                        <span class="revert-detail-value" id="revert_new_device">-</span>
-                    </div>
-                    <div class="revert-detail-row">
-                        <span class="revert-detail-label">Amount:</span>
-                        <span class="revert-detail-value" id="revert_amount">-</span>
-                    </div>
+                <div style="padding: 20px 25px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+                    <button class="btn-cancel" onclick="closeRevertModal()">Cancel</button>
+                    <button class="btn-confirm-revert" onclick="confirmRevert()">Confirm Revert</button>
                 </div>
-
-                <div class="form-group">
-                    <label><strong>Reason for Reverting this Transaction <span style="color:red">*</span></strong></label>
-                    <textarea id="revert_reason" placeholder="Please provide a detailed reason for reverting this upgrade transaction..." style="width:100%; min-height:100px; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:14px; margin-top:8px;" required></textarea>
-                </div>
-
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeRevertModal()">Cancel</button>
-                <button class="btn-confirm-revert" onclick="confirmRevert()">Confirm Revert</button>
             </div>
         </div>
     </div>
@@ -1447,12 +1441,12 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
             document.getElementById('mod_modification_reason').value = '';
 
             // Show the modal
-            document.getElementById('modificationModal').classList.add('show');
+            document.getElementById('modificationModal').style.display = 'block';
         }
 
         // Close modification modal
         function closeModificationModal() {
-            document.getElementById('modificationModal').classList.remove('show');
+            document.getElementById('modificationModal').style.display = 'none';
         }
 
         // Save modification
@@ -1559,12 +1553,12 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
             document.getElementById('revert_reason').value = '';
 
             // Show revert modal
-            document.getElementById('revertModal').classList.add('show');
+            document.getElementById('revertModal').style.display = 'block';
         }
 
         // Close revert modal
         function closeRevertModal() {
-            document.getElementById('revertModal').classList.remove('show');
+            document.getElementById('revertModal').style.display = 'none';
         }
 
         // Confirm revert

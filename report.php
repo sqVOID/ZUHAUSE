@@ -2709,13 +2709,39 @@ require_once 'config.php';
                     return 0;
                 }
 
-                // Helper to extract amount from a payment object with fallbacks
-                function extractPaymentAmount(p, defaultVal = 0) {
+                // Helper to extract amount from a payment object with fallbacks and type specificity
+                function extractPaymentAmount(p, defaultVal = 0, payType = null) {
                     if (!p || typeof p !== 'object') return defaultVal;
+                    const norm = String(payType || p.payment_type || '').toLowerCase();
+
+                    // Prioritize type-specific amount keys
+                    if (norm.includes('credit')) {
+                        const val = extractNumericFromMixed(p.creditCardAmount || p['creditCardAmount'] || p['Credit Card Amount'] || p.credit_card_amount || p.ccAmount || p.card_amount || p.amount || p['Amount'] || p['Total'] || p.total);
+                        if (val > 0) return val;
+                    } else if (norm.includes('debit')) {
+                        const val = extractNumericFromMixed(p.debitCardAmount || p['debitCardAmount'] || p['Debit Card Amount'] || p.debit_card_amount || p.dcAmount || p.amount || p['Amount'] || p['Total'] || p.total);
+                        if (val > 0) return val;
+                    } else if (norm.includes('cash')) {
+                        const val = extractNumericFromMixed(p.cashAmount || p['cashAmount'] || p['Cash Amount'] || p.cash_amount || p.amount || p['Amount'] || p['Amount '] || p['Total'] || p.total);
+                        if (val > 0) return val;
+                    } else if (norm.includes('gcash') || norm.includes('maya') || norm.includes('ewallet') || norm.includes('e-wallet')) {
+                        const val = extractNumericFromMixed(p.ewalletAmount || p['ewalletAmount'] || p.gcashAmount || p['gcashAmount'] || p.mayaAmount || p['mayaAmount'] || p.gcash_amount || p.maya_amount || p.amount || p['Amount'] || p['Total'] || p.total);
+                        if (val > 0) return val;
+                    } else if (norm.includes('online banking') || norm.includes('online_banking')) {
+                        const val = extractNumericFromMixed(p.bankAmount || p['bankAmount'] || p.onlineBankingAmount || p['onlineBankingAmount'] || p.bank_amount || p.amount || p['Amount'] || p['Total'] || p.total);
+                        if (val > 0) return val;
+                    } else if (norm.includes('partner') || norm.includes('home credit') || norm.includes('loan')) {
+                        const val = extractNumericFromMixed(p['Loan Balance'] || p.loan_balance || p.total_loan_amount || p['total_loan_amount'] || p['totalLoanAmount'] || p['Loan Amount'] || p['Amount Financed'] || p.amount || p['Amount'] || p['Total'] || p.total);
+                        if (val > 0) return val;
+                    }
+
                     const candidates = [
-                        p.amount, p['Amount'], p['Amount '], p.cash_amount, p['Cash Amount'],
-                        p.credit_card_amount, p.card_amount, p.debit_card_amount,
-                        p.gcash_amount, p.maya_amount, p.bank_amount,
+                        p.amount, p['Amount'], p['Amount '],
+                        p.cashAmount, p['cashAmount'], p['Cash Amount'], p.cash_amount,
+                        p.creditCardAmount, p['creditCardAmount'], p['Credit Card Amount'], p.credit_card_amount,
+                        p.debitCardAmount, p['debitCardAmount'], p['Debit Card Amount'], p.debit_card_amount,
+                        p.ewalletAmount, p['ewalletAmount'], p.gcashAmount, p['gcashAmount'], p.mayaAmount, p['mayaAmount'],
+                        p.bankAmount, p['bankAmount'],
                         p['Total'], p.total
                     ];
                     for (let c of candidates) {
@@ -2823,7 +2849,7 @@ require_once 'config.php';
                         const totalSrp = data.items.reduce((sum, it) => sum + (parseFloat(it.price || 0) * parseInt(it.quantity || 1)), 0);
 
                         filteredItems.forEach(item => {
-                            const itemPrice = parseFloat(item.price || 0);
+                            const itemPrice = parseFloat(item.srp || item.price || 0);
                             const qty = parseInt(item.quantity || 1);
                             // Try per-method amount first (fixes HC+Cash proportional rounding)
                             const perItemAmtModal = (typeof getPerItemAmountFromMap === 'function')
@@ -2843,7 +2869,7 @@ require_once 'config.php';
                                     <td style="padding:8px; border:1px solid #acacacff;">${item.item_description || ''}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.imei || ''}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${qty}</td>
-                                    <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 </tr>
                             `;
@@ -2867,6 +2893,9 @@ require_once 'config.php';
                 const tokenAmount = parseFloat(data.sale.token || 0);
                 const voucherAmount = parseFloat(data.sale.voucher_amount || data.sale.voucher || 0);
 
+                // Set to track units whose voucher/token have already been displayed (prevents duplicate voucher/token display across split payments)
+                const displayedVoucherTokenUnits = new Set();
+
                 // Build Unit rows with per-unit voucher/token (matched to sale items)
                 function buildUnitRowsWithVoucherToken(unitLabels) {
                     const lookupItems = (filteredItems && filteredItems.length > 0)
@@ -2879,21 +2908,41 @@ require_once 'config.php';
                         let rows = `<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">${label}</td><td style="padding:5px 0;">${u}</td></tr>`;
 
                         const uUpper = String(u).toUpperCase();
-                        const matched = lookupItems.find(it => {
-                            const desc = (it.item_description || it.item_code || '').trim().toUpperCase();
-                            const imei = (it.imei || '').trim().toUpperCase();
-                            const full = imei ? `${desc} (${imei})` : desc;
-                            return full === uUpper || (imei && uUpper.includes(imei)) || (desc && uUpper.startsWith(desc));
-                        });
+                        let matched = null;
+                        if (uUpper.includes('(') && uUpper.includes(')')) {
+                            const imeiExtract = uUpper.match(/\(([^)]+)\)$/);
+                            if (imeiExtract && imeiExtract[1]) {
+                                const targetImei = imeiExtract[1].trim();
+                                matched = lookupItems.find(it => (it.imei || '').trim().toUpperCase() === targetImei);
+                            }
+                        }
+                        if (!matched) {
+                            matched = lookupItems.find(it => {
+                                const desc = (it.item_description || it.item_code || '').trim().toUpperCase();
+                                const imei = (it.imei || '').trim().toUpperCase();
+                                const full = imei ? `${desc} (${imei})` : desc;
+                                return full === uUpper || (imei && uUpper.includes(imei)) || (desc && uUpper.startsWith(desc));
+                            });
+                        }
+                        if (!matched && lookupItems[idx]) {
+                            matched = lookupItems[idx];
+                        }
 
                         if (matched) {
-                            const v = parseFloat(matched.voucher_amount) || 0;
-                            const t = parseFloat(matched.token_amount) || 0;
-                            if (v > 0) {
-                                rows += `<tr><td style="padding:2px 10px 2px 20px; font-weight:600; color:#000000; font-size:13px;">↳ Voucher:</td><td style="padding:2px 0; color:#000000; font-size:13px;">-₱${v.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>`;
-                            }
-                            if (t > 0) {
-                                rows += `<tr><td style="padding:2px 10px 2px 20px; font-weight:600; color:#000000; font-size:13px;">↳ Token:</td><td style="padding:2px 0; color:#000000; font-size:13px;">-₱${t.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>`;
+                            const itemImei = (matched.imei || '').trim().toUpperCase();
+                            const itemCode = (matched.item_code || matched.item_description || '').trim().toUpperCase();
+                            const unitKey = itemImei ? `${itemCode}_${itemImei}` : `${itemCode}_${matched.id || idx}`;
+
+                            if (!displayedVoucherTokenUnits.has(unitKey)) {
+                                displayedVoucherTokenUnits.add(unitKey);
+                                const v = parseFloat(matched.voucher_amount) || 0;
+                                const t = parseFloat(matched.token_amount) || 0;
+                                if (v > 0) {
+                                    rows += `<tr><td style="padding:2px 10px 2px 20px; font-weight:600; color:#000000; font-size:13px;">↳ Voucher:</td><td style="padding:2px 0; color:#000000; font-size:13px;">-₱${v.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>`;
+                                }
+                                if (t > 0) {
+                                    rows += `<tr><td style="padding:2px 10px 2px 20px; font-weight:600; color:#000000; font-size:13px;">↳ Token:</td><td style="padding:2px 0; color:#000000; font-size:13px;">-₱${t.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>`;
+                                }
                             }
                         }
                         return rows;
@@ -2906,7 +2955,7 @@ require_once 'config.php';
                     let html = '';
                     let amt = (overrideAmount !== null && overrideAmount > 0)
                         ? overrideAmount
-                        : extractPaymentAmount(pData, 0);
+                        : extractPaymentAmount(pData, 0, payType);
 
                     let unitArray = [];
                     if (Array.isArray(unitInfo)) {
@@ -2914,6 +2963,16 @@ require_once 'config.php';
                     } else if (typeof unitInfo === 'string' && unitInfo.trim()) {
                         unitArray = unitInfo.split(',').map(s => s.trim()).filter(Boolean);
                     }
+
+                    // Deduplicate units in the list (prevents showing duplicate Unit 1 and Unit 2 for the same unit)
+                    const uniqueUnits = [];
+                    unitArray.forEach(u => {
+                        const cleanU = String(u).trim();
+                        if (cleanU && !uniqueUnits.includes(cleanU)) {
+                            uniqueUnits.push(cleanU);
+                        }
+                    });
+                    unitArray = uniqueUnits;
 
                     // Per-unit voucher/token under each Unit (not global at bottom)
                     const unitRow = buildUnitRowsWithVoucherToken(unitArray);
@@ -3101,8 +3160,22 @@ require_once 'config.php';
                 } else if (paymentData.payment_type && (paymentData.payment_type.includes('+') || paymentData.payment_type.includes('&'))) {
                     // Legacy plus/ampersand separated string
                     const pParts = paymentData.payment_type.split(/\s*[+&]\s*/).map(s => s.trim()).filter(Boolean);
-                    pParts.forEach(part => {
-                        paymentEntries.push({ payment_type: part, ...paymentData });
+                    pParts.forEach((part, pIdx) => {
+                        const entry = { payment_type: part };
+                        for (const [k, v] of Object.entries(paymentData)) {
+                            if (k === 'payments' || k === 'unit_payment_map' || k === 'payment_type') continue;
+                            if (typeof v === 'string' && v.includes('|')) {
+                                const splits = v.split('|').map(s => s.trim());
+                                if (pIdx < splits.length) {
+                                    entry[k] = splits[pIdx];
+                                } else {
+                                    entry[k] = splits[splits.length - 1];
+                                }
+                            } else {
+                                entry[k] = v;
+                            }
+                        }
+                        paymentEntries.push(entry);
                     });
                 } else if (Object.keys(paymentData).length > 0) {
                     paymentEntries = [paymentData];
@@ -3117,12 +3190,11 @@ require_once 'config.php';
 
                 // Check if we have unit_payment_map (per-item payment assignments)
                 const hasUnitPaymentMap = Object.keys(unitPaymentMap).length > 0;
+                let canUseUnitPaymentMap = false;
+                let paymentGroups = {};
 
-                // If we have unit_payment_map and multiple items, show separate payment sections per item
-                if (hasUnitPaymentMap && filteredItems.length > 0 && !paymentMethodFilter) {
+                if (hasUnitPaymentMap && filteredItems.length > 1 && !paymentMethodFilter) {
                     // Group items by payment method
-                    const paymentGroups = {};
-
                     filteredItems.forEach(item => {
                         const itemPayMethod = getItemPaymentMethod(item);
                         if (!paymentGroups[itemPayMethod]) {
@@ -3131,6 +3203,16 @@ require_once 'config.php';
                         paymentGroups[itemPayMethod].push(item);
                     });
 
+                    const groupKeys = Object.keys(paymentGroups);
+                    // Only group by unit_payment_map if we have distinct methods mapped across items
+                    // that cover all payment methods. If split payment was used on the same item, fall through to paymentEntries.
+                    if (groupKeys.length > 1 && groupKeys.length >= paymentEntries.length) {
+                        canUseUnitPaymentMap = true;
+                    }
+                }
+
+                // If we have distinct per-item assignments covering all methods, show separate payment sections per item
+                if (canUseUnitPaymentMap) {
                     // Render a payment section for each unique payment method
                     let isFirstPaymentSection = true; // Track if this is the first payment section
                     Object.keys(paymentGroups).forEach(payMethod => {
@@ -3187,8 +3269,8 @@ require_once 'config.php';
                         isFirstPaymentSection = false; // After first section, set to false
                     });
                 } else if (paymentEntries.length > 1 && !paymentMethodFilter) {
-                    // Multiple payment entries without unit_payment_map
-                    paymentEntries.forEach((entry) => {
+                    // Multiple payment entries without unit_payment_map (or split payment on single/multiple items)
+                    paymentEntries.forEach((entry, idx) => {
                         const entryType = formatPaymentMethodName(entry);
                         let unitList = [];
                         if (entry.Unit) {
@@ -3201,7 +3283,7 @@ require_once 'config.php';
                             }).filter(Boolean);
                         }
                         paymentInfoHTML += `<tr><td colspan="2" style="padding:10px 10px 5px 0; font-weight:600; font-size:15px; color:#1E455D; border-top:1px solid #ddd;">${entryType}:</td></tr>`;
-                        const res = renderPaymentDetails(entryType, entry, null, false, false, unitList);
+                        const res = renderPaymentDetails(entryType, entry, null, idx === 0 && tokenAmount > 0, idx === 0 && voucherAmount > 0, unitList);
                         paymentInfoHTML += res.html;
                         totalPayment += res.amount;
                     });
@@ -3253,7 +3335,7 @@ require_once 'config.php';
                         fallbackAmt = (!isNaN(parsedAmt) && parsedAmt > 0) ? parsedAmt : parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
                     } else {
                         // Prefer payment Amount/Total (card installment set price) over cart SRP in total_amount
-                        const payAmt = extractPaymentAmount(singleEntry, 0);
+                        const payAmt = extractPaymentAmount(singleEntry, 0, overallPaymentMethod);
                         const effectiveTotal = (typeof getEffectiveSaleTotal === 'function')
                             ? getEffectiveSaleTotal(data.sale, paymentData)
                             : parseFloat(data.sale.actual_total_amount || data.sale.total_amount || 0);
@@ -3293,6 +3375,45 @@ require_once 'config.php';
                 }
 
                 paymentInfoHTML += `<tr style="border-top:2px solid #acacacff;"><td style="padding:10px 10px 5px 0; font-weight:700; font-size:16px;">Total Payment:</td><td style="padding:10px 0 5px 0; font-weight:700; font-size:16px; color:#1E455D;">₱${totalPayment.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>`;
+
+                // If this is a Pre-order invoice, show the pre-order payment history breakdown
+                if (data.sale.page_type === 'preorder' && data.sale.preorder_payments && data.sale.preorder_payments.length > 0) {
+                    paymentInfoHTML += `<tr><td colspan="2" style="padding:14px 0 4px 0;"></td></tr>`;
+                    paymentInfoHTML += `<tr><td colspan="2" style="padding:6px 10px 6px 0;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <span style="background:#1E455D;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;letter-spacing:0.5px;">PRE-ORDER</span>
+                            <span style="color:#555;font-size:13px;">Payment History</span>
+                        </div>
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
+                            <thead>
+                                <tr style="background:#1E455D;color:#fff;">
+                                    <th style="padding:7px 10px;text-align:left;font-weight:600;">Invoice No</th>
+                                    <th style="padding:7px 10px;text-align:left;font-weight:600;">Date</th>
+                                    <th style="padding:7px 10px;text-align:left;font-weight:600;">Method</th>
+                                    <th style="padding:7px 10px;text-align:right;font-weight:600;">Amount</th>
+                                    <th style="padding:7px 10px;text-align:center;font-weight:600;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.sale.preorder_payments.map((pp, idx) => {
+                        const ppDate = pp.payment_date ? new Date(pp.payment_date).toLocaleString() : '';
+                        const ppAmt = parseFloat(pp.amount || 0);
+                        const ppStatus = (pp.status_after_payment || '').toLowerCase();
+                        const statusColor = ppStatus.includes('full') ? '#28a745' : ppStatus.includes('partial') ? '#fd7e14' : '#1E455D';
+                        const statusLabel = ppStatus === 'fully paid' ? 'FULLY PAID' : ppStatus === 'partial' ? 'PARTIAL' : (pp.status_after_payment || '').toUpperCase();
+                        const rowBg = idx % 2 === 0 ? '#f9f9f9' : '#fff';
+                        return `<tr style="background:${rowBg};">
+                                        <td style="padding:7px 10px;font-weight:600;color:#1E455D;">${pp.invoice_no || ''}</td>
+                                        <td style="padding:7px 10px;">${ppDate}</td>
+                                        <td style="padding:7px 10px;">${pp.payment_method || ''}</td>
+                                        <td style="padding:7px 10px;text-align:right;font-weight:600;">₱${ppAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td style="padding:7px 10px;text-align:center;"><span style="color:${statusColor};font-weight:700;font-size:11px;">${statusLabel}</span></td>
+                                    </tr>`;
+                    }).join('')}
+                            </tbody>
+                        </table>
+                    </td></tr>`;
+                }
 
                 const hasTradeIn = Boolean((data.sale.tradein_value && parseFloat(data.sale.tradein_value) > 0) || (data.sale.titu_voucher_total && parseFloat(data.sale.titu_voucher_total) > 0));
                 const hasPromoItemInSale = (data.items || []).some(item => item.is_promo_item == 1);

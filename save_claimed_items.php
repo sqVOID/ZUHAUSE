@@ -8,24 +8,24 @@ try {
     // Get POST data
     $rawData = file_get_contents('php://input');
     $data = json_decode($rawData, true);
-    
+
     if (!$data) {
         throw new Exception('Invalid JSON data received');
     }
-    
+
     // Validate required fields
     if (empty($data['invoice_no'])) {
         throw new Exception('Invoice number is required');
     }
-    
+
     if (empty($data['claimed_items']) || !is_array($data['claimed_items'])) {
         throw new Exception('At least one item must be claimed');
     }
-    
+
     if (empty($data['unclaimed_item_ids']) || !is_array($data['unclaimed_item_ids'])) {
         throw new Exception('Unclaimed item IDs are required');
     }
-    
+
     $invoice_no = trim($data['invoice_no']);
     $customer_name = isset($data['customer_name']) ? trim($data['customer_name']) : '';
     $customer_address = isset($data['customer_address']) ? trim($data['customer_address']) : '';
@@ -34,10 +34,10 @@ try {
     $remarks = isset($data['remarks']) ? trim($data['remarks']) : '';
     $claimed_items = $data['claimed_items'];
     $unclaimed_item_ids = $data['unclaimed_item_ids'];
-    
+
     $claimed_by = $_SESSION['username'] ?? 'system';
     $branch_code = $_SESSION['user_branch'] ?? '';
-    
+
     // Get branch name from the first unclaimed freebie (they should all have the same branch)
     $branch_name = '';
     if (!empty($unclaimed_item_ids) && count($unclaimed_item_ids) > 0) {
@@ -52,7 +52,7 @@ try {
         }
         $branch_query->close();
     }
-    
+
     // Fallback: Get branch name from branches table if not found in unclaimed_freebies
     if (empty($branch_name) && !empty($branch_code)) {
         $branch_query2 = $conn->prepare("SELECT branch_name FROM branches WHERE branch_code = ?");
@@ -65,10 +65,10 @@ try {
         }
         $branch_query2->close();
     }
-    
+
     // Start transaction
     $conn->begin_transaction();
-    
+
     // Create claimed_items table if it doesn't exist
     $createTableSQL = "CREATE TABLE IF NOT EXISTS claimed_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -99,47 +99,47 @@ try {
         INDEX idx_claimed_at (claimed_at),
         INDEX idx_claimed_by (claimed_by)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-    
+
     $conn->query($createTableSQL);
-    
+
     // Insert claimed items
     $insertSQL = "INSERT INTO claimed_items 
                   (invoice_no, unclaimed_freebie_id, customer_name, customer_address, customer_contact, 
                    customer_email, item_code, item_description, imei, quantity, remarks, 
                    claimed_by, claimed_at, branch_code, branch) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)";
-    
+
     $stmt = $conn->prepare($insertSQL);
     if (!$stmt) {
         throw new Exception('Failed to prepare insert statement: ' . $conn->error);
     }
-    
+
     $insertedCount = 0;
-    
+
     foreach ($claimed_items as $item) {
         // Validate item data
         if (empty($item['itemCode']) || empty($item['description']) || empty($item['quantity'])) {
             throw new Exception('Invalid item data: missing required fields');
         }
-        
+
         // Find the matching unclaimed freebie ID
         $item_code = $item['itemCode'];
         $unclaimed_freebie_id = null;
-        
+
         foreach ($unclaimed_item_ids as $id_mapping) {
             if ($id_mapping['item_code'] === $item_code) {
                 $unclaimed_freebie_id = $id_mapping['id'];
                 break;
             }
         }
-        
+
         if (!$unclaimed_freebie_id) {
             throw new Exception("Unclaimed freebie ID not found for item: $item_code");
         }
-        
+
         $imei = isset($item['imei']) && !empty($item['imei']) ? $item['imei'] : null;
         $quantity = intval($item['quantity']);
-        
+
         $stmt->bind_param(
             'sisisssssissss',
             $invoice_no,
@@ -157,30 +157,30 @@ try {
             $branch_code,
             $branch_name
         );
-        
+
         if (!$stmt->execute()) {
             throw new Exception('Failed to insert claimed item: ' . $stmt->error);
         }
-        
+
         $insertedCount++;
     }
-    
+
     $stmt->close();
-    
+
     // Get the user's branch name and code for stock deduction
     $user_branch = trim($_SESSION['user_branch'] ?? '');
-    
+
     $stockDeductedCount = 0;
     $stockErrors = [];
     $stockDebug = [];
-    
+
     foreach ($claimed_items as $item) {
         $item_code = trim($item['itemCode']);
         $quantity = intval($item['quantity']);
         $imei = isset($item['imei']) ? trim($item['imei']) : '';
-        
+
         $stockDebug[] = "Processing item: $item_code, qty: $quantity, imei: '$imei', branch: '$user_branch', branch_name: '$branch_name'";
-        
+
         // 1. SERIALIZED ITEM DEDUCTION (If IMEI is present)
         if (!empty($imei)) {
             $checkImeiSQL = "SELECT id, quantity, branch, status 
@@ -196,13 +196,13 @@ try {
             $imeiStmt->bind_param('ss', $imei, $imei);
             $imeiStmt->execute();
             $imeiResult = $imeiStmt->get_result();
-            
+
             if ($imeiResult && $imeiResult->num_rows > 0) {
                 $stockRow = $imeiResult->fetch_assoc();
                 $stockId = $stockRow['id'];
                 $stockQty = intval($stockRow['quantity']);
                 $imeiStmt->close();
-                
+
                 if ($stockQty <= 1) {
                     $delStmt = $conn->prepare("DELETE FROM stock_on_hand WHERE id = ?");
                     $delStmt->bind_param('i', $stockId);
@@ -234,7 +234,7 @@ try {
                 continue;
             }
         }
-        
+
         // 2. NON-SERIALIZED ITEM DEDUCTION
         // Query available matching stock records (ordered by ID for FIFO deduction)
         $findStockSQL = "SELECT id, quantity, branch, status 
@@ -249,17 +249,17 @@ try {
                            AND (LOWER(TRIM(status)) IN ('good', 'good stock', 'available', 'active') OR status IS NULL OR status = '')
                            AND quantity > 0
                          ORDER BY id ASC";
-        
+
         $findStmt = $conn->prepare($findStockSQL);
         if (!$findStmt) {
             $stockErrors[] = "Failed to prepare stock query for item $item_code: " . $conn->error;
             continue;
         }
-        
+
         $findStmt->bind_param('sssss', $item_code, $user_branch, $branch_name, $user_branch, $user_branch);
         $findStmt->execute();
         $findResult = $findStmt->get_result();
-        
+
         $matchingRows = [];
         $totalAvailable = 0;
         if ($findResult) {
@@ -269,7 +269,7 @@ try {
             }
         }
         $findStmt->close();
-        
+
         // Fallback: If no stock matched with branch filter, check without branch constraint if branch not strictly required
         if (empty($matchingRows)) {
             $findFallbackSQL = "SELECT id, quantity, branch, status 
@@ -292,32 +292,32 @@ try {
                 $fbStmt->close();
             }
         }
-        
+
         if (empty($matchingRows)) {
             $stockErrors[] = "Item $item_code not found in good/available stock";
             $stockDebug[] = "No stock record found for item $item_code in branch '$user_branch' or '$branch_name'";
             continue;
         }
-        
+
         if ($totalAvailable < $quantity) {
             $stockErrors[] = "Insufficient stock for item $item_code (available: $totalAvailable, requested: $quantity)";
             $stockDebug[] = "Insufficient stock: available=$totalAvailable, requested=$quantity";
             continue;
         }
-        
+
         // Deduct quantity across matching rows
         $remainingToDeduct = $quantity;
         $itemDeducted = 0;
-        
+
         foreach ($matchingRows as $stockRow) {
             if ($remainingToDeduct <= 0) {
                 break;
             }
-            
+
             $rowId = $stockRow['id'];
             $rowQty = intval($stockRow['quantity']);
             $deductThisRow = min($remainingToDeduct, $rowQty);
-            
+
             $deductStmt = $conn->prepare("UPDATE stock_on_hand SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
             if ($deductStmt) {
                 $deductStmt->bind_param('iii', $deductThisRow, $rowId, $deductThisRow);
@@ -329,7 +329,7 @@ try {
                 $deductStmt->close();
             }
         }
-        
+
         if ($itemDeducted >= $quantity) {
             $stockDeductedCount++;
             $stockDebug[] = "Successfully deducted total $quantity for item $item_code";
@@ -337,40 +337,40 @@ try {
             $stockErrors[] = "Partial stock deduction for item $item_code ($itemDeducted of $quantity deducted)";
         }
     }
-    
+
     // Update unclaimed_freebies record status to 'claimed' and set claimed_at timestamp
     if (!empty($unclaimed_item_ids)) {
         $updateClaimedSQL = "UPDATE unclaimed_freebies 
                              SET status = 'claimed', claimed_at = NOW()
                              WHERE id = ?";
-        
+
         $updateClaimedStmt = $conn->prepare($updateClaimedSQL);
-        
+
         if (!$updateClaimedStmt) {
             throw new Exception('Failed to prepare update claimed statement: ' . $conn->error);
         }
-        
+
         $updatedClaimedCount = 0;
-        
+
         foreach ($unclaimed_item_ids as $id_mapping) {
             $unclaimed_id = $id_mapping['id'];
-            
+
             $updateClaimedStmt->bind_param('i', $unclaimed_id);
-            
+
             if ($updateClaimedStmt->execute()) {
                 $updatedClaimedCount++;
             } else {
                 throw new Exception('Failed to update claimed record: ' . $updateClaimedStmt->error);
             }
         }
-        
+
         $updateClaimedStmt->close();
         $updatedCount = $updatedClaimedCount;
     }
-    
+
     // Commit transaction
     $conn->commit();
-    
+
     // Build response message
     $message = "Successfully claimed $insertedCount item(s) for invoice $invoice_no";
     if ($stockDeductedCount > 0) {
@@ -379,7 +379,7 @@ try {
     if (!empty($stockErrors)) {
         $message .= " Stock warnings: " . implode('; ', $stockErrors);
     }
-    
+
     // Return success response
     echo json_encode([
         'success' => true,
@@ -392,13 +392,13 @@ try {
         'invoice_no' => $invoice_no,
         'user_branch' => $user_branch
     ]);
-    
+
 } catch (Exception $e) {
     // Rollback on error
     if (isset($conn)) {
         $conn->rollback();
     }
-    
+
     http_response_code(400);
     echo json_encode([
         'success' => false,

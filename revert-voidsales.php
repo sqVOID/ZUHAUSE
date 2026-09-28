@@ -490,230 +490,86 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
         .modal {
             display: none;
             position: fixed;
-            z-index: 2000;
+            z-index: 10000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0, 0, 0, 0.5);
-            align-items: center;
-            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.6);
         }
 
         .modal.show {
-            display: flex;
+            display: block;
         }
 
         .modal-content {
             background-color: #fefefe;
-            margin: auto;
+            margin: 3% auto;
+            padding: 0;
             border: 1px solid #888;
-            width: 90%;
-            max-width: 900px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.3s;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease-out;
         }
 
         @keyframes slideDown {
             from {
-                opacity: 0;
                 transform: translateY(-50px);
+                opacity: 0;
             }
             to {
-                opacity: 1;
                 transform: translateY(0);
+                opacity: 1;
             }
         }
 
         .modal-header {
             padding: 20px 25px;
-            border-bottom: 1px solid #eee;
+            background-color: #000000ff;
+            color: white;
+            border-radius: 8px 8px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--color-navy);
-            color: white;
-            border-radius: 8px 8px 0 0;
         }
 
-        .modal-header h3 {
+        .modal-header h3,
+        .modal-header h2 {
             margin: 0;
             font-size: 20px;
             font-weight: 600;
         }
 
-        .close-modal {
+        .close-modal,
+        .modal-close {
             color: white;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
+            line-height: 1;
             cursor: pointer;
+            transition: color 0.2s;
             background: none;
             border: none;
-            width: 30px;
-            height: 30px;
+            padding: 0;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 4px;
         }
 
-        .close-modal:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .close-modal:hover,
+        .close-modal:focus,
+        .modal-close:hover,
+        .modal-close:focus {
+            color: #ffcccc;
         }
 
         .modal-body {
-            padding: 25px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .void-details {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 6px;
-            margin: 15px 0;
-            border-left: 4px solid var(--color-green);
-        }
-
-        .void-detail-row {
-            display: flex;
-            padding: 8px 0;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .void-detail-row:last-child {
-            border-bottom: none;
-        }
-
-        .void-detail-label {
-            font-weight: 600;
-            width: 200px;
-            color: #333;
-        }
-
-        .void-detail-value {
-            flex: 1;
-            color: #666;
-        }
-
-        .form-section {
-            background: white;
-            border: 1px solid #ddd;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-
-        .form-section-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--color-navy);
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--color-gold-pale);
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            font-size: 13px;
-            color: #333;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
-        .form-group textarea {
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            color: #333;
-            background: white;
-            font-family: Arial, sans-serif;
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--color-gold);
-            box-shadow: 0 0 0 2px rgba(176, 138, 82, 0.1);
-        }
-
-        .modal-footer {
-            padding: 20px 25px;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fafafa;
-            border-radius: 0 0 8px 8px;
-        }
-
-        .btn-cancel {
-            padding: 10px 30px;
-            border: 1px solid #ddd;
-            background: white;
-            color: #333;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        .btn-cancel:hover {
-            background-color: #f5f5f5;
-        }
-
-        .btn-confirm-revert {
-            padding: 10px 40px;
-            background-color: var(--color-green);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-
-        .btn-confirm-revert:hover {
-            background-color: var(--color-green-dark);
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .alert-warning strong {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 15px;
-        }
-
-        .alert-warning ul {
-            margin: 8px 0 0 20px;
             padding: 0;
-        }
-
-        .alert-warning li {
-            margin: 4px 0;
         }
 
         /* Status Badges */
@@ -739,71 +595,6 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
         .status-reverted {
             background-color: #bbdefb;
             color: #1565c0;
-        }
-
-        /* View Details Modal */
-        .details-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .details-table th,
-        .details-table td {
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #ddd;
-            font-size: 13px;
-        }
-
-        .details-table th {
-            background: var(--color-gold-pale);
-            font-weight: 600;
-            width: 180px;
-        }
-
-        .details-table td {
-            background: white;
-        }
-
-        .items-section {
-            margin-top: 20px;
-        }
-
-        .items-section h4 {
-            font-size: 15px;
-            color: var(--color-navy);
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--color-gold-pale);
-        }
-
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #ccc;
-            margin-top: 10px;
-        }
-
-        .items-table thead {
-            background: var(--color-gold-pale);
-        }
-
-        .items-table th {
-            text-align: center;
-            padding: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #000;
-            border: 1px solid #ccc;
-        }
-
-        .items-table td {
-            padding: 10px;
-            font-size: 13px;
-            color: #333;
-            border: 1px solid #ccc;
-            text-align: center;
         }
 
         @media (max-width: 768px) {
@@ -932,95 +723,18 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>2024-01-20</td>
-                        <td>2024-01-15</td>
-                        <td>INV-2024-0001</td>
-                        <td>Juan Dela Cruz</td>
-                        <td>Main Branch</td>
-                        <td>Customer Cancelled Order</td>
-                        <td>Admin User</td>
-                        <td><span class="status-badge status-voided">VOIDED</span></td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-view" onclick="viewDetails('INV-2024-0001')">View</button>
-                                <button class="btn-revert" onclick="revertVoidSale('INV-2024-0001')">Revert</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2024-01-21</td>
-                        <td>2024-01-16</td>
-                        <td>INV-2024-0002</td>
-                        <td>Maria Santos</td>
-                        <td>Branch 2</td>
-                        <td>Duplicate Entry</td>
-                        <td>Staff User</td>
-                        <td><span class="status-badge status-voided">VOIDED</span></td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-view" onclick="viewDetails('INV-2024-0002')">View</button>
-                                <button class="btn-revert" onclick="revertVoidSale('INV-2024-0002')">Revert</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2024-01-22</td>
-                        <td>2024-01-17</td>
-                        <td>INV-2024-0003</td>
-                        <td>Pedro Garcia</td>
-                        <td>Main Branch</td>
-                        <td>Wrong Pricing Applied</td>
-                        <td>Admin User</td>
-                        <td><span class="status-badge status-reverted">REVERTED</span></td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-view" onclick="viewDetails('INV-2024-0003')">View</button>
-                                <button class="btn-revert" disabled style="opacity:0.5;cursor:not-allowed;">Revert</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2024-01-23</td>
-                        <td>2024-01-18</td>
-                        <td>INV-2024-0004</td>
-                        <td>Ana Reyes</td>
-                        <td>Branch 3</td>
-                        <td>Customer Request - Payment Issue</td>
-                        <td>Manager User</td>
-                        <td><span class="status-badge status-voided">VOIDED</span></td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-view" onclick="viewDetails('INV-2024-0004')">View</button>
-                                <button class="btn-revert" onclick="revertVoidSale('INV-2024-0004')">Revert</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2024-01-24</td>
-                        <td>2024-01-19</td>
-                        <td>INV-2024-0005</td>
-                        <td>Carlos Mendoza</td>
-                        <td>Branch 2</td>
-                        <td>Item Out of Stock</td>
-                        <td>Staff User</td>
-                        <td><span class="status-badge status-voided">VOIDED</span></td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-view" onclick="viewDetails('INV-2024-0005')">View</button>
-                                <button class="btn-revert" onclick="revertVoidSale('INV-2024-0005')">Revert</button>
-                            </div>
-                        </td>
+                <tbody id="voidSalesTableBody">
+                    <tr class="no-data">
+                        <td colspan="9">Click Filter to load voided sales</td>
                     </tr>
                 </tbody>
             </table>
 
             <!-- Pagination -->
             <div class="pagination-wrapper">
-                <span>Showing 1-5 of 5 entries</span>
-                <button disabled>&laquo; Previous</button>
-                <button disabled>Next &raquo;</button>
+                <span id="paginationInfo">Click Filter to load data</span>
+                <button id="prevBtn" disabled>&laquo; Previous</button>
+                <button id="nextBtn" disabled>Next &raquo;</button>
             </div>
         </div>
     </div>
@@ -1029,87 +743,76 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
     <div id="viewModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Void Sale Details</h3>
-                <button class="close-modal" onclick="closeViewModal()">&times;</button>
+                <h2>Void Sale Details</h2>
+                <button class="modal-close" onclick="closeViewModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <table class="details-table">
-                    <tr>
-                        <th>Invoice Number</th>
-                        <td id="view_invoice_no">INV-2024-0001</td>
-                    </tr>
-                    <tr>
-                        <th>Date Sold</th>
-                        <td id="view_date_sold">January 15, 2024</td>
-                    </tr>
-                    <tr>
-                        <th>Date Voided</th>
-                        <td id="view_date_voided">January 20, 2024</td>
-                    </tr>
-                    <tr>
-                        <th>Customer Name</th>
-                        <td id="view_customer_name">Juan Dela Cruz</td>
-                    </tr>
-                    <tr>
-                        <th>Branch</th>
-                        <td id="view_branch">Main Branch</td>
-                    </tr>
-                    <tr>
-                        <th>Void Reason</th>
-                        <td id="view_void_reason">Customer Cancelled Order</td>
-                    </tr>
-                    <tr>
-                        <th>Voided By</th>
-                        <td id="view_voided_by">Admin User</td>
-                    </tr>
-                    <tr>
-                        <th>Status</th>
-                        <td><span class="status-badge status-voided" id="view_status">VOIDED</span></td>
-                    </tr>
-                </table>
+            <div class="modal-body" id="viewModalContent">
+                <div style="max-height:100vh; overflow-y:auto; padding:20px;">
+                    <h2 style="margin:0 0 20px 0; color:#1a1a1a; font-size:20px; border-bottom:2px solid #acacacff; padding-bottom:10px;" id="view_title">
+                        Void Sale Details: <span id="view_invoice_title">-</span>
+                    </h2>
 
-                <div class="items-section">
-                    <h4>Voided Items</h4>
-                    <table class="items-table">
-                        <thead>
+                    <!-- Invoice Info Section -->
+                    <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:20px;">
+                        <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Void Sale Information</h3>
+                        <table style="width:100%; font-size:14px;">
                             <tr>
-                                <th>Item Model</th>
-                                <th>IMEI/Serial</th>
-                                <th>Brand</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="view_items_list">
-                            <tr>
-                                <td>iPhone 14 128GB Blue</td>
-                                <td>123456789012345</td>
-                                <td>Apple</td>
-                                <td>1</td>
-                                <td>₱48,000.00</td>
-                                <td>₱48,000.00</td>
+                                <td style="padding:5px 10px 5px 0; font-weight:600; width:140px;">Invoice Number:</td>
+                                <td style="padding:5px 0;" id="view_invoice_no">-</td>
                             </tr>
                             <tr>
-                                <td>AirPods Pro Gen 2</td>
-                                <td>987654321098765</td>
-                                <td>Apple</td>
-                                <td>1</td>
-                                <td>₱12,000.00</td>
-                                <td>₱12,000.00</td>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Date Sold:</td>
+                                <td style="padding:5px 0;" id="view_date_sold">-</td>
                             </tr>
-                        </tbody>
-                        <tfoot>
                             <tr>
-                                <th colspan="5" style="text-align: right;">Grand Total:</th>
-                                <th id="view_grand_total">₱60,000.00</th>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Date Voided:</td>
+                                <td style="padding:5px 0;" id="view_date_voided">-</td>
                             </tr>
-                        </tfoot>
-                    </table>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Customer Name:</td>
+                                <td style="padding:5px 0;" id="view_customer_name">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Branch:</td>
+                                <td style="padding:5px 0;" id="view_branch">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Voided By:</td>
+                                <td style="padding:5px 0;" id="view_voided_by">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td>
+                                <td style="padding:5px 0;"><span class="status-badge status-voided" id="view_status">VOIDED</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Void Reason:</td>
+                                <td style="padding:5px 0;" id="view_void_reason">-</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Items Section -->
+                    <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:20px;">
+                        <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Voided Items</h3>
+                        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                            <thead>
+                                <tr style="background:#f5f5f5;">
+                                    <th style="padding:10px; border:1px solid #acacacff; text-align:left;">Description</th>
+                                    <th style="padding:10px; border:1px solid #acacacff; text-align:center;">IMEI</th>
+                                    <th style="padding:10px; border:1px solid #acacacff; text-align:center;">Brand</th>
+                                    <th style="padding:10px; border:1px solid #acacacff; text-align:center;">Qty</th>
+                                    <th style="padding:10px; border:1px solid #acacacff; text-align:right;">Unit Price</th>
+                                    <th style="padding:10px; border:1px solid #acacacff; text-align:right;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="view_items_list">
+                                <tr>
+                                    <td colspan="6" style="padding:20px; text-align:center; color:#999;">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeViewModal()">Close</button>
             </div>
         </div>
     </div>
@@ -1118,66 +821,91 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
     <div id="revertModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Revert Void Sale</h3>
-                <button class="close-modal" onclick="closeRevertModal()">&times;</button>
+                <h2>Revert Void Sale</h2>
+                <button class="modal-close" onclick="closeRevertModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert-warning">
-                    <strong>⚠️ Warning: Revert Void Sale Transaction</strong>
-                    <ul>
-                        <li>This action will restore the voided sale back to active status</li>
-                        <li>All items will be marked as sold again</li>
-                        <li>Inventory will be adjusted accordingly</li>
-                        <li>This action requires proper authorization and reason</li>
-                    </ul>
-                </div>
+                <div style="max-height:100vh; overflow-y:auto; padding:20px;">
+                    <h2 style="margin:0 0 20px 0; color:#1a1a1a; font-size:20px; border-bottom:2px solid #acacacff; padding-bottom:10px;">
+                        Revert Void Sale: <span id="revert_invoice_title">-</span>
+                    </h2>
+                    
+                    <!--
+                     Warning Section
+                    <div style="background:#fff3cd; border:2px solid #ffc107; border-radius:8px; padding:15px; margin-bottom:20px;">
+                        <h3 style="margin:0 0 12px 0; color:#856404; font-size:16px; font-weight:700;">⚠️ Warning: Revert Void Sale Transaction</h3>
+                        <ul style="margin:0; padding-left:20px; color:#856404; font-size:14px; line-height:1.8;">
+                            <li>This action will restore the voided sale back to active status</li>
+                            <li>All items will be marked as sold again</li>
+                            <li>Inventory will be adjusted accordingly</li>
+                            <li>This action requires proper authorization and reason</li>
+                        </ul>
+                    </div>
+                    -->
 
-                <div class="void-details">
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Invoice Number:</span>
-                        <span class="void-detail-value" id="revert_invoice_no">INV-2024-0001</span>
+                    <!-- Void Sale Details -->
+                    <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:20px;">
+                        <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Void Sale Details</h3>
+                        <table style="width:100%; font-size:14px;">
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Invoice Number:</td>
+                                <td style="padding:5px 0;" id="revert_invoice_no">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Date Sold:</td>
+                                <td style="padding:5px 0;" id="revert_date_sold">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Date Voided:</td>
+                                <td style="padding:5px 0;" id="revert_date_voided">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Customer Name:</td>
+                                <td style="padding:5px 0;" id="revert_customer_name">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Branch:</td>
+                                <td style="padding:5px 0;" id="revert_branch">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Original Void Reason:</td>
+                                <td style="padding:5px 0;" id="revert_void_reason">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Voided By:</td>
+                                <td style="padding:5px 0;" id="revert_voided_by">-</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 10px 5px 0; font-weight:600;">Total Amount:</td>
+                                <td style="padding:5px 0; font-weight:700; color:#1E455D; font-size:15px;" id="revert_total_amount">₱0.00</td>
+                            </tr>
+                        </table>
                     </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Date Sold:</span>
-                        <span class="void-detail-value" id="revert_date_sold">January 15, 2024</span>
-                    </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Date Voided:</span>
-                        <span class="void-detail-value" id="revert_date_voided">January 20, 2024</span>
-                    </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Customer Name:</span>
-                        <span class="void-detail-value" id="revert_customer_name">Juan Dela Cruz</span>
-                    </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Branch:</span>
-                        <span class="void-detail-value" id="revert_branch">Main Branch</span>
-                    </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Original Void Reason:</span>
-                        <span class="void-detail-value" id="revert_void_reason">Customer Cancelled Order</span>
-                    </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Voided By:</span>
-                        <span class="void-detail-value" id="revert_voided_by">Admin User</span>
-                    </div>
-                    <div class="void-detail-row">
-                        <span class="void-detail-label">Total Amount:</span>
-                        <span class="void-detail-value" id="revert_total_amount">₱60,000.00</span>
-                    </div>
-                </div>
 
-                <div class="form-section">
-                    <div class="form-section-title">Reason for Reverting Void Sale</div>
-                    <div class="form-group">
-                        <label>Revert Reason<span style="color:red;">*</span></label>
-                        <textarea id="revert_reason" placeholder="Enter detailed reason for reverting this void sale (e.g., Customer wants to proceed with purchase, Payment cleared, Error in voiding)..." required></textarea>
+                    <!-- Revert Reason Form -->
+                    <div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:20px;">
+                        <h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Reason for Reverting Void Sale</h3>
+                        <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600; color:#333;">
+                            Revert Reason<span style="color:red; margin-left:4px;">*</span>
+                        </label>
+                        <textarea id="revert_reason" 
+                                  placeholder="Enter detailed reason for reverting this void sale (e.g., Customer wants to proceed with purchase, Payment cleared, Error in voiding)..." 
+                                  required
+                                  style="width:100%; min-height:120px; padding:12px; border:1px solid #ddd; border-radius:4px; font-size:14px; font-family:Arial, sans-serif; resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding-top:15px; border-top:2px solid #eee;">
+                        <button onclick="closeRevertModal()" 
+                                style="padding:12px 30px; border:1px solid #ddd; background:white; color:#333; border-radius:4px; cursor:pointer; font-weight:500; font-size:14px;">
+                            Cancel
+                        </button>
+                        <button onclick="confirmRevert()" 
+                                style="padding:12px 40px; background-color:#2e7d32; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:14px; text-transform:uppercase;">
+                            Confirm Revert
+                        </button>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeRevertModal()">Cancel</button>
-                <button class="btn-confirm-revert" onclick="confirmRevert()">Confirm Revert</button>
             </div>
         </div>
     </div>
@@ -1213,6 +941,7 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
         function filterByDate() {
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
+            const branchFilter = document.getElementById('branchFilter').value;
 
             if (!dateFrom || !dateTo) {
                 alert('Please select both From and To dates');
@@ -1224,51 +953,115 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
                 return;
             }
 
-            alert(`Filtering void sales from ${dateFrom} to ${dateTo}\n(Frontend demo only)`);
-            // In production, this would filter the table based on date range
+            loadVoidSales(dateFrom, dateTo, branchFilter);
+        }
+
+        // Load void sales from database
+        function loadVoidSales(dateFrom, dateTo, branchFilter = '') {
+            const tbody = document.getElementById('voidSalesTableBody');
+            tbody.innerHTML = '<tr><td colspan="9" style="padding: 40px; text-align: center;">Loading...</td></tr>';
+
+            // Build query parameters
+            let params = new URLSearchParams();
+            params.append('date_from', dateFrom);
+            params.append('date_to', dateTo);
+            if (branchFilter) {
+                params.append('branch', branchFilter);
+            }
+
+            fetch('fetch_void_sales_data.php?' + params.toString())
+                .then(response => response.json())
+                .then(data => {
+                    tbody.innerHTML = '';
+
+                    if (data.success && data.records && data.records.length > 0) {
+                        data.records.forEach(record => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${record.voided_date}</td>
+                                <td>${record.date_sold}</td>
+                                <td>${record.invoice_no}</td>
+                                <td>${record.customer_name}</td>
+                                <td>${record.branch}</td>
+                                <td style="text-align:left;">${record.void_reason}</td>
+                                <td>${record.voided_by}</td>
+                                <td><span class="status-badge status-voided">VOIDED</span></td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="btn-view" onclick="viewDetails('${record.invoice_no}')">View</button>
+                                        <button class="btn-revert" onclick="revertVoidSale('${record.invoice_no}')">Revert</button>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+
+                        document.getElementById('paginationInfo').textContent = `Showing 1-${data.count} of ${data.count} entries`;
+                    } else {
+                        tbody.innerHTML = '<tr class="no-data"><td colspan="9">No voided sales found for the selected date range.</td></tr>';
+                        document.getElementById('paginationInfo').textContent = 'No records found';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading void sales:', error);
+                    tbody.innerHTML = '<tr class="no-data"><td colspan="9">Error loading data. Please try again.</td></tr>';
+                });
         }
 
         // View Details Modal
         function viewDetails(invoiceNo) {
-            // Sample data - in production, this would fetch from database
-            const sampleData = {
-                'INV-2024-0001': {
-                    invoice_no: 'INV-2024-0001',
-                    date_sold: 'January 15, 2024',
-                    date_voided: 'January 20, 2024',
-                    customer_name: 'Juan Dela Cruz',
-                    branch: 'Main Branch',
-                    void_reason: 'Customer Cancelled Order',
-                    voided_by: 'Admin User',
-                    status: 'VOIDED',
-                    grand_total: '₱60,000.00'
-                },
-                'INV-2024-0002': {
-                    invoice_no: 'INV-2024-0002',
-                    date_sold: 'January 16, 2024',
-                    date_voided: 'January 21, 2024',
-                    customer_name: 'Maria Santos',
-                    branch: 'Branch 2',
-                    void_reason: 'Duplicate Entry',
-                    voided_by: 'Staff User',
-                    status: 'VOIDED',
-                    grand_total: '₱35,500.00'
-                }
-            };
+            // Fetch details from server
+            fetch(`get_void_sale_details.php?invoice_no=${encodeURIComponent(invoiceNo)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('view_invoice_title').textContent = data.header.invoice_no;
+                        document.getElementById('view_invoice_no').textContent = data.header.invoice_no;
+                        document.getElementById('view_date_sold').textContent = data.header.date_sold;
+                        document.getElementById('view_date_voided').textContent = data.header.date_voided;
+                        document.getElementById('view_customer_name').textContent = data.header.customer_name;
+                        document.getElementById('view_branch').textContent = data.header.branch;
+                        document.getElementById('view_void_reason').textContent = data.header.void_reason;
+                        document.getElementById('view_voided_by').textContent = data.header.voided_by;
+                        document.getElementById('view_status').textContent = 'VOIDED';
 
-            const data = sampleData[invoiceNo] || sampleData['INV-2024-0001'];
+                        // Populate items
+                        const itemsList = document.getElementById('view_items_list');
+                        itemsList.innerHTML = '';
+                        
+                        data.items.forEach(item => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="padding:8px; border:1px solid #acacacff;">${item.item_description}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.imei || '-'}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.brand || '-'}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.quantity}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${parseFloat(item.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            `;
+                            itemsList.appendChild(tr);
+                        });
 
-            document.getElementById('view_invoice_no').textContent = data.invoice_no;
-            document.getElementById('view_date_sold').textContent = data.date_sold;
-            document.getElementById('view_date_voided').textContent = data.date_voided;
-            document.getElementById('view_customer_name').textContent = data.customer_name;
-            document.getElementById('view_branch').textContent = data.branch;
-            document.getElementById('view_void_reason').textContent = data.void_reason;
-            document.getElementById('view_voided_by').textContent = data.voided_by;
-            document.getElementById('view_status').textContent = data.status;
-            document.getElementById('view_grand_total').textContent = data.grand_total;
+                        // Add grand total row
+                        const totalRow = document.createElement('tr');
+                        totalRow.style.background = '#F5EDE8';
+                        totalRow.style.fontWeight = 'bold';
+                        totalRow.style.borderTop = '2px solid #1E455D';
+                        totalRow.innerHTML = `
+                            <td colspan="5" style="padding:12px; border:1px solid #acacacff; text-align:right; font-size:15px;">OVERALL AMOUNT:</td>
+                            <td style="padding:12px; border:1px solid #acacacff; text-align:right; color:#1E455D; font-size:15px;">₱${parseFloat(data.header.grand_total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        `;
+                        itemsList.appendChild(totalRow);
 
-            document.getElementById('viewModal').classList.add('show');
+                        document.getElementById('viewModal').classList.add('show');
+                    } else {
+                        alert('Error loading void sale details: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching void sale details:', error);
+                    alert('Error loading void sale details. Please try again.');
+                });
         }
 
         function closeViewModal() {
@@ -1277,43 +1070,31 @@ $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level'
 
         // Revert Void Sale
         function revertVoidSale(invoiceNo) {
-            // Sample data - in production, this would fetch from database
-            const sampleData = {
-                'INV-2024-0001': {
-                    invoice_no: 'INV-2024-0001',
-                    date_sold: 'January 15, 2024',
-                    date_voided: 'January 20, 2024',
-                    customer_name: 'Juan Dela Cruz',
-                    branch: 'Main Branch',
-                    void_reason: 'Customer Cancelled Order',
-                    voided_by: 'Admin User',
-                    total_amount: '₱60,000.00'
-                },
-                'INV-2024-0002': {
-                    invoice_no: 'INV-2024-0002',
-                    date_sold: 'January 16, 2024',
-                    date_voided: 'January 21, 2024',
-                    customer_name: 'Maria Santos',
-                    branch: 'Branch 2',
-                    void_reason: 'Duplicate Entry',
-                    voided_by: 'Staff User',
-                    total_amount: '₱35,500.00'
-                }
-            };
+            // Fetch details from server
+            fetch(`get_void_sale_details.php?invoice_no=${encodeURIComponent(invoiceNo)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('revert_invoice_title').textContent = data.header.invoice_no;
+                        document.getElementById('revert_invoice_no').textContent = data.header.invoice_no;
+                        document.getElementById('revert_date_sold').textContent = data.header.date_sold;
+                        document.getElementById('revert_date_voided').textContent = data.header.date_voided;
+                        document.getElementById('revert_customer_name').textContent = data.header.customer_name;
+                        document.getElementById('revert_branch').textContent = data.header.branch;
+                        document.getElementById('revert_void_reason').textContent = data.header.void_reason;
+                        document.getElementById('revert_voided_by').textContent = data.header.voided_by;
+                        document.getElementById('revert_total_amount').textContent = '₱' + parseFloat(data.header.grand_total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        document.getElementById('revert_reason').value = '';
 
-            const data = sampleData[invoiceNo] || sampleData['INV-2024-0001'];
-
-            document.getElementById('revert_invoice_no').textContent = data.invoice_no;
-            document.getElementById('revert_date_sold').textContent = data.date_sold;
-            document.getElementById('revert_date_voided').textContent = data.date_voided;
-            document.getElementById('revert_customer_name').textContent = data.customer_name;
-            document.getElementById('revert_branch').textContent = data.branch;
-            document.getElementById('revert_void_reason').textContent = data.void_reason;
-            document.getElementById('revert_voided_by').textContent = data.voided_by;
-            document.getElementById('revert_total_amount').textContent = data.total_amount;
-            document.getElementById('revert_reason').value = '';
-
-            document.getElementById('revertModal').classList.add('show');
+                        document.getElementById('revertModal').classList.add('show');
+                    } else {
+                        alert('Error loading void sale details: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching void sale details:', error);
+                    alert('Error loading void sale details. Please try again.');
+                });
         }
 
         function closeRevertModal() {

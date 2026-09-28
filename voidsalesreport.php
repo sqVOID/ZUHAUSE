@@ -855,21 +855,22 @@ if (isset($_SESSION['user_branch'])) {
             <table class="report-table" id="reportTable">
                 <thead>
                     <tr>
-                        <th style="width:10%;">Date Voided</th>
-                        <th style="width:10%;">Date Sold</th>
-                        <th style="width:15%;">Invoice No.</th>
-                        <th style="width:15%;">Customer Name</th>
-                        <th style="width:15%;">Branch</th>
-                        <th style="width:20%;">Void Reason</th>
-                        <th style="width:15%;">Voided By</th>
+                        <th style="width:9%;">Date Voided</th>
+                        <th style="width:9%;">Date Sold</th>
+                        <th style="width:13%;">Invoice No.</th>
+                        <th style="width:13%;">Customer Name</th>
+                        <th style="width:13%;">Branch</th>
+                        <th style="width:18%;">Void Reason</th>
+                        <th style="width:13%;">Voided By</th>
+                        <th style="width:12%;">Preview</th>
                     </tr>
                 </thead>
                 <tbody id="reportTableBody">
                     <tr class="select-filter-msg no-data">
-                        <td colspan="7">SELECT A FILTER TO DISPLAY THE DATA</td>
+                        <td colspan="8">SELECT A FILTER TO DISPLAY THE DATA</td>
                     </tr>
                     <tr class="no-data" style="display: none;">
-                        <td colspan="7">No voided sales found.</td>
+                        <td colspan="8">No voided sales found.</td>
                     </tr>
                 </tbody>
             </table>
@@ -1082,7 +1083,7 @@ if (isset($_SESSION['user_branch'])) {
 
             // Show loading state
             const tbody = document.getElementById('reportTableBody');
-            tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; text-align: center;"><div class="loading">Loading...</div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="padding: 40px; text-align: center;"><div class="loading">Loading...</div></td></tr>';
 
             // Fetch data
             fetch('fetch_void_sales_data.php?' + params.toString())
@@ -1102,6 +1103,11 @@ if (isset($_SESSION['user_branch'])) {
                                 <td>${record.branch}</td>
                                 <td style="text-align:left;">${record.void_reason}</td>
                                 <td>${record.voided_by}</td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="btn-view" onclick="previewVoidSale('${record.invoice_no}')">Preview</button>
+                                    </div>
+                                </td>
                             `;
                             tbody.appendChild(row);
                         });
@@ -1110,17 +1116,27 @@ if (isset($_SESSION['user_branch'])) {
                         const noDataRow = document.createElement('tr');
                         noDataRow.className = 'no-data';
                         noDataRow.style.display = 'none';
-                        noDataRow.innerHTML = '<td colspan="7">No voided sales found.</td>';
+                        noDataRow.innerHTML = '<td colspan="8">No voided sales found.</td>';
                         tbody.appendChild(noDataRow);
                     } else {
                         // Show no data message
-                        tbody.innerHTML = '<tr class="no-data"><td colspan="7">No voided sales found.</td></tr>';
+                        tbody.innerHTML = '<tr class="no-data"><td colspan="8">No voided sales found.</td></tr>';
                     }
                 })
                 .catch(error => {
                     console.error('Error loading data:', error);
-                    tbody.innerHTML = '<tr class="no-data"><td colspan="7">Error loading data. Please try again.</td></tr>';
+                    tbody.innerHTML = '<tr class="no-data"><td colspan="8">Error loading data. Please try again.</td></tr>';
                 });
+        }
+
+        // Preview individual void sale
+        function previewVoidSale(invoiceNo) {
+            if (!invoiceNo) {
+                alert('Invoice number is required.');
+                return;
+            }
+            // Open preview in new window
+            window.open('preview_void_sale.php?invoice_no=' + encodeURIComponent(invoiceNo), '_blank', 'width=900,height=700');
         }
 
         // Preview all void sales

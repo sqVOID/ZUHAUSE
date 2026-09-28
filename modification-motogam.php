@@ -2484,12 +2484,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             $is_modified = !empty($row['reason_to_modify']) && trim($row['reason_to_modify']) !== '' ? 'Yes' : 'No';
                             $modified_class = $is_modified === 'Yes' ? 'status-badge' : '';
                             $modified_style = $is_modified === 'Yes' ? 'background-color: #fff3cd; color: #856404;' : '';
-
-                            // Skip voided sales - don't display them
-                            if (strtolower($row['status']) === 'voided') {
-                                continue;
-                            }
-
+                            // Display voided sales
+                    
                             echo "<tr data-id=\"{$r_id}\" data-index=\"{$idx}\" data-invoice=\"{$r_inv}\" data-branch=\"{$b_code}\" data-date=\"{$r_date_ymd}\">";
                             echo "  <td>{$r_date}</td>";
                             echo "  <td>{$r_inv}</td>";
@@ -2524,12 +2520,18 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
         <!-- Modification Form (Hidden until modify action) -->
         <div id="modificationSection" style="display: none;">
-            <div class="sales-info-header">
+            <div class="sales-info-header" id="salesInfoHeader">
                 <h3 id="salesInfoTitle">
                     Modifying Invoice: <span id="current_invoice"></span>
                     | Branch: <span id="current_branch"></span>
+                    <span id="sales_status_container" style="display: none;"> | Status: <span id="current_status"
+                            style="color: #dc3545; font-weight: bold;">VOIDED!</span></span>
                 </h3>
-                <span id="voided_badge" style="display: none;">VOIDED</span>
+                <div id="voided_header_actions"
+                    style="position: absolute; top: 11px; right: 20px; display: flex; align-items: center; gap: 10px;">
+                    <!-- Header REVERT VOIDED button removed - using bottom button only -->
+                   <!-- <span id="voided_badge" style="display: none; position: static;">VOIDED!</span> -->
+                </div>
             </div>
 
             <div class="form-container">
@@ -2854,82 +2856,109 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         <!-- Trade-In Details Section (Only shown if sales is from salestrade-in.php) -->
                         <div id="tradeInDetailsSection" class="item-selection-container"
                             style="margin-top: 20px; padding: 20px; background: #f9f9f9; border: 1px solid #dee2e6; border-radius: 6px; display: none;">
-                            <h4 style="margin: 0 0 15px 0; color: #1E455D; font-size: 16px; font-weight: 700; border-bottom: 2px solid #1E455D; padding-bottom: 10px;">
+                            <h4
+                                style="margin: 0 0 15px 0; color: #1E455D; font-size: 16px; font-weight: 700; border-bottom: 2px solid #1E455D; padding-bottom: 10px;">
                                 Trade-In Details</h4>
-                            
+
                             <div style="background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
                                     <div class="form-group">
-                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Value:</label>
-                                        <input type="number" id="tradeInValueEdit" step="0.01" min="0" 
+                                        <label
+                                            style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In
+                                            Value:</label>
+                                        <input type="number" id="tradeInValueEdit" step="0.01" min="0"
                                             style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%; font-weight: 700; color: #1E455D;"
                                             placeholder="0.00">
                                     </div>
                                     <div class="form-group">
-                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Qty:</label>
+                                        <label
+                                            style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In
+                                            Qty:</label>
                                         <input type="number" id="tradeInQtyEdit" min="0" readonly
                                             style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5; width: 100%; cursor: not-allowed;">
                                     </div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
                                     <div class="form-group">
-                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In IMEI:</label>
-                                        <input type="text" id="tradeInIMEIEdit" 
+                                        <label
+                                            style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In
+                                            IMEI:</label>
+                                        <input type="text" id="tradeInIMEIEdit"
                                             style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
                                             placeholder="Enter IMEI" oninput="this.value = this.value.toUpperCase()">
                                     </div>
                                     <div class="form-group">
-                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Brand:</label>
-                                        <input type="text" id="tradeInBrandEdit" 
+                                        <label
+                                            style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In
+                                            Brand:</label>
+                                        <input type="text" id="tradeInBrandEdit"
                                             style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
                                             placeholder="Enter Brand" oninput="this.value = this.value.toUpperCase()">
                                     </div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
                                     <div class="form-group">
-                                        <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Item Code:</label>
-                                        <input type="text" id="tradeInItemCodeEdit" 
+                                        <label
+                                            style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In
+                                            Item Code:</label>
+                                        <input type="text" id="tradeInItemCodeEdit"
                                             style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
-                                            placeholder="Enter Item Code" oninput="this.value = this.value.toUpperCase()">
+                                            placeholder="Enter Item Code"
+                                            oninput="this.value = this.value.toUpperCase()">
                                     </div>
                                 </div>
 
                                 <!-- TITU Voucher Section -->
                                 <div style="border-top: 2px solid #dee2e6; padding-top: 15px; margin-top: 15px;">
-                                    <h5 style="margin: 0 0 12px 0; color: #1E455D; font-size: 15px; font-weight: 600;">TITU Voucher Details</h5>
-                                    
+                                    <h5 style="margin: 0 0 12px 0; color: #1E455D; font-size: 15px; font-weight: 600;">
+                                        TITU Voucher Details</h5>
+
                                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                                         <div class="form-group">
-                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU Control:</label>
-                                            <input type="text" id="tituControlEdit" 
+                                            <label
+                                                style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU
+                                                Control:</label>
+                                            <input type="text" id="tituControlEdit"
                                                 style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
                                                 placeholder="Enter TITU Control">
                                         </div>
                                         <div class="form-group">
-                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU Token:</label>
-                                            <input type="text" id="tituTokenEdit" 
+                                            <label
+                                                style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU
+                                                Token:</label>
+                                            <input type="text" id="tituTokenEdit"
                                                 style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
                                                 placeholder="Enter TITU Token">
                                         </div>
                                         <div class="form-group">
-                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU Voucher Total:</label>
+                                            <label
+                                                style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">TITU
+                                                Voucher Total:</label>
                                             <input type="number" id="tituVoucherTotalEdit" step="0.01" min="0"
                                                 style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%; font-weight: 700; color: #1E455D;"
                                                 placeholder="0.00">
                                         </div>
                                     </div>
 
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                                    <div
+                                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
                                         <div class="form-group">
-                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Cross Sell:</label>
+                                            <label
+                                                style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Cross
+                                                Sell:</label>
                                             <input type="number" id="crossSellEdit" step="0.01" min="0"
                                                 style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
                                                 placeholder="0.00">
                                         </div>
                                         <div class="form-group">
-                                            <label style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In Voucher:</label>
+                                            <label
+                                                style="font-weight: 600; color: #333; margin-bottom: 5px; display: block;">Trade-In
+                                                Voucher:</label>
                                             <input type="number" id="tradeInVoucherEdit" step="0.01" min="0"
                                                 style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: white; width: 100%;"
                                                 placeholder="0.00">
@@ -2945,21 +2974,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
                                 <div class="breakdown-input-group">
                                     <label
-                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Discount <span style="font-weight:400;color:#888;">(from items)</span>:</label>
+                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Discount
+                                        <span style="font-weight:400;color:#888;">(from items)</span>:</label>
                                     <input type="number" id="modifyDiscount" placeholder="0.00"
                                         style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: #f8f9fa;"
                                         step="0.01" min="0" readonly>
                                 </div>
                                 <div class="breakdown-input-group">
                                     <label
-                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Voucher <span style="font-weight:400;color:#888;">(from items)</span>:</label>
+                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Voucher
+                                        <span style="font-weight:400;color:#888;">(from items)</span>:</label>
                                     <input type="number" id="modifyVoucher" placeholder="0.00"
                                         style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: #f8f9fa;"
                                         step="0.01" min="0" readonly>
                                 </div>
                                 <div class="breakdown-input-group">
                                     <label
-                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Token <span style="font-weight:400;color:#888;">(from items)</span>:</label>
+                                        style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555;">Token
+                                        <span style="font-weight:400;color:#888;">(from items)</span>:</label>
                                     <input type="number" id="modifyToken" placeholder="0.00"
                                         style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: #f8f9fa;"
                                         step="0.01" min="0" readonly>
@@ -3004,7 +3036,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #a8a8a8ff;">
 
                             <!-- Payment Method Header -->
-                            <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                            <div
+                                style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                                 <h4 style="margin: 0; color: #333; font-size: 16px; font-weight: 600;">Payment Method
                                 </h4>
                                 <button type="button" id="btnAddPayment" onclick="addPaymentBlock()"
@@ -3507,13 +3540,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 </div>
                 <!-- End Order Breakdown Section -->
 
-                <!-- UPDATE and RE-ENTRY Button Section (Outside Order Breakdown) -->
+                <!-- UPDATE and REVERT VOIDED Button Section (Outside Order Breakdown) -->
                 <div
                     style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; padding: 15px 20px 15px 0; margin-top: 0px;">
-                    <button type="button" id="reentryButton" onclick="reEntrySale()"
-                        style="display: none; padding: 14px 60px; background-color: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 1px;"
+                    <button type="button" id="revertVoidedButton" onclick="revertVoidedSale()"
+                        style="display: none; padding: 14px 40px; background-color: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 1px;"
                         onmouseover="this.style.backgroundColor='#218838'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.18)';"
-                        onmouseout="this.style.backgroundColor='#28a745'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.12)';">RE-ENTRY</button>
+                        onmouseout="this.style.backgroundColor='#28a745'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.12)';">
+                        REVERT VOIDED
+                    </button>
                     <button type="button" class="btn-update" onclick="updateSalesEntry()"
                         style="padding: 14px 70px; background-color: #1976d2; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 1px;"
                         onmouseover="this.style.backgroundColor='#1565c0'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.18)';"
@@ -3852,6 +3887,19 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (paymentDataInput) {
                 paymentDataInput.value = '';
             }
+
+            const statusContainer = document.getElementById('sales_status_container');
+            if (statusContainer) statusContainer.style.display = 'none';
+            const voidedBadge = document.getElementById('voided_badge');
+            if (voidedBadge) voidedBadge.style.display = 'none';
+            // Header button removed - using bottom button only
+            const btnRevertBottom = document.getElementById('revertVoidedButton');
+            if (btnRevertBottom) btnRevertBottom.style.display = 'none';
+            const salesInfoHeader = document.getElementById('salesInfoHeader');
+            if (salesInfoHeader) {
+                salesInfoHeader.style.background = '#E1FFDE';
+                salesInfoHeader.style.borderLeftColor = '#19d222ff';
+            }
         }
 
         // Initialize table filter on load
@@ -4126,16 +4174,45 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 togglePromoFields();
             }
 
-            // Don't show VOIDED badge in modification page
+            // Handle VOIDED status and Revert Voided button in modification page
+            const isVoided = String(data.status || '').toLowerCase() === 'voided';
+            const statusContainer = document.getElementById('sales_status_container');
             const voidedBadge = document.getElementById('voided_badge');
-            if (voidedBadge) {
-                voidedBadge.style.display = 'none';
-            }
+            // Header button removed - using bottom button only
+            const btnRevertBottom = document.getElementById('revertVoidedButton');
+            const salesInfoHeader = document.getElementById('salesInfoHeader');
 
-            // Don't show RE-ENTRY button in modification page
-            const reentryButton = document.getElementById('reentryButton');
-            if (reentryButton) {
-                reentryButton.style.display = 'none';
+            if (isVoided) {
+                if (statusContainer) {
+                    statusContainer.style.display = 'inline';
+                }
+                if (voidedBadge) {
+                    voidedBadge.textContent = '';
+                    voidedBadge.style.display = 'inline-block';
+                }
+                // Header button removed - using bottom button only
+                if (btnRevertBottom) {
+                    btnRevertBottom.style.display = 'inline-block';
+                }
+                if (salesInfoHeader) {
+                    salesInfoHeader.style.background = '#ffebee';
+                    salesInfoHeader.style.borderLeftColor = '#dc3545';
+                }
+            } else {
+                if (statusContainer) {
+                    statusContainer.style.display = 'none';
+                }
+                if (voidedBadge) {
+                    voidedBadge.style.display = 'none';
+                }
+                // Header button removed - using bottom button only
+                if (btnRevertBottom) {
+                    btnRevertBottom.style.display = 'none';
+                }
+                if (salesInfoHeader) {
+                    salesInfoHeader.style.background = '#E1FFDE';
+                    salesInfoHeader.style.borderLeftColor = '#19d222ff';
+                }
             }
 
             // Load items — each item keeps its own discount/voucher/token
@@ -4202,35 +4279,35 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             // Handle Trade-In Details Section - Show only if from salestrade-in.php
             const tradeInSection = document.getElementById('tradeInDetailsSection');
-            const hasTradeInData = data.page_type === 'salestrade-in' || 
-                                   (data.tradein_value && parseFloat(data.tradein_value) > 0) ||
-                                   (data.tradein_imei && data.tradein_imei.trim() !== '');
-            
+            const hasTradeInData = data.page_type === 'salestrade-in' ||
+                (data.tradein_value && parseFloat(data.tradein_value) > 0) ||
+                (data.tradein_imei && data.tradein_imei.trim() !== '');
+
             if (tradeInSection && hasTradeInData) {
                 tradeInSection.style.display = 'block';
-                
+
                 // Populate Trade-In fields (editable)
                 const tradeInValue = parseFloat(data.tradein_value || 0);
                 const tradeInQty = tradeInValue > 0 ? 1 : 0;
-                
+
                 document.getElementById('tradeInValueEdit').value = tradeInValue;
                 document.getElementById('tradeInQtyEdit').value = tradeInQty;
                 document.getElementById('tradeInIMEIEdit').value = data.tradein_imei || '';
                 document.getElementById('tradeInBrandEdit').value = data.tradein_brand || '';
                 document.getElementById('tradeInItemCodeEdit').value = data.tradein_item_code || '';
-                
+
                 // Populate TITU Voucher fields (editable)
                 document.getElementById('tituControlEdit').value = data.titu_control || '';
                 document.getElementById('tituTokenEdit').value = data.titu_token || '';
                 document.getElementById('tituVoucherTotalEdit').value = parseFloat(data.titu_voucher_total || 0);
                 document.getElementById('crossSellEdit').value = parseFloat(data.cross_sell || 0);
                 document.getElementById('tradeInVoucherEdit').value = parseFloat(data.trade_in_voucher || 0);
-                
+
                 // Add event listener to auto-calculate Trade-In Qty when value changes
                 const tradeInValueInput = document.getElementById('tradeInValueEdit');
                 const tradeInQtyInput = document.getElementById('tradeInQtyEdit');
                 if (tradeInValueInput && tradeInQtyInput) {
-                    tradeInValueInput.addEventListener('input', function() {
+                    tradeInValueInput.addEventListener('input', function () {
                         const value = parseFloat(this.value) || 0;
                         tradeInQtyInput.value = value > 0 ? 1 : 0;
                     });
@@ -5259,12 +5336,12 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
         // ========== END PROMO FUNCTIONS ==========
 
-        function reEntrySale() {
+        function revertVoidedSale() {
             const salesEntryId = document.getElementById('sales_entry_id').value;
             const invoiceNo = document.getElementById('invoice_no').value;
-            const reasonToModify = document.getElementById('reason_to_modify').value.trim();
+            let reasonToModify = document.getElementById('reason_to_modify').value.trim();
 
-            console.log('🔄 RE-ENTRY initiated for:', { salesEntryId, invoiceNo });
+            console.log('🔄 REVERT VOIDED initiated for:', { salesEntryId, invoiceNo });
 
             if (!salesEntryId) {
                 showAlert('No sales entry loaded', 'error');
@@ -5273,18 +5350,26 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             // Validate reason to modify is filled
             if (!reasonToModify) {
-                showAlert('Please provide a Reason to Modify before RE-ENTRY', 'error');
-                document.getElementById('reason_to_modify').focus();
+                reasonToModify = prompt('Please enter a Reason for Reverting this voided sale back to active sales:');
+                if (reasonToModify === null) {
+                    return;
+                }
+                reasonToModify = reasonToModify.trim();
+                if (!reasonToModify) {
+                    showAlert('Please provide a Reason to Modify before reverting voided sale', 'error');
+                    document.getElementById('reason_to_modify').focus();
+                    return;
+                }
+                document.getElementById('reason_to_modify').value = reasonToModify;
+            }
+
+            if (!confirm(`Are you sure you want to REVERT this voided sale back to active sales?\n\nInvoice: ${invoiceNo}\n\nThis will restore the sale status to completed/sales.`)) {
+                console.log('❌ REVERT VOIDED cancelled by user');
                 return;
             }
 
-            if (!confirm(`Are you sure you want to RE-ENTRY this voided sale?\n\nInvoice: ${invoiceNo}\n\nThis will change the status back to completed.`)) {
-                console.log('❌ RE-ENTRY cancelled by user');
-                return;
-            }
-
-            // Send request to backend to change status from voided to active
-            console.log('📤 Sending RE-ENTRY request to backend...');
+            // Send request to backend to change status from voided to completed/active
+            console.log('📤 Sending REVERT VOIDED request to backend...');
             fetch('reentry_sale.php', {
                 method: 'POST',
                 headers: {
@@ -5314,23 +5399,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 .then(data => {
                     console.log('✅ Response data:', data);
                     if (data.status === 'success') {
-                        showAlert(data.message, 'success');
+                        showAlert(data.message || 'Sale successfully reverted back to active sales!', 'success');
 
-                        // Refresh the page after successful re-entry
+                        // Refresh the page after successful revert
                         console.log('🔄 Refreshing page...');
                         setTimeout(() => {
                             window.location.reload();
                         }, 1500);
                     } else {
-                        console.error('❌ RE-ENTRY failed:', data.message);
-                        showAlert(data.message || 'Failed to re-entry sale', 'error');
+                        console.error('❌ REVERT VOIDED failed:', data.message);
+                        showAlert(data.message || 'Failed to revert voided sale', 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('❌ RE-ENTRY error:', error);
-                    showAlert('An error occurred while processing re-entry: ' + error.message, 'error');
+                    console.error('❌ REVERT VOIDED error:', error);
+                    showAlert('An error occurred while reverting voided sale: ' + error.message, 'error');
                 });
         }
+        const reEntrySale = revertVoidedSale;
 
         function updateSalesEntry() {
             const salesEntryId = document.getElementById('sales_entry_id').value;
@@ -5500,7 +5586,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 points: parseFloat(document.getElementById('modifyPoints')?.value || document.getElementById('pointsField').value) || 0,
                 commission: parseFloat(document.getElementById('modifyCommission')?.value || document.getElementById('commissionField').value.replace(/,/g, '')) || 0,
                 payment_data: document.getElementById('payment_data').value,
-                
+
                 // Trade-In Details (only include if section is visible/exists)
                 tradein_value: document.getElementById('tradeInValueEdit') ? (parseFloat(document.getElementById('tradeInValueEdit').value) || 0) : null,
                 tradein_imei: document.getElementById('tradeInIMEIEdit') ? document.getElementById('tradeInIMEIEdit').value.trim() : null,

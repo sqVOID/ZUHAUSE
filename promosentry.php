@@ -4953,21 +4953,32 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                         } else {
                                             data[key] = input.value;
                                         }
+                                        if (sectionObj[key]) {
+                                            sectionObj[key] += ', ' + input.value;
+                                        } else {
+                                            sectionObj[key] = input.value;
+                                        }
                                     }
                                 } else {
                                     // Text, Number, Select
                                     if (input.tagName === 'SELECT') {
                                         data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
+                                        sectionObj[key] = input.value;
                                         // For E-Wallet dropdown, also capture the display text
                                         if (key === 'E-Wallet' && input.selectedIndex > 0) {
-                                            data['E-Wallet-Text'] = data['E-Wallet-Text'] ? data['E-Wallet-Text'] + ' | ' + input.options[input.selectedIndex].text : input.options[input.selectedIndex].text;
+                                            const ewt = input.options[input.selectedIndex].text;
+                                            data['E-Wallet-Text'] = data['E-Wallet-Text'] ? data['E-Wallet-Text'] + ' | ' + ewt : ewt;
+                                            sectionObj['E-Wallet-Text'] = ewt;
                                         }
                                         // For Online Banking Bank dropdown, also capture the display text
                                         if (key === 'Bank' && input.selectedIndex > 0) {
-                                            data['Bank-Text'] = data['Bank-Text'] ? data['Bank-Text'] + ' | ' + input.options[input.selectedIndex].text : input.options[input.selectedIndex].text;
+                                            const bt = input.options[input.selectedIndex].text;
+                                            data['Bank-Text'] = data['Bank-Text'] ? data['Bank-Text'] + ' | ' + bt : bt;
+                                            sectionObj['Bank-Text'] = bt;
                                         }
                                     } else {
                                         data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
+                                        sectionObj[key] = input.value;
                                     }
                                     if (input.value && input.value.trim() !== '') {
                                         // Ignore default select options like "Select Bank" if they have empty value
@@ -4976,12 +4987,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 }
                             });
 
-                            // Capture Total from global total
-                            const globalTotalInput = document.getElementById('globalTotalInput');
-                            if (globalTotalInput) {
-                                data['Total'] = globalTotalInput.value;
-                                if (globalTotalInput.value && globalTotalInput.value.trim() !== '') hasValues = true;
-                            }
+                            data.payments = data.payments || [];
+                            data.payments.push(sectionObj);
 
                             return true;
                         }
@@ -5006,7 +5013,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
                     // Build unit_payment_map: { unitLabel -> paymentMethodName }
                     // This allows the report to show per-unit payment options correctly.
-                    const unitPaymentMap = {};
+                    const unitCountMap = {};
+                    const unitSectionMap = {};
                     for (const sec of sections) {
                         const secEl = document.querySelector(sec.class);
                         if (!secEl || secEl.style.display !== 'block') continue;
@@ -5023,12 +5031,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         const unitCheckboxes = secEl.querySelectorAll('.unit-selector-row input[type="checkbox"][name="Unit"]:checked');
                         unitCheckboxes.forEach(cb => {
                             const unitLabel = cb.value; // e.g. 'AEROX V3 (TEST222222222227)'
-                            unitPaymentMap[unitLabel] = displayName;
+                            unitCountMap[unitLabel] = (unitCountMap[unitLabel] || 0) + 1;
+                            unitSectionMap[unitLabel] = displayName;
                         });
                     }
 
-                    if (Object.keys(unitPaymentMap).length > 0) {
-                        data.unit_payment_map = unitPaymentMap;
+                    const hasOverlappingUnits = Object.values(unitCountMap).some(count => count > 1);
+                    if (!hasOverlappingUnits && Object.keys(unitSectionMap).length > 0) {
+                        data.unit_payment_map = unitSectionMap;
+                    }
+
+                    // Capture Total from global total
+                    const globalTotalInput = document.getElementById('globalTotalInput');
+                    if (globalTotalInput) {
+                        data['Total'] = globalTotalInput.value;
+                        if (globalTotalInput.value && globalTotalInput.value.trim() !== '') hasValues = true;
                     }
 
                     if (isValid) {

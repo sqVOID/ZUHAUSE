@@ -230,6 +230,9 @@ try {
         // Update the status from 'voided' to 'completed' and save the reason
         $update_query = "UPDATE sales_entry 
                          SET status = 'completed', 
+                             void_reason = NULL,
+                             voided_at = NULL,
+                             voided_by = NULL,
                              reason_to_modify = '$reason_to_modify',
                              updated_at = NOW() 
                          WHERE id = '$sales_entry_id' 
@@ -238,6 +241,9 @@ try {
         if (!$conn->query($update_query)) {
             throw new Exception("Failed to update sales entry status: " . $conn->error);
         }
+        
+        // Restore any unclaimed freebies that were voided for this invoice
+        $conn->query("UPDATE unclaimed_freebies SET status = 'unclaimed', void_reason = NULL, voided_at = NULL, voided_by = NULL WHERE invoice_number = '$invoice_no' AND status = 'void'");
         
         error_log("RE-ENTRY Success: Invoice $invoice_no status changed to completed with reason: $reason_to_modify");
         

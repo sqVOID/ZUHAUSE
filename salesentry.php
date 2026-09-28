@@ -138,6 +138,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
@@ -4362,7 +4363,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 }
                             }
                         }
-                        
+
                         // NEW: Trigger validation after bank selection changes
                         if (typeof window.displayCardPaymentValidationErrors === 'function') {
                             window.displayCardPaymentValidationErrors();
@@ -4441,7 +4442,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 if (totalInput) totalInput.value = '';
                             }
                         }
-                        
+
                         // NEW: Trigger validation after terms selection changes
                         if (typeof window.displayCardPaymentValidationErrors === 'function') {
                             window.displayCardPaymentValidationErrors();
@@ -5393,7 +5394,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
         function displayCardPaymentValidationErrors() {
             const creditCardSection = document.querySelector('.credit-card-section');
             const debitCardSection = document.querySelector('.debit-card-section');
-            
+
             // Function to create or update error message display
             function showError(section, message, errorId) {
                 // Remove existing error message if any
@@ -5401,17 +5402,17 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 if (existingError) {
                     existingError.remove();
                 }
-                
+
                 // Create new error message
                 const errorDiv = document.createElement('div');
                 errorDiv.id = errorId;
                 errorDiv.style.cssText = 'background-color: #fee; border: 2px solid #f44; color: #c00; padding: 12px; margin: 10px 0; border-radius: 5px; font-weight: bold; font-size: 14px;';
                 errorDiv.textContent = message;
-                
+
                 // Insert at the top of the section
                 section.insertBefore(errorDiv, section.firstChild);
             }
-            
+
             // Function to remove error message
             function hideError(section, errorId) {
                 let existingError = section.querySelector(`#${errorId}`);
@@ -5419,15 +5420,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     existingError.remove();
                 }
             }
-            
+
             // Helper function to validate amount against set prices
             function validateAmountAgainstPrice(section, sectionType) {
                 const unitRow = section.querySelector('.unit-selector-row');
                 if (!unitRow) return;
-                
+
                 const checkedUnits = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
                 if (checkedUnits.length !== 1) return; // Only validate when exactly 1 unit is selected
-                
+
                 const selectedUnit = checkedUnits[0];
                 const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                 let unitPrices = {};
@@ -5436,24 +5437,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 } catch (e) {
                     unitPrices = {};
                 }
-                
+
                 // Get selected bank and terms
                 const bankDropdown = section.querySelector(`#${sectionType}BankDropdown`);
                 const termsDropdown = section.querySelector(`#${sectionType}TermsDropdown`);
                 const amountInput = section.querySelector(`#${sectionType}Amount`);
-                
+
                 if (!bankDropdown || !termsDropdown || !amountInput) return;
-                
+
                 const selectedBank = bankDropdown.value;
                 const selectedTerms = termsDropdown.value;
                 const enteredAmount = parseFloat(amountInput.value.replace(/,/g, '')) || 0;
-                
+
                 // Skip validation if bank, terms, or amount not selected/entered
                 if (!selectedBank || !selectedTerms || enteredAmount === 0) {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                     return;
                 }
-                
+
                 // NEW: Check if split payment is active (multiple payment methods selected)
                 const allPaymentSections = [
                     document.querySelector('.home-credit-section'),
@@ -5465,31 +5466,31 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     document.querySelector('.online-banking-section'),
                     document.querySelector('.cash-section')
                 ].filter(s => s && s.style.display === 'block');
-                
+
                 const isSplitPayment = allPaymentSections.length > 1;
-                
+
                 // If split payment is active, skip exact amount validation for Credit/Debit Card
                 // because partial payments are allowed
                 if (isSplitPayment) {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                     return;
                 }
-                
+
                 // Build the price key (e.g., "BDO 24 Months")
                 const priceKey = `${selectedBank} ${selectedTerms}`;
                 const setPrice = parseFloat(unitPrices[priceKey]) || 0;
-                
+
                 // Skip validation if no set price exists for this bank/terms combination
                 if (setPrice === 0) {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                     return;
                 }
-                
+
                 // Get cart context to calculate expected amount after deductions
                 const context = (typeof getCartAndPaymentContext === 'function')
                     ? getCartAndPaymentContext()
                     : null;
-                    
+
                 let expectedAmount = setPrice;
                 if (context) {
                     // Subtract token, voucher, and discount from set price to get expected amount
@@ -5498,47 +5499,47 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         + (context.discountAmount || 0);
                     expectedAmount = Math.max(0, setPrice - deductions);
                 }
-                
+
                 // Check if entered amount exactly matches the expected amount
                 // Allow small floating point tolerance (0.01)
                 const difference = Math.abs(enteredAmount - expectedAmount);
-                
+
                 if (difference > 0.01) {
                     const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const formattedEntered = enteredAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const formattedSetPrice = setPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    
+
                     let errorMsg = `ERROR! The entered amount (₱${formattedEntered}) does not match the required amount (₱${formattedExpected}) for ${priceKey}.`;
-                    
+
                     if (context && (context.activeSelectedToken > 0 || context.activeSelectedVoucher > 0 || context.discountAmount > 0)) {
                         errorMsg += ` (Set Price: ₱${formattedSetPrice} minus deductions)`;
                     }
-                    
+
                     if (enteredAmount < expectedAmount) {
                         errorMsg += ` The amount is too low. Please enter exactly ₱${formattedExpected}.`;
                     } else {
                         errorMsg += ` The amount is too high. Please enter exactly ₱${formattedExpected}.`;
                     }
-                    
+
                     showError(section, errorMsg, `${sectionType}-amount-exceeds-error`);
                 } else {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                 }
             }
-            
+
             // Check Credit Card section
             if (creditCardSection && creditCardSection.style.display === 'block') {
                 const ccUnitRow = creditCardSection.querySelector('.unit-selector-row');
                 if (ccUnitRow) {
                     const ccCheckedUnits = ccUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                    
+
                     // Check if more than 1 unit is selected
                     if (ccCheckedUnits.length > 1) {
                         showError(creditCardSection, 'ERROR! Credit Card payment can only accept 1 item selected. Please select only one unit.', 'cc-multiple-units-error');
                     } else {
                         hideError(creditCardSection, 'cc-multiple-units-error');
                     }
-                    
+
                     // Check if the selected item has set prices (only if exactly 1 is selected)
                     if (ccCheckedUnits.length === 1) {
                         const selectedUnit = ccCheckedUnits[0];
@@ -5549,16 +5550,16 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         } catch (e) {
                             unitPrices = {};
                         }
-                        
-                        const hasPrices = Object.keys(unitPrices).length > 0 && 
-                                        Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
-                        
+
+                        const hasPrices = Object.keys(unitPrices).length > 0 &&
+                            Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
+
                         if (!hasPrices) {
                             showError(creditCardSection, 'ERROR! The selected item does not have set prices in Item Registration. Please set the prices first before using Credit Card payment.', 'cc-no-price-error');
                         } else {
                             hideError(creditCardSection, 'cc-no-price-error');
                         }
-                        
+
                         // NEW: Validate amount against set price
                         validateAmountAgainstPrice(creditCardSection, 'creditCard');
                     } else {
@@ -5567,20 +5568,20 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     }
                 }
             }
-            
+
             // Check Debit Card section
             if (debitCardSection && debitCardSection.style.display === 'block') {
                 const dcUnitRow = debitCardSection.querySelector('.unit-selector-row');
                 if (dcUnitRow) {
                     const dcCheckedUnits = dcUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                    
+
                     // Check if more than 1 unit is selected
                     if (dcCheckedUnits.length > 1) {
                         showError(debitCardSection, 'ERROR! Debit Card payment can only accept 1 item selected. Please select only one unit.', 'dc-multiple-units-error');
                     } else {
                         hideError(debitCardSection, 'dc-multiple-units-error');
                     }
-                    
+
                     // Check if the selected item has set prices (only if exactly 1 is selected)
                     if (dcCheckedUnits.length === 1) {
                         const selectedUnit = dcCheckedUnits[0];
@@ -5591,16 +5592,16 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         } catch (e) {
                             unitPrices = {};
                         }
-                        
-                        const hasPrices = Object.keys(unitPrices).length > 0 && 
-                                        Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
-                        
+
+                        const hasPrices = Object.keys(unitPrices).length > 0 &&
+                            Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
+
                         if (!hasPrices) {
                             showError(debitCardSection, 'ERROR! The selected item does not have set prices in Item Registration. Please set the prices first before using Debit Card payment.', 'dc-no-price-error');
                         } else {
                             hideError(debitCardSection, 'dc-no-price-error');
                         }
-                        
+
                         // NEW: Validate amount against set price
                         validateAmountAgainstPrice(debitCardSection, 'debitCard');
                     } else {
@@ -6234,9 +6235,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 const parentLabel = input.closest('.enter-amount-row')?.querySelector('label')?.textContent;
 
                 if ((label && (label.includes('Amount') || label.includes('Balance'))) || (parentLabel && parentLabel.includes('Amount')) || input.id === 'creditCardAmount' || input.id === 'debitCardAmount') {
-                    input.addEventListener('input', function () { 
-                        formatInput(this); 
-                        
+                    input.addEventListener('input', function () {
+                        formatInput(this);
+
                         // NEW: Trigger validation when amount changes for Credit/Debit Card
                         if (this.id === 'creditCardAmount' || this.id === 'debitCardAmount') {
                             if (typeof window.displayCardPaymentValidationErrors === 'function') {
@@ -6422,7 +6423,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 alert('ERROR! Credit Card payment can only accept 1 item selected. Please select only one unit.');
                                 return;
                             }
-                            
+
                             // NEW: Check if the selected item has set prices
                             const selectedUnit = ccCheckedUnits[0];
                             const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
@@ -6432,21 +6433,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             } catch (e) {
                                 unitPrices = {};
                             }
-                            
+
                             // Check if prices object is empty or has no valid price values
-                            const hasPrices = Object.keys(unitPrices).length > 0 && 
-                                            Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
-                            
+                            const hasPrices = Object.keys(unitPrices).length > 0 &&
+                                Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
+
                             if (!hasPrices) {
                                 alert('ERROR! The selected item does not have set prices in Item Registration. Please set the prices first before using Credit Card payment.');
                                 return;
                             }
-                            
+
                             // NEW: Validate amount doesn't exceed set price
                             const bank = document.getElementById('creditCardBankDropdown');
                             const terms = document.getElementById('creditCardTermsDropdown');
                             const amount = document.getElementById('creditCardAmount');
-                            
+
                             if (bank && terms && amount && bank.value && terms.value) {
                                 // NEW: Check if split payment is active
                                 const allActiveSections = [
@@ -6459,21 +6460,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                     onlineBankingSection,
                                     cashSection
                                 ].filter(s => s && s.style.display === 'block');
-                                
+
                                 const isSplitPayment = allActiveSections.length > 1;
-                                
+
                                 // Skip exact amount validation if split payment is active (partial payments allowed)
                                 if (!isSplitPayment) {
                                     const priceKey = `${bank.value} ${terms.value}`;
                                     const setPrice = parseFloat(unitPrices[priceKey]) || 0;
                                     const enteredAmount = parseFloat(amount.value.replace(/,/g, '')) || 0;
-                                    
+
                                     if (setPrice > 0) {
                                         // Get cart context to calculate expected amount
                                         const context = (typeof getCartAndPaymentContext === 'function')
                                             ? getCartAndPaymentContext()
                                             : null;
-                                        
+
                                         let expectedAmount = setPrice;
                                         if (context) {
                                             const deductions = (context.activeSelectedToken || 0)
@@ -6481,14 +6482,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                                 + (context.discountAmount || 0);
                                             expectedAmount = Math.max(0, setPrice - deductions);
                                         }
-                                        
+
                                         // Check if entered amount exactly matches expected amount (with tolerance)
                                         const difference = Math.abs(enteredAmount - expectedAmount);
-                                        
+
                                         if (difference > 0.01) {
                                             const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                             const formattedEntered = enteredAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                            
+
                                             if (enteredAmount < expectedAmount) {
                                                 alert(`ERROR! The entered amount (₱${formattedEntered}) is too low for ${priceKey}. The required amount is ₱${formattedExpected}. Please enter exactly ₱${formattedExpected}.`);
                                             } else {
@@ -6501,7 +6502,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 }
                             }
                         }
-                        
+
                         const terminalIssuer = document.getElementById('ccTerminalIssuer');
                         const terminalId = document.getElementById('ccTerminalId');
                         const bank = document.getElementById('creditCardBankDropdown');
@@ -6573,7 +6574,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 alert('ERROR! Debit Card payment can only accept 1 item selected. Please select only one unit.');
                                 return;
                             }
-                            
+
                             // NEW: Check if the selected item has set prices
                             const selectedUnit = dcCheckedUnits[0];
                             const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
@@ -6583,21 +6584,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             } catch (e) {
                                 unitPrices = {};
                             }
-                            
+
                             // Check if prices object is empty or has no valid price values
-                            const hasPrices = Object.keys(unitPrices).length > 0 && 
-                                            Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
-                            
+                            const hasPrices = Object.keys(unitPrices).length > 0 &&
+                                Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
+
                             if (!hasPrices) {
                                 alert('ERROR! The selected item does not have set prices in Item Registration. Please set the prices first before using Debit Card payment.');
                                 return;
                             }
-                            
+
                             // NEW: Validate amount doesn't exceed set price
                             const bank = document.getElementById('debitCardBankDropdown');
                             const terms = document.getElementById('debitCardTermsDropdown');
                             const amount = document.getElementById('debitCardAmount');
-                            
+
                             if (bank && terms && amount && bank.value && terms.value) {
                                 // NEW: Check if split payment is active
                                 const allActiveSections = [
@@ -6610,21 +6611,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                     onlineBankingSection,
                                     cashSection
                                 ].filter(s => s && s.style.display === 'block');
-                                
+
                                 const isSplitPayment = allActiveSections.length > 1;
-                                
+
                                 // Skip exact amount validation if split payment is active (partial payments allowed)
                                 if (!isSplitPayment) {
                                     const priceKey = `${bank.value} ${terms.value}`;
                                     const setPrice = parseFloat(unitPrices[priceKey]) || 0;
                                     const enteredAmount = parseFloat(amount.value.replace(/,/g, '')) || 0;
-                                    
+
                                     if (setPrice > 0) {
                                         // Get cart context to calculate expected amount
                                         const context = (typeof getCartAndPaymentContext === 'function')
                                             ? getCartAndPaymentContext()
                                             : null;
-                                        
+
                                         let expectedAmount = setPrice;
                                         if (context) {
                                             const deductions = (context.activeSelectedToken || 0)
@@ -6632,14 +6633,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                                 + (context.discountAmount || 0);
                                             expectedAmount = Math.max(0, setPrice - deductions);
                                         }
-                                        
+
                                         // Check if entered amount exactly matches expected amount (with tolerance)
                                         const difference = Math.abs(enteredAmount - expectedAmount);
-                                        
+
                                         if (difference > 0.01) {
                                             const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                             const formattedEntered = enteredAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                            
+
                                             if (enteredAmount < expectedAmount) {
                                                 alert(`ERROR! The entered amount (₱${formattedEntered}) is too low for ${priceKey}. The required amount is ₱${formattedExpected}. Please enter exactly ₱${formattedExpected}.`);
                                             } else {
@@ -6652,7 +6653,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                 }
                             }
                         }
-                        
+
                         const terminalIssuer = document.getElementById('dcTerminalIssuer');
                         const terminalId = document.getElementById('dcTerminalId');
                         const bank = document.getElementById('debitCardBankDropdown');
@@ -7044,99 +7045,6 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         return;
                     }
 
-
-                    
-
-                    // NEW: Validate total payment matches expected amount when Credit/Debit Card is used with set prices
-                    // THIS MUST RUN BEFORE STORING DATA!
-                    const isCreditCardActive = creditCardSection && creditCardSection.style.display === 'block';
-                    const isDebitCardActive = debitCardSection && debitCardSection.style.display === 'block';
-                    
-                    if (isCreditCardActive || isDebitCardActive) {
-                        // Get the active card section
-                        const activeCardSection = isCreditCardActive ? creditCardSection : debitCardSection;
-                        const sectionType = isCreditCardActive ? 'creditCard' : 'debitCard';
-                        
-                        // Check if using set prices (bank and terms selected)
-                        const bankDropdown = activeCardSection.querySelector(`#${sectionType}BankDropdown`);
-                        const termsDropdown = activeCardSection.querySelector(`#${sectionType}TermsDropdown`);
-                        const unitRow = activeCardSection.querySelector('.unit-selector-row');
-                        
-                        if (bankDropdown && termsDropdown && unitRow && bankDropdown.value && termsDropdown.value) {
-                            // Get the selected unit's prices
-                            const checkedUnits = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                            if (checkedUnits.length === 1) {
-                                const selectedUnit = checkedUnits[0];
-                                const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
-                                let unitPrices = {};
-                                try {
-                                    unitPrices = JSON.parse(unitPricesStr);
-                                } catch (e) {
-                                    unitPrices = {};
-                                }
-                                
-                                const priceKey = `${bankDropdown.value} ${termsDropdown.value}`;
-                                const setPrice = parseFloat(unitPrices[priceKey]) || 0;
-                                
-                                if (setPrice > 0) {
-                                    // Calculate expected amount after deductions
-                                    const context = (typeof getCartAndPaymentContext === 'function')
-                                        ? getCartAndPaymentContext()
-                                        : null;
-                                    
-                                    let expectedAmount = setPrice;
-                                    if (context) {
-                                        const deductions = (context.activeSelectedToken || 0)
-                                            + (context.activeSelectedVoucher || 0)
-                                            + (context.discountAmount || 0);
-                                        expectedAmount = Math.max(0, setPrice - deductions);
-                                    }
-                                    
-                                    // Calculate total payment from all active sections
-                                    let totalPayment = 0;
-                                    
-                                    // Helper to get amount from section
-                                    const getAmountFromSection = (section) => {
-                                        if (!section || section.style.display !== 'block') return 0;
-                                        const amountInputs = section.querySelectorAll('input[type="text"]');
-                                        for (let input of amountInputs) {
-                                            const label = input.closest('.hc-form-group')?.querySelector('label')?.textContent;
-                                            if (label && label.includes('Amount')) {
-                                                return parseFloat(input.value.replace(/,/g, '')) || 0;
-                                            }
-                                        }
-                                        return 0;
-                                    };
-                                    
-                                    totalPayment += getAmountFromSection(creditCardSection);
-                                    totalPayment += getAmountFromSection(debitCardSection);
-                                    totalPayment += getAmountFromSection(homeCreditSection);
-                                    totalPayment += getAmountFromSection(qrPhSection);
-                                    totalPayment += getAmountFromSection(starpayQrSection);
-                                    totalPayment += getAmountFromSection(ewalletSection);
-                                    totalPayment += getAmountFromSection(onlineBankingSection);
-                                    totalPayment += getAmountFromSection(cashSection);
-                                    
-                                    // Check if total matches expected amount
-                                    const difference = Math.abs(totalPayment - expectedAmount);
-                                    
-                                    if (difference > 0.01) {
-                                        const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                        const formattedTotal = totalPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                        const formattedDifference = Math.abs(expectedAmount - totalPayment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                        
-                                        if (totalPayment < expectedAmount) {
-                                            alert(`ERROR! Total payment (₱${formattedTotal}) is less than the required amount (₱${formattedExpected}) for ${priceKey}.\n\nShortfall: ₱${formattedDifference}\n\nPlease adjust your payment amounts to match the required total.`);
-                                        } else {
-                                            alert(`ERROR! Total payment (₱${formattedTotal}) exceeds the required amount (₱${formattedExpected}) for ${priceKey}.\n\nExcess: ₱${formattedDifference}\n\nPlease adjust your payment amounts to match the required total.`);
-                                        }
-                                        return; // STOP HERE - Do not save data or update button
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     console.log('Saving Payment Data:', data);
                     const hiddenInput = document.getElementById('payment_data');
                     if (hiddenInput) {
@@ -7302,7 +7210,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             if (banner) {
                                 banner.innerHTML = `
                                         <div style="display: flex; align-items: flex-start; gap: 12px;">
-                                            <div style="color: #ef4444; margin-top: 2px;">
+                                             <div style="color: #ef4444; margin-top: 2px;">
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                     <circle cx="12" cy="12" r="10"></circle>
                                                     <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -7366,95 +7274,6 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             btnPayment.innerText = buttonText;
                             btnPayment.style.backgroundColor = '#2E7D32'; // Success Green
                             btnPayment.style.color = 'white';
-                        }
-
-                        // NEW: Validate total payment matches expected amount when Credit/Debit Card is used with set prices
-                        const isCreditCardActive = creditCardSection && creditCardSection.style.display === 'block';
-                        const isDebitCardActive = debitCardSection && debitCardSection.style.display === 'block';
-                        
-                        if (isCreditCardActive || isDebitCardActive) {
-                            // Get the active card section
-                            const activeCardSection = isCreditCardActive ? creditCardSection : debitCardSection;
-                            const sectionType = isCreditCardActive ? 'creditCard' : 'debitCard';
-                            
-                            // Check if using set prices (bank and terms selected)
-                            const bankDropdown = activeCardSection.querySelector(`#${sectionType}BankDropdown`);
-                            const termsDropdown = activeCardSection.querySelector(`#${sectionType}TermsDropdown`);
-                            const unitRow = activeCardSection.querySelector('.unit-selector-row');
-                            
-                            if (bankDropdown && termsDropdown && unitRow && bankDropdown.value && termsDropdown.value) {
-                                // Get the selected unit's prices
-                                const checkedUnits = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                                if (checkedUnits.length === 1) {
-                                    const selectedUnit = checkedUnits[0];
-                                    const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
-                                    let unitPrices = {};
-                                    try {
-                                        unitPrices = JSON.parse(unitPricesStr);
-                                    } catch (e) {
-                                        unitPrices = {};
-                                    }
-                                    
-                                    const priceKey = `${bankDropdown.value} ${termsDropdown.value}`;
-                                    const setPrice = parseFloat(unitPrices[priceKey]) || 0;
-                                    
-                                    if (setPrice > 0) {
-                                        // Calculate expected amount after deductions
-                                        const context = (typeof getCartAndPaymentContext === 'function')
-                                            ? getCartAndPaymentContext()
-                                            : null;
-                                        
-                                        let expectedAmount = setPrice;
-                                        if (context) {
-                                            const deductions = (context.activeSelectedToken || 0)
-                                                + (context.activeSelectedVoucher || 0)
-                                                + (context.discountAmount || 0);
-                                            expectedAmount = Math.max(0, setPrice - deductions);
-                                        }
-                                        
-                                        // Calculate total payment from all active sections
-                                        let totalPayment = 0;
-                                        
-                                        // Helper to get amount from section
-                                        const getAmountFromSection = (section) => {
-                                            if (!section || section.style.display !== 'block') return 0;
-                                            const amountInputs = section.querySelectorAll('input[type="text"]');
-                                            for (let input of amountInputs) {
-                                                const label = input.closest('.hc-form-group')?.querySelector('label')?.textContent;
-                                                if (label && label.includes('Amount')) {
-                                                    return parseFloat(input.value.replace(/,/g, '')) || 0;
-                                                }
-                                            }
-                                            return 0;
-                                        };
-                                        
-                                        totalPayment += getAmountFromSection(creditCardSection);
-                                        totalPayment += getAmountFromSection(debitCardSection);
-                                        totalPayment += getAmountFromSection(homeCreditSection);
-                                        totalPayment += getAmountFromSection(qrPhSection);
-                                        totalPayment += getAmountFromSection(starpayQrSection);
-                                        totalPayment += getAmountFromSection(ewalletSection);
-                                        totalPayment += getAmountFromSection(onlineBankingSection);
-                                        totalPayment += getAmountFromSection(cashSection);
-                                        
-                                        // Check if total matches expected amount
-                                        const difference = Math.abs(totalPayment - expectedAmount);
-                                        
-                                        if (difference > 0.01) {
-                                            const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                            const formattedTotal = totalPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                            const formattedDifference = Math.abs(expectedAmount - totalPayment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                            
-                                            if (totalPayment < expectedAmount) {
-                                                alert(`ERROR! Total payment (₱${formattedTotal}) is less than the required amount (₱${formattedExpected}) for ${priceKey}.\n\nShortfall: ₱${formattedDifference}\n\nPlease adjust your payment amounts to match the required total.`);
-                                            } else {
-                                                alert(`ERROR! Total payment (₱${formattedTotal}) exceeds the required amount (₱${formattedExpected}) for ${priceKey}.\n\nExcess: ₱${formattedDifference}\n\nPlease adjust your payment amounts to match the required total.`);
-                                            }
-                                            return;
-                                        }
-                                    }
-                                }
-                            }
                         }
 
                         alert('Payment details saved successfully!');
@@ -8031,4 +7850,4 @@ if ($promos_result && $promos_result->num_rows > 0) {
     </script>
 </body>
 
-</html> 
+</html>

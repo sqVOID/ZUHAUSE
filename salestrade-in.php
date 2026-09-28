@@ -5670,18 +5670,29 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                     } else {
                                         data[key] = input.value;
                                     }
+                                    if (sectionObj[key]) {
+                                        sectionObj[key] += ', ' + input.value;
+                                    } else {
+                                        sectionObj[key] = input.value;
+                                    }
                                 }
                             } else {
                                 if (input.tagName === 'SELECT') {
                                     data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
+                                    sectionObj[key] = input.value;
                                     if (key === 'E-Wallet' && input.selectedIndex > 0) {
-                                        data['E-Wallet-Text'] = data['E-Wallet-Text'] ? data['E-Wallet-Text'] + ' | ' + input.options[input.selectedIndex].text : input.options[input.selectedIndex].text;
+                                        const ewt = input.options[input.selectedIndex].text;
+                                        data['E-Wallet-Text'] = data['E-Wallet-Text'] ? data['E-Wallet-Text'] + ' | ' + ewt : ewt;
+                                        sectionObj['E-Wallet-Text'] = ewt;
                                     }
                                     if (key === 'Bank' && input.selectedIndex > 0) {
-                                        data['Bank-Text'] = data['Bank-Text'] ? data['Bank-Text'] + ' | ' + input.options[input.selectedIndex].text : input.options[input.selectedIndex].text;
+                                        const bt = input.options[input.selectedIndex].text;
+                                        data['Bank-Text'] = data['Bank-Text'] ? data['Bank-Text'] + ' | ' + bt : bt;
+                                        sectionObj['Bank-Text'] = bt;
                                     }
                                 } else {
                                     data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
+                                    sectionObj[key] = input.value;
                                 }
                                 if (input.value && input.value.trim() !== '') {
                                     hasValues = true;
@@ -5689,11 +5700,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                             }
                         });
 
-                        const globalTotalInput = document.getElementById('globalTotalInput');
-                        if (globalTotalInput) {
-                            data['Total'] = globalTotalInput.value;
-                            if (globalTotalInput.value && globalTotalInput.value.trim() !== '') hasValues = true;
-                        }
+                        data.payments = data.payments || [];
+                        data.payments.push(sectionObj);
+
                         return true;
                     }
                     return false;
@@ -5714,7 +5723,8 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     collectData(sec.class, sec.name);
                 }
 
-                const unitPaymentMap = {};
+                const unitCountMap = {};
+                const unitSectionMap = {};
                 for (const sec of sections) {
                     const secEl = document.querySelector(sec.class);
                     if (!secEl || secEl.style.display !== 'block') continue;
@@ -5730,110 +5740,26 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
 
                     const unitCheckboxes = secEl.querySelectorAll('.unit-selector-row input[type="checkbox"][name="Unit"]:checked');
                     unitCheckboxes.forEach(cb => {
-                        unitPaymentMap[cb.value] = displayName;
+                        unitCountMap[cb.value] = (unitCountMap[cb.value] || 0) + 1;
+                        unitSectionMap[cb.value] = displayName;
                     });
                 }
 
-                if (Object.keys(unitPaymentMap).length > 0) {
-                    data.unit_payment_map = unitPaymentMap;
+                const hasOverlappingUnits = Object.values(unitCountMap).some(count => count > 1);
+                if (!hasOverlappingUnits && Object.keys(unitSectionMap).length > 0) {
+                    data.unit_payment_map = unitSectionMap;
+                }
+
+                const globalTotalInput = document.getElementById('globalTotalInput');
+                if (globalTotalInput) {
+                    data['Total'] = globalTotalInput.value;
+                    if (globalTotalInput.value && globalTotalInput.value.trim() !== '') hasValues = true;
                 }
 
                 if (isValid) {
                     if (!hasValues) {
                         alert('Please fill in the payment details before saving.');
                         return;
-                    }
-
-                    // NEW: Validate total payment matches expected amount when Credit/Debit Card is used with set prices
-                    // THIS MUST RUN BEFORE STORING DATA!
-                    const isCreditCardActive = creditCardSection && creditCardSection.style.display === 'block';
-                    const isDebitCardActive = debitCardSection && debitCardSection.style.display === 'block';
-                    
-                    if (isCreditCardActive || isDebitCardActive) {
-                        // Get the active card section
-                        const activeCardSection = isCreditCardActive ? creditCardSection : debitCardSection;
-                        const sectionType = isCreditCardActive ? 'creditCard' : 'debitCard';
-                        
-                        // Check if using set prices (bank and terms selected)
-                        const bankDropdown = activeCardSection.querySelector(`#${sectionType}BankDropdown`);
-                        const termsDropdown = activeCardSection.querySelector(`#${sectionType}TermsDropdown`);
-                        const unitRow = activeCardSection.querySelector('.unit-selector-row');
-                        
-                        if (bankDropdown && termsDropdown && unitRow && bankDropdown.value && termsDropdown.value) {
-                            // Get the selected unit's prices
-                            const checkedUnits = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                            if (checkedUnits.length === 1) {
-                                const selectedUnit = checkedUnits[0];
-                                const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
-                                let unitPrices = {};
-                                try {
-                                    unitPrices = JSON.parse(unitPricesStr);
-                                } catch (e) {
-                                    unitPrices = {};
-                                }
-                                
-                                const priceKey = `${bankDropdown.value} ${termsDropdown.value}`;
-                                const setPrice = parseFloat(unitPrices[priceKey]) || 0;
-                                
-                                if (setPrice > 0) {
-                                    // Calculate expected amount after deductions
-                                    const context = (typeof getCartAndPaymentContext === 'function')
-                                        ? getCartAndPaymentContext()
-                                        : null;
-                                    
-                                    let expectedAmount = setPrice;
-                                    if (context) {
-                                        const deductions = (context.activeSelectedToken || 0)
-                                            + (context.activeSelectedVoucher || 0)
-                                            + (context.discountAmount || 0)
-                                            + (context.tradeInValue || 0)
-                                            + (context.tituVoucher || 0);
-                                        expectedAmount = Math.max(0, setPrice - deductions);
-                                    }
-                                    
-                                    // Calculate total payment from all active sections
-                                    let totalPayment = 0;
-                                    
-                                    // Helper to get amount from section
-                                    const getAmountFromSection = (section) => {
-                                        if (!section || section.style.display !== 'block') return 0;
-                                        const amountInputs = section.querySelectorAll('input[type="text"]');
-                                        for (let input of amountInputs) {
-                                            const label = input.closest('.hc-form-group')?.querySelector('label')?.textContent;
-                                            if (label && label.includes('Amount')) {
-                                                return parseFloat(input.value.replace(/,/g, '')) || 0;
-                                            }
-                                        }
-                                        return 0;
-                                    };
-                                    
-                                    totalPayment += getAmountFromSection(creditCardSection);
-                                    totalPayment += getAmountFromSection(debitCardSection);
-                                    totalPayment += getAmountFromSection(homeCreditSection);
-                                    totalPayment += getAmountFromSection(qrPhSection);
-                                    totalPayment += getAmountFromSection(starpayQrSection);
-                                    totalPayment += getAmountFromSection(ewalletSection);
-                                    totalPayment += getAmountFromSection(onlineBankingSection);
-                                    totalPayment += getAmountFromSection(cashSection);
-                                    
-                                    // Check if total matches expected amount
-                                    const difference = Math.abs(totalPayment - expectedAmount);
-                                    
-                                    if (difference > 0.01) {
-                                        const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                        const formattedTotal = totalPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                        const formattedDifference = Math.abs(expectedAmount - totalPayment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                        
-                                        if (totalPayment < expectedAmount) {
-                                            alert(`ERROR! Total payment (₱${formattedTotal}) is less than the required amount (₱${formattedExpected}) for ${priceKey}.\n\nShortfall: ₱${formattedDifference}\n\nPlease adjust your payment amounts to match the required total.`);
-                                        } else {
-                                            alert(`ERROR! Total payment (₱${formattedTotal}) exceeds the required amount (₱${formattedExpected}) for ${priceKey}.\n\nExcess: ₱${formattedDifference}\n\nPlease adjust your payment amounts to match the required total.`);
-                                        }
-                                        return; // STOP HERE - Do not save data or update button
-                                    }
-                                }
-                            }
-                        }
                     }
 
                     const context = getCartAndPaymentContext();

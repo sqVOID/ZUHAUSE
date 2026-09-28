@@ -217,6 +217,31 @@ try {
         $sale['actual_total_amount'] = $paid;
         $sale['total_amount'] = $paid;
 
+        // Fetch ALL preorder payment history records for this preorder
+        $preorder_payments = [];
+        $pph_query = $conn->prepare("
+            SELECT 
+                invoice_no,
+                payment_date,
+                payment_method,
+                amount,
+                status_after_payment,
+                payment_sequence
+            FROM preorder_payment_history
+            WHERE preorder_id = ?
+            ORDER BY payment_sequence ASC
+        ");
+        $pph_query->bind_param("i", $sale['id']);
+        $pph_query->execute();
+        $pph_result = $pph_query->get_result();
+        if ($pph_result && $pph_result->num_rows > 0) {
+            while ($pph_row = $pph_result->fetch_assoc()) {
+                $preorder_payments[] = $pph_row;
+            }
+        }
+        $pph_query->close();
+        $sale['preorder_payments'] = $preorder_payments;
+
         // Check if assisted_by is a promoter and fetch their brand
         $assisted_by_brand = '';
         if (!empty($sale['assisted_by'])) {
@@ -258,7 +283,8 @@ try {
             sei.item_code,
             sei.imei,
             sei.quantity,
-            sei.price,
+            COALESCE(NULLIF(sei.price, 0), i.srp, 0) AS price,
+            COALESCE(i.srp, NULLIF(sei.price, 0), 0) AS srp,
             sei.is_promo_item,
             COALESCE(
                 NULLIF(sei.voucher_amount, 0),
