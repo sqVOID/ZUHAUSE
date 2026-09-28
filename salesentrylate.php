@@ -3347,11 +3347,13 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const checkedCbs = Array.from(secEl.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
                     if (checkedCbs.length > 0) {
                         hasCheckedUnit = true;
-                        if (checkedCbs.length === 1) {
+                        const serializedCbs = checkedCbs.filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                        const targetCbs = serializedCbs.length > 0 ? serializedCbs : checkedCbs;
+                        if (targetCbs.length === 1) {
                             try {
-                                mergedPrices = JSON.parse(checkedCbs[0].getAttribute('data-prices') || '{}');
+                                mergedPrices = JSON.parse(targetCbs[0].getAttribute('data-prices') || '{}');
                             } catch (e) { }
-                            const ob = checkedCbs[0].getAttribute('data-others-bank-enabled');
+                            const ob = targetCbs[0].getAttribute('data-others-bank-enabled');
                             othersBankEnabled = (ob === '1' || ob === 'true');
                         } else {
                             // Multiple units selected:
@@ -4656,6 +4658,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                                     discountField.style.backgroundColor = '#ffffff';
                                                     discountField.style.cursor = 'text';
                                                 } else {
+
                                                     discountField.setAttribute('readonly', 'readonly');
                                                     discountField.style.backgroundColor = '#e0e0e0';
                                                     discountField.style.cursor = 'not-allowed';
@@ -4731,8 +4734,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 const has_token = parseInt(itemCodeInput.getAttribute('data-has-token')) || 0;
                 const token_amount = parseFloat(itemCodeInput.getAttribute('data-token-amount')) || 0;
 
-                if (!desc || !price) {
-                    alert("Please select or enter an item description and price.");
+                if (!desc) {
+                    alert("Please select or enter an item description.");
+                    return;
+                }
+
+                // For serialized items (with IMEI), price is required
+                // For non-serialized items, price can be empty/zero
+                if (imei && imei.trim() !== '' && !price) {
+                    alert("Please enter a price for this serialized item.");
                     return;
                 }
 
@@ -5170,263 +5180,285 @@ if ($promos_result && $promos_result->num_rows > 0) {
              * - 1 item   → auto-select, show read-only text
              * - 0 items  → hide the row
              */
-        function getSectionPaymentAmount(secEl) {
-            if (!secEl || secEl.style.display !== 'block') return 0;
-            let secTotal = 0;
-            const inputs = secEl.querySelectorAll('input[type="text"], input[type="number"]');
-            inputs.forEach(input => {
-                let isAmount = false;
-                if (input.classList.contains('amount-input')) isAmount = true;
-                if (input.id && input.id.toLowerCase().includes('amount') && input.id !== 'totalLoanAmount') isAmount = true;
-                const formGroup = input.closest('.hc-form-group');
-                if (formGroup) {
-                    const label = formGroup.querySelector('label');
-                    if (label && label.innerText.includes('Amount') && !label.innerText.includes('Total Loan Amount')) isAmount = true;
-                    if (label && label.innerText.includes('Loan Balance')) isAmount = true;
-                }
-                const enterAmountRow = input.closest('.enter-amount-row');
-                if (enterAmountRow) {
-                    const label = enterAmountRow.querySelector('label');
-                    if (label && label.innerText.includes('Amount')) isAmount = true;
-                }
-                if (isAmount) {
-                    let val = parseFloat(input.value.replace(/[^0-9.-]+/g, '')) || 0;
-                    secTotal += val;
-                }
-            });
-            return secTotal;
-        }
-
-        /**
-         * When Credit/Debit Card has Bank+Terms selected, the installment set price
-         * (often higher than cart SRP) is what must be covered across split payments.
-         * Elevate each unit's due so Cash/other methods still show the unit when
-         * card amount is reduced below that set price.
-         */
-        function applyCardSetPriceToItemDueMap(itemNetDueMap, deductionsByLabel) {
-            if (!itemNetDueMap) return itemNetDueMap;
-            const cardConfigs = [
-                { section: '.credit-card-section', bankId: 'creditCardBankDropdown', termsId: 'creditCardTermsDropdown' },
-                { section: '.debit-card-section', bankId: 'debitCardBankDropdown', termsId: 'debitCardTermsDropdown' }
-            ];
-
-            cardConfigs.forEach(cfg => {
-                const secEl = document.querySelector(cfg.section);
-                if (!secEl || secEl.style.display !== 'block') return;
-
-                const bankEl = document.getElementById(cfg.bankId);
-                const termsEl = document.getElementById(cfg.termsId);
-                const bank = bankEl ? bankEl.value : '';
-                const terms = termsEl ? termsEl.value : '';
-                if (!bank || !terms) return;
-
-                const priceKey = bank + ' ' + terms;
-                const checkedCbs = secEl.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                checkedCbs.forEach(cb => {
-                    const uLabel = cb.value;
-                    let prices = {};
-                    try {
-                        prices = JSON.parse(cb.getAttribute('data-prices') || '{}');
-                    } catch (e) { }
-                    const setPrice = parseFloat(prices[priceKey]) || 0;
-                    if (setPrice <= 0) return;
-
-                    const deductions = (deductionsByLabel && deductionsByLabel[uLabel]) || 0;
-                    const netSetDue = Math.max(0, setPrice - deductions);
-                    if (itemNetDueMap[uLabel] === undefined) {
-                        itemNetDueMap[uLabel] = netSetDue;
-                    } else {
-                        itemNetDueMap[uLabel] = Math.max(itemNetDueMap[uLabel], netSetDue);
+            function getSectionPaymentAmount(secEl) {
+                if (!secEl || secEl.style.display !== 'block') return 0;
+                let secTotal = 0;
+                const inputs = secEl.querySelectorAll('input[type="text"], input[type="number"]');
+                inputs.forEach(input => {
+                    let isAmount = false;
+                    if (input.classList.contains('amount-input')) isAmount = true;
+                    if (input.id && input.id.toLowerCase().includes('amount') && input.id !== 'totalLoanAmount') isAmount = true;
+                    const formGroup = input.closest('.hc-form-group');
+                    if (formGroup) {
+                        const label = formGroup.querySelector('label');
+                        if (label && label.innerText.includes('Amount') && !label.innerText.includes('Total Loan Amount')) isAmount = true;
+                        if (label && label.innerText.includes('Loan Balance')) isAmount = true;
+                    }
+                    const enterAmountRow = input.closest('.enter-amount-row');
+                    if (enterAmountRow) {
+                        const label = enterAmountRow.querySelector('label');
+                        if (label && label.innerText.includes('Amount')) isAmount = true;
+                    }
+                    if (isAmount) {
+                        let val = parseFloat(input.value.replace(/[^0-9.-]+/g, '')) || 0;
+                        secTotal += val;
                     }
                 });
-            });
-            return itemNetDueMap;
-        }
-        window.applyCardSetPriceToItemDueMap = applyCardSetPriceToItemDueMap;
+                return secTotal;
+            }
 
-        // Sync unit selectors so items with no remaining balance (fully paid by other payment methods) are not displayed as options in other payment methods
-        function syncUnitSelectorsAcrossSections(triggeredUnitRow) {
-            const sections = [
-                '.home-credit-section',
-                '.credit-card-section',
-                '.debit-card-section',
-                '.qr-ph-section',
-                '.starpay-qr-section',
-                '.ewallet-section',
-                '.online-banking-section',
-                '.cash-section'
-            ];
+            /**
+             * When Credit/Debit Card has Bank+Terms selected, the installment set price
+             * (often higher than cart SRP) is what must be covered across split payments.
+             * Elevate each unit's due so Cash/other methods still show the unit when
+             * card amount is reduced below that set price.
+             */
+            function applyCardSetPriceToItemDueMap(itemNetDueMap, deductionsByLabel) {
+                if (!itemNetDueMap) return itemNetDueMap;
+                const cardConfigs = [
+                    { section: '.credit-card-section', bankId: 'creditCardBankDropdown', termsId: 'creditCardTermsDropdown' },
+                    { section: '.debit-card-section', bankId: 'debitCardBankDropdown', termsId: 'debitCardTermsDropdown' }
+                ];
 
-            const activeSections = sections
-                .map(secClass => document.querySelector(secClass))
-                .filter(secEl => secEl && secEl.style.display === 'block');
+                cardConfigs.forEach(cfg => {
+                    const secEl = document.querySelector(cfg.section);
+                    if (!secEl || secEl.style.display !== 'block') return;
 
-            if (activeSections.length === 0) return;
+                    const bankEl = document.getElementById(cfg.bankId);
+                    const termsEl = document.getElementById(cfg.termsId);
+                    const bank = bankEl ? bankEl.value : '';
+                    const terms = termsEl ? termsEl.value : '';
+                    if (!bank || !terms) return;
 
-            // Get items and their net due amounts from cart table
-            const cartRows = document.querySelectorAll('#itemsTableBody tr:not(#no-sales-row):not(#no-items-row)');
-            const cartItems = [];
-            const itemNetDueMap = {};
-            const deductionsByLabel = {};
-
-            const discountField = document.getElementById('discountField');
-            const totalDiscount = discountField ? (parseFloat(discountField.value.replace(/,/g, '')) || 0) : 0;
-
-            cartRows.forEach((row, idx) => {
-                const tds = row.querySelectorAll('td');
-                if (tds.length >= 2) {
-                    const descText = tds[0].textContent.trim();
-                    const serialText = tds[1] ? tds[1].textContent.trim() : '';
-                    const labelText = serialText ? (descText + ' (' + serialText + ')') : descText;
-
-                    const priceInput = row.querySelector('.price-input-table');
-                    const qtyInput = row.querySelector('.qty-input');
-                    const pVal = parseFloat(priceInput ? priceInput.value.replace(/,/g, '') : 0) || 0;
-                    const qVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
-                    const rowTotal = pVal * qVal;
-
-                    const hasVoucher = parseInt(row.getAttribute('data-has-voucher')) || 0;
-                    const voucherAmount = parseFloat(row.getAttribute('data-voucher-amount')) || 0;
-                    const itemVoucher = (hasVoucher === 1) ? voucherAmount : 0;
-
-                    const hasToken = parseInt(row.getAttribute('data-has-token')) || 0;
-                    const tokenAmount = parseFloat(row.getAttribute('data-token-amount')) || 0;
-                    const itemToken = (hasToken === 1) ? tokenAmount : 0;
-
-                    let itemDeductions = itemVoucher + itemToken;
-                    let netDue = Math.max(0, rowTotal - itemVoucher - itemToken);
-                    if (idx === cartRows.length - 1 && totalDiscount > 0) {
-                        netDue = Math.max(0, netDue - totalDiscount);
-                        itemDeductions += totalDiscount;
-                    }
-
-                    cartItems.push({ labelText, netDue });
-                    itemNetDueMap[labelText] = netDue;
-                    deductionsByLabel[labelText] = itemDeductions;
-                }
-            });
-
-            // Use installment set price as due when it exceeds cart SRP (enables CC+Cash split on same unit)
-            applyCardSetPriceToItemDueMap(itemNetDueMap, deductionsByLabel);
-            cartItems.forEach(item => {
-                if (itemNetDueMap[item.labelText] !== undefined) {
-                    item.netDue = itemNetDueMap[item.labelText];
-                }
-            });
-
-            // For each active section, determine which items are visible based on remaining balance
-            activeSections.forEach(targetSecEl => {
-                const unitRow = targetSecEl.querySelector('.unit-selector-row');
-                if (!unitRow) return;
-
-                const container = unitRow.querySelector('.unit-checkboxes');
-                if (!container) return;
-
-                // Ensure the unit row container itself is always visible when there are items in the cart
-                unitRow.style.display = (cartItems.length > 0) ? '' : 'none';
-
-                // Calculate how much was paid towards each item by OTHER active sections
-                const otherPaidPerItem = {};
-                cartItems.forEach(item => {
-                    otherPaidPerItem[item.labelText] = 0;
-                });
-
-                activeSections.forEach(otherSecEl => {
-                    if (otherSecEl === targetSecEl) return;
-                    const otherAmt = getSectionPaymentAmount(otherSecEl);
-                    if (otherAmt <= 0) return;
-
-                    const otherUnitRow = otherSecEl.querySelector('.unit-selector-row');
-                    if (!otherUnitRow) return;
-
-                    const otherCheckedCbs = Array.from(otherUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
-                    if (otherCheckedCbs.length === 0) return;
-
-                    let remAmt = otherAmt;
-                    otherCheckedCbs.forEach(cb => {
+                    const priceKey = bank + ' ' + terms;
+                    const checkedCbs = secEl.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
+                    checkedCbs.forEach(cb => {
                         const uLabel = cb.value;
-                        const itemDue = itemNetDueMap[uLabel] || 0;
-                        const alreadyPaid = otherPaidPerItem[uLabel] || 0;
-                        const remainingOnItem = Math.max(0, itemDue - alreadyPaid);
-                        const allocate = Math.min(remainingOnItem, remAmt);
-                        otherPaidPerItem[uLabel] = alreadyPaid + allocate;
-                        remAmt -= allocate;
+                        let prices = {};
+                        try {
+                            prices = JSON.parse(cb.getAttribute('data-prices') || '{}');
+                        } catch (e) { }
+                        const setPrice = parseFloat(prices[priceKey]) || 0;
+                        if (setPrice <= 0) return;
+
+                        const deductions = (deductionsByLabel && deductionsByLabel[uLabel]) || 0;
+                        const netSetDue = Math.max(0, setPrice - deductions);
+                        if (itemNetDueMap[uLabel] === undefined) {
+                            itemNetDueMap[uLabel] = netSetDue;
+                        } else {
+                            itemNetDueMap[uLabel] = Math.max(itemNetDueMap[uLabel], netSetDue);
+                        }
+                    });
+                });
+                return itemNetDueMap;
+            }
+            window.applyCardSetPriceToItemDueMap = applyCardSetPriceToItemDueMap;
+
+            // Sync unit selectors so items with no remaining balance (fully paid by other payment methods) are not displayed as options in other payment methods
+            function syncUnitSelectorsAcrossSections(triggeredUnitRow) {
+                const sections = [
+                    '.home-credit-section',
+                    '.credit-card-section',
+                    '.debit-card-section',
+                    '.qr-ph-section',
+                    '.starpay-qr-section',
+                    '.ewallet-section',
+                    '.online-banking-section',
+                    '.cash-section'
+                ];
+
+                const activeSections = sections
+                    .map(secClass => document.querySelector(secClass))
+                    .filter(secEl => secEl && secEl.style.display === 'block');
+
+                if (activeSections.length === 0) return;
+
+                // Get items and their net due amounts from cart table
+                const cartRows = document.querySelectorAll('#itemsTableBody tr:not(#no-sales-row):not(#no-items-row)');
+                const cartItems = [];
+                const itemNetDueMap = {};
+                const deductionsByLabel = {};
+
+                const discountField = document.getElementById('discountField');
+                const totalDiscount = discountField ? (parseFloat(discountField.value.replace(/,/g, '')) || 0) : 0;
+
+                cartRows.forEach((row, idx) => {
+                    const tds = row.querySelectorAll('td');
+                    if (tds.length >= 2) {
+                        const descText = tds[0].textContent.trim();
+                        const serialText = tds[1] ? tds[1].textContent.trim() : '';
+                        const labelText = serialText ? (descText + ' (' + serialText + ')') : descText;
+
+                        const priceInput = row.querySelector('.price-input-table');
+                        const qtyInput = row.querySelector('.qty-input');
+                        const pVal = parseFloat(priceInput ? priceInput.value.replace(/,/g, '') : 0) || 0;
+                        const qVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+                        const rowTotal = pVal * qVal;
+
+                        const hasVoucher = parseInt(row.getAttribute('data-has-voucher')) || 0;
+                        const voucherAmount = parseFloat(row.getAttribute('data-voucher-amount')) || 0;
+                        const itemVoucher = (hasVoucher === 1) ? voucherAmount : 0;
+
+                        const hasToken = parseInt(row.getAttribute('data-has-token')) || 0;
+                        const tokenAmount = parseFloat(row.getAttribute('data-token-amount')) || 0;
+                        const itemToken = (hasToken === 1) ? tokenAmount : 0;
+
+                        let itemDeductions = itemVoucher + itemToken;
+                        let netDue = Math.max(0, rowTotal - itemVoucher - itemToken);
+                        if (idx === cartRows.length - 1 && totalDiscount > 0) {
+                            netDue = Math.max(0, netDue - totalDiscount);
+                            itemDeductions += totalDiscount;
+                        }
+
+                        cartItems.push({ labelText, netDue });
+                        itemNetDueMap[labelText] = netDue;
+                        deductionsByLabel[labelText] = itemDeductions;
+                    }
+                });
+
+                // Use installment set price as due when it exceeds cart SRP (enables CC+Cash split on same unit)
+                applyCardSetPriceToItemDueMap(itemNetDueMap, deductionsByLabel);
+                cartItems.forEach(item => {
+                    if (itemNetDueMap[item.labelText] !== undefined) {
+                        item.netDue = itemNetDueMap[item.labelText];
+                    }
+                });
+
+                // For each active section, determine which items are visible based on remaining balance
+                activeSections.forEach(targetSecEl => {
+                    const unitRow = targetSecEl.querySelector('.unit-selector-row');
+                    if (!unitRow) return;
+
+                    const container = unitRow.querySelector('.unit-checkboxes');
+                    if (!container) return;
+
+                    // Ensure the unit row container itself is always visible when there are items in the cart
+                    unitRow.style.display = (cartItems.length > 0) ? '' : 'none';
+
+                    // Calculate how much was paid towards each item by OTHER active sections
+                    // and track which items are checked in other active sections
+                    const otherPaidPerItem = {};
+                    const checkedInOtherSections = {};
+                    cartItems.forEach(item => {
+                        otherPaidPerItem[item.labelText] = 0;
+                        checkedInOtherSections[item.labelText] = 0;
                     });
 
-                    if (remAmt > 0 && otherCheckedCbs.length > 0) {
-                        const firstLabel = otherCheckedCbs[0].value;
-                        otherPaidPerItem[firstLabel] = (otherPaidPerItem[firstLabel] || 0) + remAmt;
+                    activeSections.forEach(otherSecEl => {
+                        if (otherSecEl === targetSecEl) return;
+
+                        const otherUnitRow = otherSecEl.querySelector('.unit-selector-row');
+                        if (!otherUnitRow) return;
+
+                        const otherCheckedCbs = Array.from(otherUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
+                        if (otherCheckedCbs.length === 0) return;
+
+                        otherCheckedCbs.forEach(cb => {
+                            const uLabel = cb.value;
+                            checkedInOtherSections[uLabel] = (checkedInOtherSections[uLabel] || 0) + 1;
+                        });
+
+                        const otherAmt = getSectionPaymentAmount(otherSecEl);
+                        if (otherAmt <= 0) return;
+
+                        let remAmt = otherAmt;
+                        otherCheckedCbs.forEach(cb => {
+                            const uLabel = cb.value;
+                            const itemDue = itemNetDueMap[uLabel] || 0;
+                            const alreadyPaid = otherPaidPerItem[uLabel] || 0;
+                            const remainingOnItem = Math.max(0, itemDue - alreadyPaid);
+                            const allocate = Math.min(remainingOnItem, remAmt);
+                            otherPaidPerItem[uLabel] = alreadyPaid + allocate;
+                            remAmt -= allocate;
+                        });
+
+                        if (remAmt > 0 && otherCheckedCbs.length > 0) {
+                            const firstLabel = otherCheckedCbs[0].value;
+                            otherPaidPerItem[firstLabel] = (otherPaidPerItem[firstLabel] || 0) + remAmt;
+                        }
+                    });
+
+                    const itemLabels = container.querySelectorAll('label:not(:has(.select-all-units-cb))');
+                    itemLabels.forEach(lbl => {
+                        const cb = lbl.querySelector('input[type="checkbox"][name="Unit"]');
+                        if (!cb) return;
+
+                        const uLabel = cb.value;
+                        const itemDue = itemNetDueMap[uLabel] !== undefined ? itemNetDueMap[uLabel] : 0;
+                        const paidByOthers = otherPaidPerItem[uLabel] || 0;
+                        const remainingForThisSec = itemDue - paidByOthers;
+                        const isCheckedInOther = (checkedInOtherSections[uLabel] || 0) > 0;
+
+                        const isCheckedHere = cb.checked;
+                        const thisSecAmt = getSectionPaymentAmount(targetSecEl);
+
+                        if (itemDue <= 0.009) {
+                            // For freebies / 0-price items:
+                            // If already checked in another active section, hide it from this section.
+                            if (isCheckedInOther) {
+                                lbl.style.display = 'none';
+                                cb.checked = false;
+                            } else {
+                                lbl.style.display = 'flex';
+                            }
+                        } else {
+                            // For priced items:
+                            // If remaining balance is 0 or negative and not currently being paid in this section:
+                            // Hide option from dropdown and uncheck it
+                            if (remainingForThisSec <= 0.009 && (!isCheckedHere || thisSecAmt <= 0)) {
+                                lbl.style.display = 'none';
+                                cb.checked = false;
+                            } else {
+                                lbl.style.display = 'flex';
+                            }
+                        }
+                    });
+
+                    const visibleItemCbs = Array.from(container.querySelectorAll('input[type="checkbox"][name="Unit"]'))
+                        .filter(cb => cb.closest('label').style.display !== 'none');
+                    let checkedItemCbs = visibleItemCbs.filter(cb => cb.checked);
+
+                    // Auto-select first available unit if nothing is selected and only 1 visible unit exists AND not user triggered
+                    if (checkedItemCbs.length === 0 && visibleItemCbs.length === 1 && !triggeredUnitRow) {
+                        visibleItemCbs[0].checked = true;
+                        checkedItemCbs = [visibleItemCbs[0]];
+                    }
+
+                    const selectAllCb = container.querySelector('.select-all-units-cb');
+                    const selectAllLbl = selectAllCb ? selectAllCb.closest('label') : null;
+                    if (selectAllLbl) {
+                        selectAllLbl.style.display = (visibleItemCbs.length > 1) ? 'flex' : 'none';
+                    }
+                    if (selectAllCb) {
+                        selectAllCb.checked = (visibleItemCbs.length > 0 && checkedItemCbs.length === visibleItemCbs.length);
+                    }
+
+                    const textSpan = unitRow.querySelector('.selected-text');
+                    if (textSpan) {
+                        if (visibleItemCbs.length === 0) {
+                            textSpan.textContent = '-- No Units Available --';
+                        } else if (checkedItemCbs.length === 0) {
+                            textSpan.textContent = '-- Select Units --';
+                        } else if (checkedItemCbs.length === 1) {
+                            textSpan.textContent = checkedItemCbs[0].value;
+                        } else if (visibleItemCbs.length > 1 && checkedItemCbs.length === visibleItemCbs.length) {
+                            textSpan.textContent = 'All Available Units (' + checkedItemCbs.length + ')';
+                        } else {
+                            textSpan.textContent = checkedItemCbs.length + ' Units Selected';
+                        }
                     }
                 });
 
-                const itemLabels = container.querySelectorAll('label:not(:has(.select-all-units-cb))');
-                itemLabels.forEach(lbl => {
-                    const cb = lbl.querySelector('input[type="checkbox"][name="Unit"]');
-                    if (!cb) return;
+                // Refresh Bank dropdowns when unit selections change across sections
+                filterBanksByTerminalId('cc');
+                filterBanksByTerminalId('dc');
 
-                    const uLabel = cb.value;
-                    const itemDue = itemNetDueMap[uLabel] !== undefined ? itemNetDueMap[uLabel] : 0;
-                    const paidByOthers = otherPaidPerItem[uLabel] || 0;
-                    const remainingForThisSec = itemDue - paidByOthers;
-
-                    const isCheckedHere = cb.checked;
-                    const thisSecAmt = getSectionPaymentAmount(targetSecEl);
-
-                    // If remaining balance is 0 or negative and not currently being paid in this section:
-                    // Hide option from dropdown and uncheck it
-                    if (remainingForThisSec <= 0.009 && (!isCheckedHere || thisSecAmt <= 0)) {
-                        lbl.style.display = 'none';
-                        cb.checked = false;
-                    } else {
-                        lbl.style.display = 'flex';
-                    }
-                });
-
-                const visibleItemCbs = Array.from(container.querySelectorAll('input[type="checkbox"][name="Unit"]'))
-                    .filter(cb => cb.closest('label').style.display !== 'none');
-                let checkedItemCbs = visibleItemCbs.filter(cb => cb.checked);
-
-                // Auto-select first available unit if nothing is selected and only 1 visible unit exists AND not user triggered
-                if (checkedItemCbs.length === 0 && visibleItemCbs.length === 1 && !triggeredUnitRow) {
-                    visibleItemCbs[0].checked = true;
-                    checkedItemCbs = [visibleItemCbs[0]];
+                // NEW: Display validation errors after syncing unit selectors
+                if (typeof window.displayCardPaymentValidationErrors === 'function') {
+                    window.displayCardPaymentValidationErrors();
                 }
-
-                const selectAllCb = container.querySelector('.select-all-units-cb');
-                const selectAllLbl = selectAllCb ? selectAllCb.closest('label') : null;
-                if (selectAllLbl) {
-                    selectAllLbl.style.display = (visibleItemCbs.length > 1) ? 'flex' : 'none';
-                }
-                if (selectAllCb) {
-                    selectAllCb.checked = (visibleItemCbs.length > 0 && checkedItemCbs.length === visibleItemCbs.length);
-                }
-
-                const textSpan = unitRow.querySelector('.selected-text');
-                if (textSpan) {
-                    if (visibleItemCbs.length === 0) {
-                        textSpan.textContent = '-- No Units Available --';
-                    } else if (checkedItemCbs.length === 0) {
-                        textSpan.textContent = '-- Select Units --';
-                    } else if (checkedItemCbs.length === 1) {
-                        textSpan.textContent = checkedItemCbs[0].value;
-                    } else if (visibleItemCbs.length > 1 && checkedItemCbs.length === visibleItemCbs.length) {
-                        textSpan.textContent = 'All Available Units (' + checkedItemCbs.length + ')';
-                    } else {
-                        textSpan.textContent = checkedItemCbs.length + ' Units Selected';
-                    }
-                }
-            });
-
-            // Refresh Bank dropdowns when unit selections change across sections
-            filterBanksByTerminalId('cc');
-            filterBanksByTerminalId('dc');
-
-            // NEW: Display validation errors after syncing unit selectors
-            if (typeof window.displayCardPaymentValidationErrors === 'function') {
-                window.displayCardPaymentValidationErrors();
             }
-        }
-        window.syncUnitSelectorsAcrossSections = syncUnitSelectorsAcrossSections;
+            window.syncUnitSelectorsAcrossSections = syncUnitSelectorsAcrossSections;
 
             // NEW: Function to display Credit/Debit Card validation errors in real-time
             function displayCardPaymentValidationErrors() {
@@ -5570,17 +5602,20 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const ccUnitRow = creditCardSection.querySelector('.unit-selector-row');
                     if (ccUnitRow) {
                         const ccCheckedUnits = ccUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
+                        const ccSerializedUnits = Array.from(ccCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                        const ccHasMultipleSerialized = ccSerializedUnits.length > 1 || (ccSerializedUnits.length === 0 && ccCheckedUnits.length > 1);
 
-                        // Check if more than 1 unit is selected
-                        if (ccCheckedUnits.length > 1) {
+                        // Check if more than 1 serialized unit is selected
+                        if (ccHasMultipleSerialized) {
                             showError(creditCardSection, 'ERROR! Credit Card payment can only accept 1 item selected. Please select only one unit.', 'cc-multiple-units-error');
                         } else {
                             hideError(creditCardSection, 'cc-multiple-units-error');
                         }
 
-                        // Check if the selected item has set prices (only if exactly 1 is selected)
-                        if (ccCheckedUnits.length === 1) {
-                            const selectedUnit = ccCheckedUnits[0];
+                        // Check if the selected item has set prices
+                        const selectedUnit = ccSerializedUnits.length > 0 ? ccSerializedUnits[0] : (ccCheckedUnits.length === 1 ? ccCheckedUnits[0] : null);
+
+                        if (!ccHasMultipleSerialized && selectedUnit) {
                             const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                             let unitPrices = {};
                             try {
@@ -5612,17 +5647,20 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const dcUnitRow = debitCardSection.querySelector('.unit-selector-row');
                     if (dcUnitRow) {
                         const dcCheckedUnits = dcUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
+                        const dcSerializedUnits = Array.from(dcCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                        const dcHasMultipleSerialized = dcSerializedUnits.length > 1 || (dcSerializedUnits.length === 0 && dcCheckedUnits.length > 1);
 
-                        // Check if more than 1 unit is selected
-                        if (dcCheckedUnits.length > 1) {
+                        // Check if more than 1 serialized unit is selected
+                        if (dcHasMultipleSerialized) {
                             showError(debitCardSection, 'ERROR! Debit Card payment can only accept 1 item selected. Please select only one unit.', 'dc-multiple-units-error');
                         } else {
                             hideError(debitCardSection, 'dc-multiple-units-error');
                         }
 
-                        // Check if the selected item has set prices (only if exactly 1 is selected)
-                        if (dcCheckedUnits.length === 1) {
-                            const selectedUnit = dcCheckedUnits[0];
+                        // Check if the selected item has set prices
+                        const selectedUnit = dcSerializedUnits.length > 0 ? dcSerializedUnits[0] : (dcCheckedUnits.length === 1 ? dcCheckedUnits[0] : null);
+
+                        if (!dcHasMultipleSerialized && selectedUnit) {
                             const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                             let unitPrices = {};
                             try {
@@ -6450,13 +6488,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                     alert('ERROR! Please select at least one unit for Credit Card payment.');
                                     return;
                                 }
-                                if (ccCheckedUnits.length > 1) {
+                                const ccSerializedUnits = Array.from(ccCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                                if (ccSerializedUnits.length > 1 || (ccSerializedUnits.length === 0 && ccCheckedUnits.length > 1)) {
                                     alert('ERROR! Credit Card payment can only accept 1 item selected. Please select only one unit.');
                                     return;
                                 }
 
                                 // NEW: Check if the selected item has set prices
-                                const selectedUnit = ccCheckedUnits[0];
+                                const selectedUnit = ccSerializedUnits.length > 0 ? ccSerializedUnits[0] : ccCheckedUnits[0];
                                 const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                                 let unitPrices = {};
                                 try {
@@ -6601,13 +6640,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                                     alert('ERROR! Please select at least one unit for Debit Card payment.');
                                     return;
                                 }
-                                if (dcCheckedUnits.length > 1) {
+                                const dcSerializedUnits = Array.from(dcCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                                if (dcSerializedUnits.length > 1 || (dcSerializedUnits.length === 0 && dcCheckedUnits.length > 1)) {
                                     alert('ERROR! Debit Card payment can only accept 1 item selected. Please select only one unit.');
                                     return;
                                 }
 
                                 // NEW: Check if the selected item has set prices
-                                const selectedUnit = dcCheckedUnits[0];
+                                const selectedUnit = dcSerializedUnits.length > 0 ? dcSerializedUnits[0] : dcCheckedUnits[0];
                                 const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                                 let unitPrices = {};
                                 try {

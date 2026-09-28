@@ -3018,11 +3018,13 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 const checkedCbs = Array.from(secEl.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
                 if (checkedCbs.length > 0) {
                     hasCheckedUnit = true;
-                    if (checkedCbs.length === 1) {
+                    const serializedCbs = checkedCbs.filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                    const targetCbs = serializedCbs.length > 0 ? serializedCbs : checkedCbs;
+                    if (targetCbs.length === 1) {
                         try {
-                            mergedPrices = JSON.parse(checkedCbs[0].getAttribute('data-prices') || '{}');
+                            mergedPrices = JSON.parse(targetCbs[0].getAttribute('data-prices') || '{}');
                         } catch (e) { }
-                        const ob = checkedCbs[0].getAttribute('data-others-bank-enabled');
+                        const ob = targetCbs[0].getAttribute('data-others-bank-enabled');
                         othersBankEnabled = (ob === '1' || ob === 'true');
                     } else {
                         // Multiple units selected:
@@ -3398,20 +3400,28 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 unitRow.style.display = (cartItems.length > 0) ? '' : 'none';
 
                 const otherPaidPerItem = {};
+                const checkedInOtherSections = {};
                 cartItems.forEach(item => {
                     otherPaidPerItem[item.labelText] = 0;
+                    checkedInOtherSections[item.labelText] = 0;
                 });
 
                 activeSections.forEach(otherSecEl => {
                     if (otherSecEl === targetSecEl) return;
-                    const otherAmt = getSectionPaymentAmount(otherSecEl);
-                    if (otherAmt <= 0) return;
 
                     const otherUnitRow = otherSecEl.querySelector('.unit-selector-row');
                     if (!otherUnitRow) return;
 
                     const otherCheckedCbs = Array.from(otherUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
                     if (otherCheckedCbs.length === 0) return;
+
+                    otherCheckedCbs.forEach(cb => {
+                        const uLabel = cb.value;
+                        checkedInOtherSections[uLabel] = (checkedInOtherSections[uLabel] || 0) + 1;
+                    });
+
+                    const otherAmt = getSectionPaymentAmount(otherSecEl);
+                    if (otherAmt <= 0) return;
 
                     let remAmt = otherAmt;
                     otherCheckedCbs.forEach(cb => {
@@ -3439,16 +3449,30 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     const itemDue = itemNetDueMap[uLabel] !== undefined ? itemNetDueMap[uLabel] : 0;
                     const paidByOthers = otherPaidPerItem[uLabel] || 0;
                     const remainingForThisSec = itemDue - paidByOthers;
+                    const isCheckedInOther = (checkedInOtherSections[uLabel] || 0) > 0;
 
                     const isCheckedHere = cb.checked;
                     const thisSecAmt = getSectionPaymentAmount(targetSecEl);
 
-                    // Fully paid by other methods → hide from this section
-                    if (remainingForThisSec <= 0.009 && (!isCheckedHere || thisSecAmt <= 0)) {
-                        lbl.style.display = 'none';
-                        cb.checked = false;
+                    if (itemDue <= 0.009) {
+                        // For freebies / 0-price items:
+                        // If already checked in another active section, hide it from this section.
+                        if (isCheckedInOther) {
+                            lbl.style.display = 'none';
+                            cb.checked = false;
+                        } else {
+                            lbl.style.display = 'flex';
+                        }
                     } else {
-                        lbl.style.display = 'flex';
+                        // For priced items:
+                        // If remaining balance is 0 or negative and not currently being paid in this section:
+                        // Hide option from dropdown and uncheck it
+                        if (remainingForThisSec <= 0.009 && (!isCheckedHere || thisSecAmt <= 0)) {
+                            lbl.style.display = 'none';
+                            cb.checked = false;
+                        } else {
+                            lbl.style.display = 'flex';
+                        }
                     }
                 });
 
@@ -3500,7 +3524,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
         function displayCardPaymentValidationErrors() {
             const creditCardSection = document.querySelector('.credit-card-section');
             const debitCardSection = document.querySelector('.debit-card-section');
-            
+
             // Function to create or update error message display
             function showError(section, message, errorId) {
                 // Remove existing error message if any
@@ -3508,17 +3532,17 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 if (existingError) {
                     existingError.remove();
                 }
-                
+
                 // Create new error message
                 const errorDiv = document.createElement('div');
                 errorDiv.id = errorId;
                 errorDiv.style.cssText = 'background-color: #fee; border: 2px solid #f44; color: #c00; padding: 12px; margin: 10px 0; border-radius: 5px; font-weight: bold; font-size: 14px;';
                 errorDiv.textContent = message;
-                
+
                 // Insert at the top of the section
                 section.insertBefore(errorDiv, section.firstChild);
             }
-            
+
             // Function to remove error message
             function hideError(section, errorId) {
                 let existingError = section.querySelector(`#${errorId}`);
@@ -3526,15 +3550,15 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     existingError.remove();
                 }
             }
-            
+
             // Helper function to validate amount against set prices
             function validateAmountAgainstPrice(section, sectionType) {
                 const unitRow = section.querySelector('.unit-selector-row');
                 if (!unitRow) return;
-                
+
                 const checkedUnits = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
                 if (checkedUnits.length !== 1) return; // Only validate when exactly 1 unit is selected
-                
+
                 const selectedUnit = checkedUnits[0];
                 const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                 let unitPrices = {};
@@ -3543,24 +3567,24 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                 } catch (e) {
                     unitPrices = {};
                 }
-                
+
                 // Get selected bank and terms
                 const bankDropdown = section.querySelector(`#${sectionType}BankDropdown`);
                 const termsDropdown = section.querySelector(`#${sectionType}TermsDropdown`);
                 const amountInput = section.querySelector(`#${sectionType}Amount`);
-                
+
                 if (!bankDropdown || !termsDropdown || !amountInput) return;
-                
+
                 const selectedBank = bankDropdown.value;
                 const selectedTerms = termsDropdown.value;
                 const enteredAmount = parseFloat(amountInput.value.replace(/,/g, '')) || 0;
-                
+
                 // Skip validation if bank, terms, or amount not selected/entered
                 if (!selectedBank || !selectedTerms || enteredAmount === 0) {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                     return;
                 }
-                
+
                 // NEW: Check if split payment is active (multiple payment methods selected)
                 const allPaymentSections = [
                     document.querySelector('.home-credit-section'),
@@ -3572,31 +3596,31 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     document.querySelector('.online-banking-section'),
                     document.querySelector('.cash-section')
                 ].filter(s => s && s.style.display === 'block');
-                
+
                 const isSplitPayment = allPaymentSections.length > 1;
-                
+
                 // If split payment is active, skip exact amount validation for Credit/Debit Card
                 // because partial payments are allowed
                 if (isSplitPayment) {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                     return;
                 }
-                
+
                 // Build the price key (e.g., "BDO 24 Months")
                 const priceKey = `${selectedBank} ${selectedTerms}`;
                 const setPrice = parseFloat(unitPrices[priceKey]) || 0;
-                
+
                 // Skip validation if no set price exists for this bank/terms combination
                 if (setPrice === 0) {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                     return;
                 }
-                
+
                 // Get cart context to calculate expected amount after deductions
                 const context = (typeof getCartAndPaymentContext === 'function')
                     ? getCartAndPaymentContext()
                     : null;
-                    
+
                 let expectedAmount = setPrice;
                 if (context) {
                     // Subtract token, voucher, discount, trade-in, and titu voucher from set price to get expected amount
@@ -3607,50 +3631,53 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         + (context.tituVoucher || 0);
                     expectedAmount = Math.max(0, setPrice - deductions);
                 }
-                
+
                 // Check if entered amount exactly matches the expected amount
                 // Allow small floating point tolerance (0.01)
                 const difference = Math.abs(enteredAmount - expectedAmount);
-                
+
                 if (difference > 0.01) {
                     const formattedExpected = expectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const formattedEntered = enteredAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const formattedSetPrice = setPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    
+
                     let errorMsg = `ERROR! The entered amount (₱${formattedEntered}) does not match the required amount (₱${formattedExpected}) for ${priceKey}.`;
-                    
+
                     if (context && (context.activeSelectedToken > 0 || context.activeSelectedVoucher > 0 || context.discountAmount > 0 || context.tradeInValue > 0 || context.tituVoucher > 0)) {
                         errorMsg += ` (Set Price: ₱${formattedSetPrice} minus deductions)`;
                     }
-                    
+
                     if (enteredAmount < expectedAmount) {
                         errorMsg += ` The amount is too low. Please enter exactly ₱${formattedExpected}.`;
                     } else {
                         errorMsg += ` The amount is too high. Please enter exactly ₱${formattedExpected}.`;
                     }
-                    
+
                     showError(section, errorMsg, `${sectionType}-amount-exceeds-error`);
                 } else {
                     hideError(section, `${sectionType}-amount-exceeds-error`);
                 }
             }
-            
+
             // Check Credit Card section
             if (creditCardSection && creditCardSection.style.display === 'block') {
                 const ccUnitRow = creditCardSection.querySelector('.unit-selector-row');
                 if (ccUnitRow) {
                     const ccCheckedUnits = ccUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                    
-                    // Check if more than 1 unit is selected
-                    if (ccCheckedUnits.length > 1) {
+                    const ccSerializedUnits = Array.from(ccCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                    const ccHasMultipleSerialized = ccSerializedUnits.length > 1 || (ccSerializedUnits.length === 0 && ccCheckedUnits.length > 1);
+
+                    // Check if more than 1 serialized unit is selected
+                    if (ccHasMultipleSerialized) {
                         showError(creditCardSection, 'ERROR! Credit Card payment can only accept 1 item selected. Please select only one unit.', 'cc-multiple-units-error');
                     } else {
                         hideError(creditCardSection, 'cc-multiple-units-error');
                     }
-                    
-                    // Check if the selected item has set prices (only if exactly 1 is selected)
-                    if (ccCheckedUnits.length === 1) {
-                        const selectedUnit = ccCheckedUnits[0];
+
+                    // Check if the selected item has set prices
+                    const selectedUnit = ccSerializedUnits.length > 0 ? ccSerializedUnits[0] : (ccCheckedUnits.length === 1 ? ccCheckedUnits[0] : null);
+
+                    if (!ccHasMultipleSerialized && selectedUnit) {
                         const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                         let unitPrices = {};
                         try {
@@ -3658,16 +3685,16 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         } catch (e) {
                             unitPrices = {};
                         }
-                        
-                        const hasPrices = Object.keys(unitPrices).length > 0 && 
-                                        Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
-                        
+
+                        const hasPrices = Object.keys(unitPrices).length > 0 &&
+                            Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
+
                         if (!hasPrices) {
                             showError(creditCardSection, 'ERROR! The selected item does not have set prices in Item Registration. Please set the prices first before using Credit Card payment.', 'cc-no-price-error');
                         } else {
                             hideError(creditCardSection, 'cc-no-price-error');
                         }
-                        
+
                         // NEW: Validate amount against set price
                         validateAmountAgainstPrice(creditCardSection, 'creditCard');
                     } else {
@@ -3676,23 +3703,26 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     }
                 }
             }
-            
+
             // Check Debit Card section
             if (debitCardSection && debitCardSection.style.display === 'block') {
                 const dcUnitRow = debitCardSection.querySelector('.unit-selector-row');
                 if (dcUnitRow) {
                     const dcCheckedUnits = dcUnitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
-                    
-                    // Check if more than 1 unit is selected
-                    if (dcCheckedUnits.length > 1) {
+                    const dcSerializedUnits = Array.from(dcCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                    const dcHasMultipleSerialized = dcSerializedUnits.length > 1 || (dcSerializedUnits.length === 0 && dcCheckedUnits.length > 1);
+
+                    // Check if more than 1 serialized unit is selected
+                    if (dcHasMultipleSerialized) {
                         showError(debitCardSection, 'ERROR! Debit Card payment can only accept 1 item selected. Please select only one unit.', 'dc-multiple-units-error');
                     } else {
                         hideError(debitCardSection, 'dc-multiple-units-error');
                     }
-                    
-                    // Check if the selected item has set prices (only if exactly 1 is selected)
-                    if (dcCheckedUnits.length === 1) {
-                        const selectedUnit = dcCheckedUnits[0];
+
+                    // Check if the selected item has set prices
+                    const selectedUnit = dcSerializedUnits.length > 0 ? dcSerializedUnits[0] : (dcCheckedUnits.length === 1 ? dcCheckedUnits[0] : null);
+
+                    if (!dcHasMultipleSerialized && selectedUnit) {
                         const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                         let unitPrices = {};
                         try {
@@ -3700,16 +3730,16 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         } catch (e) {
                             unitPrices = {};
                         }
-                        
-                        const hasPrices = Object.keys(unitPrices).length > 0 && 
-                                        Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
-                        
+
+                        const hasPrices = Object.keys(unitPrices).length > 0 &&
+                            Object.values(unitPrices).some(price => price && parseFloat(price) > 0);
+
                         if (!hasPrices) {
                             showError(debitCardSection, 'ERROR! The selected item does not have set prices in Item Registration. Please set the prices first before using Debit Card payment.', 'dc-no-price-error');
                         } else {
                             hideError(debitCardSection, 'dc-no-price-error');
                         }
-                        
+
                         // NEW: Validate amount against set price
                         validateAmountAgainstPrice(debitCardSection, 'debitCard');
                     } else {
@@ -3990,7 +4020,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                 }
                             }
                         }
-                        
+
                         // NEW: Trigger validation after bank selection changes
                         if (typeof window.displayCardPaymentValidationErrors === 'function') {
                             window.displayCardPaymentValidationErrors();
@@ -4064,14 +4094,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                 amountInput.dispatchEvent(new Event('input'));
                             }
                         }
-                        
+
                         // NEW: Trigger validation after terms selection changes
                         if (typeof window.displayCardPaymentValidationErrors === 'function') {
                             window.displayCardPaymentValidationErrors();
                         }
                     });
                 }
-                
+
                 // NEW: Add validation trigger to amount input changes
                 if (amountInput) {
                     amountInput.addEventListener('input', function () {
@@ -5185,13 +5215,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                 alert('ERROR! Please select at least one unit for Credit Card payment.');
                                 return;
                             }
-                            if (ccCheckedUnits.length > 1) {
+                            const ccSerializedUnits = Array.from(ccCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                            if (ccSerializedUnits.length > 1 || (ccSerializedUnits.length === 0 && ccCheckedUnits.length > 1)) {
                                 alert('ERROR! Credit Card payment can only accept 1 item selected. Please select only one unit.');
                                 return;
                             }
 
                             // Check if the selected item has set prices
-                            const selectedUnit = ccCheckedUnits[0];
+                            const selectedUnit = ccSerializedUnits.length > 0 ? ccSerializedUnits[0] : ccCheckedUnits[0];
                             const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                             let unitPrices = {};
                             try {
@@ -5333,13 +5364,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                                 alert('ERROR! Please select at least one unit for Debit Card payment.');
                                 return;
                             }
-                            if (dcCheckedUnits.length > 1) {
+                            const dcSerializedUnits = Array.from(dcCheckedUnits).filter(cb => (cb.getAttribute('data-serial') || '').trim() !== '');
+                            if (dcSerializedUnits.length > 1 || (dcSerializedUnits.length === 0 && dcCheckedUnits.length > 1)) {
                                 alert('ERROR! Debit Card payment can only accept 1 item selected. Please select only one unit.');
                                 return;
                             }
 
                             // Check if the selected item has set prices
-                            const selectedUnit = dcCheckedUnits[0];
+                            const selectedUnit = dcSerializedUnits.length > 0 ? dcSerializedUnits[0] : dcCheckedUnits[0];
                             const unitPricesStr = selectedUnit.getAttribute('data-prices') || '{}';
                             let unitPrices = {};
                             try {
@@ -5624,6 +5656,8 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         if (type === 'Home Credit' && paymentPartnersDropdown && paymentPartnersDropdown.value !== '') {
                             displayType = paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text;
                         }
+
+                        const sectionObj = { payment_type: displayType };
 
                         if (sectionName) {
                             sectionName += ' + ' + displayType;

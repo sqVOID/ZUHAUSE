@@ -1,5 +1,3 @@
-report.php
-100%
 <?php
 require_once 'session_check.php';
 require_once 'config.php';
@@ -9,7 +7,8 @@ require_once 'config.php';
 
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
+    <link rel="icon" type="image/png" href="Icon/ZUHAUSE-LOGO.png?v=1">
+    <link rel="shortcut icon" type="image/png" href="Icon/ZUHAUSE-LOGO.png?v=1">
     <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <title>Daily Sales</title>
     <style>
@@ -1598,8 +1597,15 @@ require_once 'config.php';
             return null;
         }
 
+        function isReportDateInRange(dateStr, dateFrom, dateTo) {
+            if (!dateStr || !dateFrom || !dateTo) return false;
+            const day = String(dateStr).substring(0, 10);
+            return day >= dateFrom && day <= dateTo;
+        }
+
         /* --- Display Sales Data --- */
         function displaySalesData(salesData, lastInvoice) {
+            // Keep full list (incl. for_breakdown_only) for Unclaimed Breakdown invoice combining
             currentSalesData = salesData || [];
             const tbody = document.getElementById('salesTableBody');
 
@@ -1608,7 +1614,10 @@ require_once 'config.php';
             // Update last invoice
             document.getElementById('displayLastInvoice').textContent = lastInvoice || '? (no data)';
 
-            if (!salesData || salesData.length === 0) {
+            // Main table + money breakdown: only payment/sale dates inside the filter
+            const visibleSales = (salesData || []).filter(sale => !sale.for_breakdown_only);
+
+            if (!visibleSales || visibleSales.length === 0) {
                 tbody.innerHTML = '<tr><td class="td-no-data" colspan="13">NO DATA</td></tr>';
                 document.getElementById('displayPage').textContent = 'PAGE 1 OF 1';
                 generateBreakdown([]);
@@ -1637,7 +1646,7 @@ require_once 'config.php';
             }
 
             let tableHTML = '';
-            salesData.forEach((sale, saleIndex) => {
+            visibleSales.forEach((sale, saleIndex) => {
                 console.log('Processing sale:', sale);
 
                 const isVoided = (sale.status === 'voided');
@@ -1933,13 +1942,16 @@ require_once 'config.php';
             tbody.innerHTML = tableHTML;
             document.getElementById('displayPage').textContent = 'PAGE 1 OF 1';
 
-            // Generate breakdown
-            generateBreakdown(salesData);
+            // Generate breakdown totals from visible (in-range) sales only
+            generateBreakdown(visibleSales);
         }
 
         /* --- Generate Breakdown --- */
         function generateBreakdown(salesData) {
             const breakdownSection = document.getElementById('breakdownSection');
+
+            // Never count for_breakdown_only rows in money/unit totals
+            salesData = (salesData || []).filter(sale => !sale.for_breakdown_only);
 
             if (!salesData || salesData.length === 0) {
                 // Still create the layout so unclaimedFreebiesBreakdownBox exists in DOM
@@ -2414,6 +2426,8 @@ require_once 'config.php';
                 return;
             }
 
+            const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+            const dateTo = document.getElementById('filterDateTo')?.value || dateFrom;
             const records = [];
             const sales = currentSalesData || [];
             const branchName = document.getElementById('displayBranch')?.textContent?.trim() || '';
@@ -2449,7 +2463,8 @@ require_once 'config.php';
                         if (invNo && !group.payments.some(p => p.invoice_no === invNo)) {
                             group.payments.push({
                                 invoice_no: invNo,
-                                date: sale.created_at
+                                date: sale.created_at,
+                                for_breakdown_only: !!sale.for_breakdown_only
                             });
                         }
                     });
@@ -2459,8 +2474,11 @@ require_once 'config.php';
             preorderGroups.forEach(group => {
                 const isClaimed = group.status === 'claimed';
 
-                // UNCLAIMED PRE-ORDER entry for each payment invoice
+                // UNCLAIMED PRE-ORDER: only payments whose sale/payment date is in the filter
                 group.payments.forEach(p => {
+                    if (p.for_breakdown_only) return;
+                    if (!isReportDateInRange(p.date, dateFrom, dateTo)) return;
+
                     records.push({
                         type: 'preorder',
                         invoice_number: p.invoice_no,
@@ -2473,8 +2491,8 @@ require_once 'config.php';
                     });
                 });
 
-                // CLAIMED PRE-ORDER combined entry if claimed
-                if (isClaimed) {
+                // CLAIMED PRE-ORDER: only when claim date falls in the filter
+                if (isClaimed && isReportDateInRange(group.claimed_at, dateFrom, dateTo)) {
                     const allInvoices = group.payments.map(p => p.invoice_no);
                     if (group.claimed_invoice_no && !allInvoices.includes(group.claimed_invoice_no)) {
                         allInvoices.push(group.claimed_invoice_no);

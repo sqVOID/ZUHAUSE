@@ -458,7 +458,7 @@ try {
                     FROM stock_on_hand
                     WHERE TRIM(item_code) = TRIM(?)
                       AND branch = ?
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                       AND quantity >= ?
                     ORDER BY id ASC
                     LIMIT 1
@@ -471,7 +471,7 @@ try {
                     SELECT dr_number
                     FROM stock_on_hand
                     WHERE TRIM(item_code) = TRIM(?)
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                       AND quantity >= ?
                     ORDER BY id ASC
                     LIMIT 1
@@ -513,6 +513,7 @@ try {
                     WHERE TRIM(imei) = TRIM(?)
                       AND TRIM(item_code) = TRIM(?)
                       AND branch = ?
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                     LIMIT 1
                 ");
                 if ($delete_stock) {
@@ -530,6 +531,7 @@ try {
                     DELETE FROM stock_on_hand
                     WHERE TRIM(imei) = TRIM(?)
                       AND TRIM(item_code) = TRIM(?)
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                     LIMIT 1
                 ");
                 if ($delete_stock) {
@@ -546,6 +548,7 @@ try {
                 $delete_stock = $conn->prepare("
                     DELETE FROM stock_on_hand
                     WHERE TRIM(imei) = TRIM(?)
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                     LIMIT 1
                 ");
                 if ($delete_stock) {
@@ -568,7 +571,7 @@ try {
                     SET quantity = quantity - ?
                     WHERE TRIM(item_code) = TRIM(?)
                       AND branch = ?
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                       AND quantity >= ?
                     LIMIT 1
                 ");
@@ -578,7 +581,7 @@ try {
                     UPDATE stock_on_hand
                     SET quantity = quantity - ?
                     WHERE TRIM(item_code) = TRIM(?)
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                       AND quantity >= ?
                     LIMIT 1
                 ");

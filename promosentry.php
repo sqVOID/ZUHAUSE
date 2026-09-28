@@ -3755,8 +3755,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 const points = parseFloat(itemCodeInput.getAttribute('data-points')) || 0;
                 const has_points = parseInt(itemCodeInput.getAttribute('data-has-points')) || 0;
 
-                if (!desc || (!isPromoFreeUnit && !price)) {
-                    alert("Please select or enter an item description and price.");
+                if (!desc) {
+                    alert("Please select or enter an item description.");
+                    return;
+                }
+
+                // For serialized items (with IMEI), price is required unless promo free unit
+                // For non-serialized items, price can be empty/zero
+                if (imei && imei.trim() !== '' && !isPromoFreeUnit && !price) {
+                    alert("Please enter a price for this serialized item.");
                     return;
                 }
 
@@ -4898,6 +4905,8 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         const section = document.querySelector(sectionClass);
                         // Check if section is visible (style.display is set to 'block' by the toggle logic)
                         if (section && section.style.display === 'block') {
+                            const sectionObj = { payment_type: type };
+
                             if (sectionName) {
                                 sectionName += ' + ' + type;
                             } else {

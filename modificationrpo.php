@@ -467,17 +467,6 @@ foreach ($raw_item_rows as $item) {
         }
     }
 
-    if ($is_branch_view && isset($item['allocated_quantity'])) {
-        $item_quantity = (int) $item['allocated_quantity'];
-        $item['quantity'] = $item_quantity;
-        $item['total'] = (float) $item['cost'] * $item_quantity;
-    } else {
-        $item_quantity = (int) $item['quantity'];
-    }
-
-    $grand_total += (float) $item['total'];
-    $total_ordered_qty += $item_quantity;
-
     // Count received quantity
     $received_count = 0;
     if ($item['has_serial'] == 1 || !empty($item['has_serial_number'])) {
@@ -496,6 +485,22 @@ foreach ($raw_item_rows as $item) {
     }
     $item['calculated_received_qty'] = $received_count;
     $total_received_qty += $received_count;
+
+    if ($is_branch_view && isset($item['allocated_quantity'])) {
+        $item_quantity = (int) $item['allocated_quantity'];
+    } else {
+        $item_quantity = (int) $item['quantity'];
+    }
+
+    if ($received_count > $item_quantity) {
+        $item_quantity = $received_count;
+    }
+
+    $item['quantity'] = $item_quantity;
+    $item['total'] = (float) $item['cost'] * $item_quantity;
+
+    $grand_total += (float) $item['total'];
+    $total_ordered_qty += $item_quantity;
 
     if ($item['has_serial'] == 1 || !empty($item['has_serial_number'])) {
         $has_serialized_items = true;
@@ -5982,12 +5987,14 @@ if ($edit_query && $edit_query->num_rows > 0) {
                 const qtyInput = row.querySelector('.item-qty-input');
                 const costInput = row.querySelector('.item-cost-input');
                 if (qtyInput && costInput) {
+                    const rawQty = qtyInput.value !== undefined && qtyInput.value !== '' ? qtyInput.value : (qtyInput.textContent || qtyInput.innerText);
+                    const rawCost = costInput.value !== undefined && costInput.value !== '' ? costInput.value : (costInput.textContent || costInput.innerText);
                     itemQuantitiesCosts.push({
                         id: itemId,
                         family_code: qtyInput.getAttribute('data-family-code'),
                         item_no: parseInt(qtyInput.getAttribute('data-item-no')),
-                        quantity: parseFloat(qtyInput.value) || 0,
-                        cost: parseFloat(costInput.value) || 0
+                        quantity: parseFloat(rawQty) || 0,
+                        cost: parseFloat(rawCost) || 0
                     });
                 }
             });

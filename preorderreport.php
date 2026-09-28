@@ -1063,49 +1063,59 @@ require_once 'config.php';
                 .then(([data, freebiesData]) => {
                     if (data.status !== 'success') {
                         tbody.innerHTML = '<tr><td class="td-no-data" colspan="12">' + (data.message || 'Error loading report') + '</td></tr>';
+                        displayUnclaimedBreakdown(freebiesData, null, dateFrom, dateTo);
                         return;
                     }
 
-                    if (!data.rows || data.rows.length === 0) {
+                    // Only show rows whose payment/sale date falls in the filter.
+                    // Rows flagged for_breakdown_only were pulled in via claimed_at for the breakdown box.
+                    const visibleRows = (data.rows || []).filter(row => !row.for_breakdown_only);
+
+                    if (visibleRows.length === 0) {
                         tbody.innerHTML = '<tr><td class="td-no-data" colspan="12">NO DATA</td></tr>';
-                        return;
+                    } else {
+                        let html = '';
+                        visibleRows.forEach(row => {
+                            const statusClass = getStatusClass(row.status);
+                            const claimedDate = row.claimed_at ? formatDateOnly(row.claimed_at) : '-';
+
+                            // Create hyperlink for preorder number
+                            const preorderCell = row.preorder_no
+                                ? `<a href="#" onclick="viewPreorderDetails('${row.preorder_no}'); return false;" style="color: #0066cc; text-decoration: underline; cursor: pointer;">${row.preorder_no}</a>`
+                                : '';
+
+                            html += `
+                                <tr>
+                                    <td>${preorderCell}</td>
+                                    <td class="td-text-left">${row.customer_name || ''}</td>
+                                    <td class="td-text-left">${row.item_description || ''}</td>
+                                    <td>${row.imei || ''}</td>
+                                    <td>${row.quantity || 0}</td>
+                                    <td class="td-number">${Number(row.unit_price || 0).toFixed(2)}</td>
+                                    <td class="td-number">${Number(row.total_amount || 0).toFixed(2)}</td>
+                                    <td class="td-number">${Number(row.payment_amount || 0).toFixed(2)}</td>
+                                    <td><span class="${statusClass}">${(row.status || '').toUpperCase()}</span></td>
+                                    <td>${row.branch_name || ''}</td>
+                                    <td>${formatDateOnly(row.date_created)}</td>
+                                    <td>${claimedDate}</td>
+                                </tr>
+                            `;
+                        });
+                        tbody.innerHTML = html;
                     }
-
-                    let html = '';
-                    data.rows.forEach(row => {
-                        const statusClass = getStatusClass(row.status);
-                        const claimedDate = row.claimed_at ? formatDateOnly(row.claimed_at) : '-';
-
-                        // Create hyperlink for preorder number
-                        const preorderCell = row.preorder_no
-                            ? `<a href="#" onclick="viewPreorderDetails('${row.preorder_no}'); return false;" style="color: #0066cc; text-decoration: underline; cursor: pointer;">${row.preorder_no}</a>`
-                            : '';
-
-                        html += `
-                            <tr>
-                                <td>${preorderCell}</td>
-                                <td class="td-text-left">${row.customer_name || ''}</td>
-                                <td class="td-text-left">${row.item_description || ''}</td>
-                                <td>${row.imei || ''}</td>
-                                <td>${row.quantity || 0}</td>
-                                <td class="td-number">${Number(row.unit_price || 0).toFixed(2)}</td>
-                                <td class="td-number">${Number(row.total_amount || 0).toFixed(2)}</td>
-                                <td class="td-number">${Number(row.payment_amount || 0).toFixed(2)}</td>
-                                <td><span class="${statusClass}">${(row.status || '').toUpperCase()}</span></td>
-                                <td>${row.branch_name || ''}</td>
-                                <td>${formatDateOnly(row.date_created)}</td>
-                                <td>${claimedDate}</td>
-                            </tr>
-                        `;
-                    });
-                    tbody.innerHTML = html;
 
                     // Handle unclaimed breakdown data (both pre-orders and freebies)
-                    displayUnclaimedBreakdown(freebiesData, data);
+                    displayUnclaimedBreakdown(freebiesData, data, dateFrom, dateTo);
                 })
                 .catch(err => {
                     tbody.innerHTML = '<tr><td class="td-no-data" colspan="12">Error loading report: ' + err.message + '</td></tr>';
                 });
+        }
+
+        function isReportDateInRange(dateStr, dateFrom, dateTo) {
+            if (!dateStr || !dateFrom || !dateTo) return false;
+            const day = String(dateStr).substring(0, 10);
+            return day >= dateFrom && day <= dateTo;
         }
 
         function getStatusClass(status) {
@@ -1152,7 +1162,7 @@ require_once 'config.php';
         }
 
         /* --- Display Unclaimed Breakdown --- */
-        function displayUnclaimedBreakdown(freebiesData, preorderData) {
+        function displayUnclaimedBreakdown(freebiesData, preorderData, dateFrom, dateTo) {
             if (freebiesData !== undefined) currentUnclaimedFreebiesData = freebiesData;
             if (preorderData !== undefined) currentPreorderReportData = preorderData;
 
@@ -1188,7 +1198,8 @@ require_once 'config.php';
                     if (invNo && !group.payments.some(p => p.invoice_no === invNo)) {
                         group.payments.push({
                             invoice_no: invNo,
-                            date: row.date_created
+                            date: row.date_created,
+                            for_breakdown_only: !!row.for_breakdown_only
                         });
                     }
                 });
@@ -1196,8 +1207,11 @@ require_once 'config.php';
                 preorderGroups.forEach(group => {
                     const isClaimed = group.status === 'claimed';
 
-                    // UNCLAIMED PRE-ORDER entry for each payment invoice
+                    // UNCLAIMED PRE-ORDER: only payments whose sale/payment date is in the filter
                     group.payments.forEach(p => {
+                        if (p.for_breakdown_only) return;
+                        if (!isReportDateInRange(p.date, dateFrom, dateTo)) return;
+
                         records.push({
                             type: 'preorder',
                             invoice_number: p.invoice_no,
@@ -1210,8 +1224,9 @@ require_once 'config.php';
                         });
                     });
 
-                    // CLAIMED PRE-ORDER single entry combining all invoices (e.g. 0135 & 0136)
-                    if (isClaimed) {
+                    // CLAIMED PRE-ORDER: only when claim date falls in the filter
+                    // (still combine all related invoices for the label)
+                    if (isClaimed && isReportDateInRange(group.claimed_at, dateFrom, dateTo)) {
                         const allInvoices = group.payments.map(p => p.invoice_no);
                         if (group.claimed_invoice_no && !allInvoices.includes(group.claimed_invoice_no)) {
                             allInvoices.push(group.claimed_invoice_no);

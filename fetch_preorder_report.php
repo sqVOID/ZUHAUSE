@@ -42,6 +42,8 @@ try {
     // Step 2: Fetch one row per individual payment from preorder_payment_history
     //         so that partial payment and claim payment each appear separately
     //         with their own invoice number.
+    //         Also include ALL payment rows for preorders that were CLAIMED within
+    //         the date range, so they appear in the unclaimed breakdown.
     // ------------------------------------------------------------------
     $payment_query = "
         SELECT
@@ -62,11 +64,14 @@ try {
             p.contact_no       AS customer_phone
         FROM preorder_payment_history ph
         INNER JOIN preorders p ON ph.preorder_id = p.id
-        WHERE DATE(ph.payment_date) BETWEEN ? AND ?
+        WHERE (
+            DATE(ph.payment_date) BETWEEN ? AND ?
+            OR DATE(p.claimed_at) BETWEEN ? AND ?
+        )
     ";
 
-    $payment_params = [$date_from, $date_to];
-    $payment_types = 'ss';
+    $payment_params = [$date_from, $date_to, $date_from, $date_to];
+    $payment_types = 'ssss';
 
     if ($branch_code !== null) {
         $payment_query .= " AND p.branch_code = ?";
@@ -80,7 +85,7 @@ try {
         $payment_types .= 's';
     }
 
-    $payment_query .= " ORDER BY ph.payment_date ASC, ph.payment_sequence ASC";
+    $payment_query .= " GROUP BY ph.id ORDER BY ph.payment_date ASC, ph.payment_sequence ASC";
 
     $pay_stmt = $conn->prepare($payment_query);
     if (!$pay_stmt) {
@@ -100,6 +105,11 @@ try {
         $payment_amount = floatval($pay_row['payment_amount']);
         $payment_date = $pay_row['payment_date'];
         $claimed_at = $pay_row['claimed_at'];
+
+        // Determine if this row is in the date range because of payment_date or only claimed_at
+        $payment_day = $payment_date ? substr($payment_date, 0, 10) : '';
+        $in_payment_range = ($payment_day >= $date_from && $payment_day <= $date_to);
+        $for_breakdown_only = !$in_payment_range; // only included via claimed_at
 
         // Use the payment's own invoice_no as the displayed "Pre Order No"
         // (e.g. 0001-PRE for partial, 0002-PRE for claim payment)
@@ -167,6 +177,7 @@ try {
                 'branch_name' => $branch,
                 'date_created' => $payment_date,
                 'claimed_at' => $claimed_at,
+                'for_breakdown_only' => $for_breakdown_only,
             ];
             continue;
         }
@@ -203,6 +214,7 @@ try {
                 'branch_name' => $branch,
                 'date_created' => $payment_date,
                 'claimed_at' => $claimed_at,
+                'for_breakdown_only' => $for_breakdown_only,
             ];
         }
     }

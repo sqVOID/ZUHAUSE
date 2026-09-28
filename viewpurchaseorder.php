@@ -505,23 +505,6 @@ foreach ($raw_item_rows as $item) {
             $seen_allocation_ids[$alloc_id] = true;
         }
 
-        // When receiving by branch, always use branch allocation quantity (not total PO item quantity)
-        if ($from_param === 'purchaseorderreceive' && isset($item['allocated_quantity'])) {
-            $item_quantity = (int)$item['allocated_quantity'];
-        } else {
-            $row_qty = (int)($item['quantity'] ?? 0);
-            $alloc_qty = isset($item['allocated_quantity']) ? (int)$item['allocated_quantity'] : 0;
-            $item_quantity = ($row_qty > 0) ? $row_qty : ($alloc_qty > 0 ? $alloc_qty : 0);
-        }
-        
-        $item['quantity'] = $item_quantity;
-        $item['total'] = (float)$item['cost'] * $item_quantity;
-        
-        // ALWAYS add to grand_total (shows allocated cost, not received cost)
-        $grand_total += (float)$item['total'];
-
-        $total_ordered_qty += $item_quantity;
-
         // Count received quantity
         // CRITICAL: For status calculation, only count serial numbers (serialized items)
         // For unserialized items, received_qty is for DISPLAY only (e.g., 10/10), NOT for status
@@ -555,6 +538,27 @@ foreach ($raw_item_rows as $item) {
             }
         }
         $item['calculated_received_qty'] = $received_count_for_display;
+        
+        // When receiving by branch, always use branch allocation quantity (not total PO item quantity)
+        if ($from_param === 'purchaseorderreceive' && isset($item['allocated_quantity'])) {
+            $item_quantity = (int)$item['allocated_quantity'];
+        } else {
+            $row_qty = (int)($item['quantity'] ?? 0);
+            $alloc_qty = isset($item['allocated_quantity']) ? (int)$item['allocated_quantity'] : 0;
+            $item_quantity = ($row_qty > 0) ? $row_qty : ($alloc_qty > 0 ? $alloc_qty : 0);
+        }
+
+        if ($received_count_for_display > $item_quantity) {
+            $item_quantity = $received_count_for_display;
+        }
+        
+        $item['quantity'] = $item_quantity;
+        $item['total'] = (float)$item['cost'] * $item_quantity;
+        
+        // ALWAYS add to grand_total (shows allocated cost, not received cost)
+        $grand_total += (float)$item['total'];
+
+        $total_ordered_qty += $item_quantity;
         
         // ALWAYS add to display counter (both serialized and unserialized)
         $total_received_qty_display += $received_count_for_display;

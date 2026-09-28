@@ -76,7 +76,7 @@ try {
                     DELETE FROM stock_on_hand
                     WHERE TRIM(imei) = TRIM(?)
                       AND branch = ?
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                     LIMIT 1
                 ");
                 $del_stmt->bind_param("ss", $new_imei, $stock_branch_name);
@@ -91,7 +91,7 @@ try {
                 $del_fallback = $conn->prepare("
                     DELETE FROM stock_on_hand
                     WHERE TRIM(imei) = TRIM(?)
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                     LIMIT 1
                 ");
                 $del_fallback->bind_param("s", $new_imei);
@@ -179,7 +179,7 @@ try {
                     SET quantity = quantity - ?
                     WHERE TRIM(item_code) = TRIM(?)
                       AND branch = ?
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                       AND quantity >= ?
                     LIMIT 1
                 ");
@@ -189,7 +189,7 @@ try {
                     UPDATE stock_on_hand
                     SET quantity = quantity - ?
                     WHERE TRIM(item_code) = TRIM(?)
-                      AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                      AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                       AND quantity >= ?
                     LIMIT 1
                 ");
@@ -208,7 +208,7 @@ try {
                 SELECT id FROM stock_on_hand
                 WHERE TRIM(item_code) = TRIM(?)
                   AND branch = ?
-                  AND (LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'active')
+                  AND (LOWER(TRIM(status)) IN ('available', 'active', 'good stock', 'good', 'in stock') OR status IS NULL OR status = '')
                 LIMIT 1
             ");
             $check_stk->bind_param("ss", $item_code, $stock_branch_name);

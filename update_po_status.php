@@ -40,9 +40,52 @@ function buildBranchReceiveItemsFilter($conn, $receiving_branch)
             SELECT 1 FROM purchase_order_allocations poa
             WHERE poa.po_id = poi.po_id
             AND poa.branch_name = '{$receiving_branch_esc}'
-            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
         )
     )";
+}
+
+/**
+ * Check if a serial number is already in stock, sold in sales, or claimed as freebie.
+ * Returns true if serial is already active or consumed and should NOT be re-inserted as new stock.
+ */
+function isSerialAlreadyUsedOrInStock($conn, $serial_number)
+{
+    if (empty($serial_number)) {
+        return true;
+    }
+    $serial_esc = $conn->real_escape_string(trim($serial_number));
+
+    // 1. Check if currently exists in stock_on_hand (any branch)
+    $stock_check = $conn->query("SELECT id FROM stock_on_hand WHERE imei = '{$serial_esc}' OR imei2 = '{$serial_esc}' LIMIT 1");
+    if ($stock_check && $stock_check->num_rows > 0) {
+        return true;
+    }
+
+    // 2. Check if sold in sales_entry_items (non-voided sales)
+    $sold_check = $conn->query("
+        SELECT sei.id 
+        FROM sales_entry_items sei 
+        JOIN sales_entry se ON sei.sales_entry_id = se.id 
+        WHERE (TRIM(sei.imei) = '{$serial_esc}')
+          AND (se.status IS NULL OR se.status != 'voided') 
+        LIMIT 1
+    ");
+    if ($sold_check && $sold_check->num_rows > 0) {
+        return true;
+    }
+
+    // 3. Check if claimed as freebie in claimed_items (non-voided)
+    $claimed_check = $conn->query("
+        SELECT id FROM claimed_items 
+        WHERE TRIM(imei) = '{$serial_esc}' 
+          AND (status IS NULL OR status != 'voided') 
+        LIMIT 1
+    ");
+    if ($claimed_check && $claimed_check->num_rows > 0) {
+        return true;
+    }
+
+    return false;
 }
 
 // Enable error logging for debugging (but don't display errors to avoid breaking JSON)
@@ -690,11 +733,10 @@ try {
 
                         file_put_contents(__DIR__ . '/debug_update_po_status.log', "Adding serial to stock: {$serial_number} (imei2: {$serial_number_2}) with status: {$item_status}\n", FILE_APPEND);
 
-                        // Check if this serial number already exists in stock_on_hand (to prevent duplicates)
-                        $duplicate_check = $conn->query("SELECT id FROM stock_on_hand WHERE imei = '{$serial_number}' LIMIT 1");
-                        if ($duplicate_check && $duplicate_check->num_rows > 0) {
-                            file_put_contents(__DIR__ . '/debug_update_po_status.log', "Serial {$serial_number} already exists in stock, skipping\n", FILE_APPEND);
-                            continue; // Skip this serial, it's already in stock
+                        // Check if this serial number already exists in stock or was already sold/claimed
+                        if (isSerialAlreadyUsedOrInStock($conn, $serial_number)) {
+                            file_put_contents(__DIR__ . '/debug_update_po_status.log', "Serial {$serial_number} already in stock or already used/sold, skipping stock insertion\n", FILE_APPEND);
+                            continue; // Skip this serial, it's already in stock or sold
                         }
 
                         $stock_sql = "INSERT INTO stock_on_hand 
@@ -956,8 +998,7 @@ try {
                     $s2_val = isset($clean_s2[$idx]) ? $conn->real_escape_string($clean_s2[$idx]) : '';
                     $imei2_sql = !empty($s2_val) ? "'{$s2_val}'" : "NULL";
 
-                    $duplicate_check = $conn->query("SELECT id FROM stock_on_hand WHERE imei = '{$serial_number_esc}' LIMIT 1");
-                    if ($duplicate_check && $duplicate_check->num_rows > 0) {
+                    if (isSerialAlreadyUsedOrInStock($conn, $serial_number)) {
                         continue;
                     }
 
@@ -1294,16 +1335,19 @@ try {
 
                         file_put_contents(__DIR__ . '/debug_update_po_status.log', "Adding serial to stock: {$serial_number} (imei2: {$serial_number_2})\n", FILE_APPEND);
 
-                        // Check if this serial number already exists in stock (to avoid duplicates)
-                        $existing_check = $conn->query("SELECT id FROM stock_on_hand WHERE imei = '{$serial_number}' AND family_code = '{$family_code}' LIMIT 1");
-                        if (!$existing_check || $existing_check->num_rows == 0) {
-                            $stock_sql = "INSERT INTO stock_on_hand 
-                                          (item_code, description, item_type, imei, imei2, dr_number, branch, 
-                                           dr_date, system_entry_date, status, quantity, family_code)
-                                          VALUES 
-                                          ('{$item_model}', '{$item_description}', 'IMEI', 
-                                           '{$serial_number}', {$imei2_sql}, '{$po_number}', '{$user_branch}', 
-                                           '{$action_at}', '{$action_at}', 'Good Stock', 1, '{$family_code}')";
+                        // Check if this serial number already exists in stock or was already sold/claimed
+                        if (isSerialAlreadyUsedOrInStock($conn, $serial_number)) {
+                            file_put_contents(__DIR__ . '/debug_update_po_status.log', "Serial {$serial_number} already in stock or already used/sold, skipping\n", FILE_APPEND);
+                            continue;
+                        }
+
+                        $stock_sql = "INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('{$item_model}', '{$item_description}', 'IMEI', 
+                                       '{$serial_number}', {$imei2_sql}, '{$po_number}', '{$user_branch}', 
+                                       '{$action_at}', '{$action_at}', 'Good Stock', 1, '{$family_code}')";
 
                             file_put_contents(__DIR__ . '/debug_update_po_status.log', "Stock SQL: {$stock_sql}\n", FILE_APPEND);
 
@@ -1313,9 +1357,6 @@ try {
                             }
 
                             file_put_contents(__DIR__ . '/debug_update_po_status.log', "Serial added to stock successfully\n", FILE_APPEND);
-                        } else {
-                            file_put_contents(__DIR__ . '/debug_update_po_status.log', "Serial already exists in stock, skipping\n", FILE_APPEND);
-                        }
                     }
 
                 } else {

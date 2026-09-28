@@ -299,11 +299,14 @@ try {
             p.claimed_invoice_no
         FROM preorder_payment_history ph
         INNER JOIN preorders p ON ph.preorder_id = p.id
-        WHERE DATE(ph.payment_date) BETWEEN ? AND ?
+        WHERE (
+            DATE(ph.payment_date) BETWEEN ? AND ?
+            OR DATE(p.claimed_at) BETWEEN ? AND ?
+        )
           AND p.branch_code = ?
         ORDER BY ph.payment_date ASC, ph.payment_sequence ASC
     ");
-    $po_query->bind_param("sss", $date_from, $date_to, $branch_code);
+    $po_query->bind_param("sssss", $date_from, $date_to, $date_from, $date_to, $branch_code);
     $po_query->execute();
     $po_result = $po_query->get_result();
 
@@ -311,6 +314,10 @@ try {
         while ($po = $po_result->fetch_assoc()) {
             $paid = floatval($po['payment_amount']);
             $invoice_display = !empty($po['payment_invoice_no']) ? $po['payment_invoice_no'] : $po['preorder_no'];
+
+            // Included via claimed_at only — for Unclaimed Breakdown invoice list, not main table
+            $payment_day = !empty($po['payment_date']) ? substr($po['payment_date'], 0, 10) : '';
+            $for_breakdown_only = !($payment_day >= $date_from && $payment_day <= $date_to);
 
             // Build item list from preorder_items
             $poi_q = $conn->prepare("SELECT family_code AS item_description, item_code, imei, quantity, price FROM preorder_items WHERE preorder_id = ?");
@@ -339,6 +346,7 @@ try {
                 'preorder_status' => $po['preorder_status'],
                 'claimed_at' => $po['claimed_at'],
                 'claimed_invoice_no' => $po['claimed_invoice_no'],
+                'for_breakdown_only' => $for_breakdown_only,
                 'invoice_no' => $invoice_display,
                 'first_name' => $po['first_name'],
                 'last_name' => $po['last_name'],
@@ -365,8 +373,8 @@ try {
                 'items' => $po_items,
             ];
 
-            // Track last invoice
-            if (empty($last_invoice) || $invoice_display > $last_invoice) {
+            // Track last invoice from rows that belong in the date filter
+            if (!$for_breakdown_only && (empty($last_invoice) || $invoice_display > $last_invoice)) {
                 $last_invoice = $invoice_display;
             }
         }

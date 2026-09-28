@@ -179,6 +179,27 @@ function syncSerializedStockForItem($conn, $po_number, $family_code_esc, $item_m
             }
             throw new Exception("Serial number '{$serial}' already exists in stock.");
         }
+        // Check if serial was already sold or claimed
+        $sold_check = $conn->query("
+            SELECT sei.id FROM sales_entry_items sei 
+            JOIN sales_entry se ON sei.sales_entry_id = se.id 
+            WHERE (TRIM(sei.imei) = '{$serial_esc}')
+              AND (se.status IS NULL OR se.status != 'voided') 
+            LIMIT 1
+        ");
+        if ($sold_check && $sold_check->num_rows > 0) {
+            continue; // Skip already sold serial
+        }
+
+        $claimed_check = $conn->query("
+            SELECT id FROM claimed_items 
+            WHERE TRIM(imei) = '{$serial_esc}' 
+              AND (status IS NULL OR status != 'voided') 
+            LIMIT 1
+        ");
+        if ($claimed_check && $claimed_check->num_rows > 0) {
+            continue; // Skip already claimed serial
+        }
 
         $item_status = isset($serial_types[$key]) ? $serial_types[$key] : 'Good Stock';
         $item_status_esc = $conn->real_escape_string($item_status);
@@ -284,10 +305,13 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
     if ($alloc_result->num_rows === 1) {
         $alloc = $alloc_result->fetch_assoc();
         $alloc_id = (int)$alloc['id'];
+        $alloc_qty = (int)($alloc['quantity'] ?? 0);
+        $new_alloc_qty = max($alloc_qty, $received_qty);
         $conn->query("
             UPDATE purchase_order_allocations
             SET serial_number = '{$serial_string_esc}',
-                received_qty = {$received_qty}
+                received_qty = {$received_qty},
+                quantity = {$new_alloc_qty}
             WHERE id = {$alloc_id}
         ");
     } else {
@@ -301,11 +325,13 @@ function syncAllocationSerials($conn, $po_id, $family_code, $serial_string, $rec
                 }
             }
             if ((int)($alloc['received_qty'] ?? 0) > 0 || !empty($alloc['serial_number'])) {
-                $branch_qty = min($received_qty, (int)$alloc['quantity']);
+                $alloc_qty = (int)($alloc['quantity'] ?? 0);
+                $branch_qty = max($alloc_qty, $received_qty);
                 $conn->query("
                     UPDATE purchase_order_allocations
                     SET serial_number = '{$serial_string_esc}',
-                        received_qty = {$branch_qty}
+                        received_qty = {$received_qty},
+                        quantity = {$branch_qty}
                     WHERE id = {$alloc_id}
                 ");
             }
@@ -1181,10 +1207,14 @@ try {
             // Join serial numbers with line breaks
             $serial_string = $conn->real_escape_string(implode("\n", $item_serials));
             
+            $item_serials_count = count($item_serials);
             // Update purchase order items with new serial numbers (scoped by model when possible)
             $item_model_esc2 = $conn->real_escape_string($item_model ?? '');
             $update_item_sql = "UPDATE purchase_order_items 
-                               SET serial_number = '{$serial_string}' 
+                               SET serial_number = '{$serial_string}',
+                                   received_qty = {$item_serials_count},
+                                   quantity = GREATEST(quantity, {$item_serials_count}),
+                                   total = GREATEST(quantity, {$item_serials_count}) * cost
                                WHERE po_id = {$po_id} 
                                AND family_code = '{$family_code_esc}' 
                                AND item_no = {$item_no}";
@@ -1202,10 +1232,30 @@ try {
                 $po_id,
                 $family_code,
                 implode("\n", $item_serials),
-                count($item_serials),
+                $item_serials_count,
                 $receiving_branch,
                 $item_model
             );
+
+            // Sync allocated_quantity in purchase_order_items
+            $conn->query("
+                UPDATE purchase_order_items poi
+                SET allocated_quantity = (
+                    SELECT COALESCE(SUM(poa.quantity), 0)
+                    FROM purchase_order_allocations poa
+                    WHERE poa.po_id = poi.po_id
+                    AND poa.family_code COLLATE utf8mb4_general_ci = poi.family_code COLLATE utf8mb4_general_ci
+                ),
+                quantity = GREATEST(quantity, (
+                    SELECT COALESCE(SUM(poa.quantity), 0)
+                    FROM purchase_order_allocations poa
+                    WHERE poa.po_id = poi.po_id
+                    AND poa.family_code COLLATE utf8mb4_general_ci = poi.family_code COLLATE utf8mb4_general_ci
+                )),
+                total = quantity * cost
+                WHERE poi.po_id = {$po_id}
+                AND poi.family_code COLLATE utf8mb4_general_ci = '{$family_code_esc}' COLLATE utf8mb4_general_ci
+            ");
         }
     }
 

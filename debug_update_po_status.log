@@ -51328,3 +51328,2803 @@ Stock SQL: INSERT INTO stock_on_hand
 Serial added to stock successfully with status: Good Stock
 Updating purchase_order_allocations with received quantities and invoice number
 === TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 15:21:22 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TESTT23123
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: TESTT23123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+)
+
+Serial Numbers Count: 15
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = 'TESTT23123' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 734
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 
+    [quantity] => 15
+    [allocated_quantity] => 15
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 15:20:40
+    [received_qty] => 10
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '1IPO2CH41OI2H41', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '12HC4P1H2C4OI12', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '24CH1IP2C4H12IC', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '24JHPIC12J4PC1J', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '24CJP1O2JC4POJC', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '2J4CP12J4CP124C', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '2JC4P12OJ4P1O2C', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already exists in stock, skipping
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'C1J2P4J12PO4JC1', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'C1J24P12JC4PO12', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'NPV12H4N12IO4N1', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'PO2C41P2O4P12CO', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       '4C12O4C1[2P4COP', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'C1O2[4PC1O2C4[P', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'SAC12OI4C12H4OI', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:21:22', '2026-09-28 15:21:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 15:27:07 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TESTT23123
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: TESTT23123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+)
+
+Serial Numbers Count: 16
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = 'TESTT23123' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI\nC123C12312X3123', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+            AND poa.family_code COLLATE utf8mb4_unicode_ci = poi.family_code COLLATE utf8mb4_unicode_ci
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 735
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 
+    [quantity] => 16
+    [allocated_quantity] => 16
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 15:26:12
+    [received_qty] => 15
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Serial 1IPO2CH41OI2H41 already exists in stock, skipping
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Serial 12HC4P1H2C4OI12 already exists in stock, skipping
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Serial 24CH1IP2C4H12IC already exists in stock, skipping
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Serial 24JHPIC12J4PC1J already exists in stock, skipping
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Serial 24CJP1O2JC4POJC already exists in stock, skipping
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Serial 2J4CP12J4CP124C already exists in stock, skipping
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Serial 2JC4P12OJ4P1O2C already exists in stock, skipping
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already exists in stock, skipping
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Serial C1J2P4J12PO4JC1 already exists in stock, skipping
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Serial C1J24P12JC4PO12 already exists in stock, skipping
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Serial NPV12H4N12IO4N1 already exists in stock, skipping
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Serial PO2C41P2O4P12CO already exists in stock, skipping
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Serial 4C12O4C1[2P4COP already exists in stock, skipping
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Serial C1O2[4PC1O2C4[P already exists in stock, skipping
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Serial SAC12OI4C12H4OI already exists in stock, skipping
+Adding serial to stock: C123C12312X3123 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'C123C12312X3123', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 15:27:07', '2026-09-28 15:27:07', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 16:18:22 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TESTT23123
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST11111112222"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: TESTT23123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST11111112222"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST11111112222
+        )
+
+)
+
+Serial Numbers Count: 17
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = 'TESTT23123' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI\nC123C12312X3123\nTEST11111112222', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 736
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 
+    [quantity] => 17
+    [allocated_quantity] => 17
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 16:14:48
+    [received_qty] => 16
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST11111112222
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Serial 1IPO2CH41OI2H41 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Serial 12HC4P1H2C4OI12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Serial 24CH1IP2C4H12IC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Serial 24JHPIC12J4PC1J already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Serial 24CJP1O2JC4POJC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Serial 2J4CP12J4CP124C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Serial 2JC4P12OJ4P1O2C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Serial C1J2P4J12PO4JC1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Serial C1J24P12JC4PO12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Serial NPV12H4N12IO4N1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Serial PO2C41P2O4P12CO already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Serial 4C12O4C1[2P4COP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Serial C1O2[4PC1O2C4[P already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Serial SAC12OI4C12H4OI already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C123C12312X3123 (imei2: ) with status: Good Stock
+Serial C123C12312X3123 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TEST11111112222 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'TEST11111112222', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 16:18:22', '2026-09-28 16:18:22', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 16:20:14 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TESTT23123
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST11111112222"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST333333321121111"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: TESTT23123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST11111112222"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST333333321121111"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST11111112222
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST333333321121111
+        )
+
+)
+
+Serial Numbers Count: 18
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = 'TESTT23123' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI\nC123C12312X3123\nTEST11111112222\nTEST333333321121111', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 737
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 1IPO2CH41OI2H41
+12HC4P1H2C4OI12
+24CH1IP2C4H12IC
+24JHPIC12J4PC1J
+24CJP1O2JC4POJC
+2J4CP12J4CP124C
+2JC4P12OJ4P1O2C
+C2J4POJAWP4JCWP
+C1J2P4J12PO4JC1
+C1J24P12JC4PO12
+NPV12H4N12IO4N1
+PO2C41P2O4P12CO
+4C12O4C1[2P4COP
+C1O2[4PC1O2C4[P
+SAC12OI4C12H4OI
+C123C12312X3123
+    [quantity] => 17
+    [allocated_quantity] => 18
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 16:19:02
+    [received_qty] => 17
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST11111112222
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST333333321121111
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Serial 1IPO2CH41OI2H41 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Serial 12HC4P1H2C4OI12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Serial 24CH1IP2C4H12IC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Serial 24JHPIC12J4PC1J already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Serial 24CJP1O2JC4POJC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Serial 2J4CP12J4CP124C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Serial 2JC4P12OJ4P1O2C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Serial C1J2P4J12PO4JC1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Serial C1J24P12JC4PO12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Serial NPV12H4N12IO4N1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Serial PO2C41P2O4P12CO already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Serial 4C12O4C1[2P4COP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Serial C1O2[4PC1O2C4[P already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Serial SAC12OI4C12H4OI already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C123C12312X3123 (imei2: ) with status: Good Stock
+Serial C123C12312X3123 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TEST11111112222 (imei2: ) with status: Good Stock
+Serial TEST11111112222 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TEST333333321121111 (imei2: ) with status: Good Stock
+Serial TEST333333321121111 already in stock or already used/sold, skipping stock insertion
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 16:24:04 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TESTT23123
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST11111112222"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST33333332112"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: TESTT23123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST11111112222"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TEST33333332112"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST11111112222
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST33333332112
+        )
+
+)
+
+Serial Numbers Count: 18
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    invoice_number = 'TESTT23123' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI\nC123C12312X3123\nTEST11111112222\nTEST33333332112', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 738
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 1IPO2CH41OI2H41
+12HC4P1H2C4OI12
+24CH1IP2C4H12IC
+24JHPIC12J4PC1J
+24CJP1O2JC4POJC
+2J4CP12J4CP124C
+2JC4P12OJ4P1O2C
+C2J4POJAWP4JCWP
+C1J2P4J12PO4JC1
+C1J24P12JC4PO12
+NPV12H4N12IO4N1
+PO2C41P2O4P12CO
+4C12O4C1[2P4COP
+C1O2[4PC1O2C4[P
+SAC12OI4C12H4OI
+C123C12312X3123
+    [quantity] => 18
+    [allocated_quantity] => 18
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 16:23:28
+    [received_qty] => 18
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST11111112222
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TEST33333332112
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Serial 1IPO2CH41OI2H41 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Serial 12HC4P1H2C4OI12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Serial 24CH1IP2C4H12IC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Serial 24JHPIC12J4PC1J already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Serial 24CJP1O2JC4POJC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Serial 2J4CP12J4CP124C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Serial 2JC4P12OJ4P1O2C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Serial C1J2P4J12PO4JC1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Serial C1J24P12JC4PO12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Serial NPV12H4N12IO4N1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Serial PO2C41P2O4P12CO already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Serial 4C12O4C1[2P4COP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Serial C1O2[4PC1O2C4[P already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Serial SAC12OI4C12H4OI already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C123C12312X3123 (imei2: ) with status: Good Stock
+Serial C123C12312X3123 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TEST11111112222 (imei2: ) with status: Good Stock
+Serial TEST11111112222 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TEST33333332112 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-16-128GB-BLACK', 'IPHONE 16 128GB BLACK', 'IMEI', 
+                                       'TEST33333332112', NULL, 'PO-2026-035', 'ZUHAUSE INFANTA', 
+                                       '2026-09-28 16:24:04', '2026-09-28 16:24:04', 'Good Stock', 1, 'IPHONE 16 128GB')
+Serial added to stock successfully with status: Good Stock
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 17:03:39 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TESTADMIN12313123"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: 
+Receiving Branch: 
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TESTADMIN12313123"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TESTADMIN12313123
+        )
+
+)
+
+Serial Numbers Count: 17
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI\nC123C12312X3123\nTESTADMIN12313123', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 739
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 1IPO2CH41OI2H41
+12HC4P1H2C4OI12
+24CH1IP2C4H12IC
+24JHPIC12J4PC1J
+24CJP1O2JC4POJC
+2J4CP12J4CP124C
+2JC4P12OJ4P1O2C
+C2J4POJAWP4JCWP
+C1J2P4J12PO4JC1
+C1J24P12JC4PO12
+NPV12H4N12IO4N1
+PO2C41P2O4P12CO
+4C12O4C1[2P4COP
+C1O2[4PC1O2C4[P
+SAC12OI4C12H4OI
+C123C12312X3123
+    [quantity] => 17
+    [allocated_quantity] => 17
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 16:42:40
+    [received_qty] => 17
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TESTADMIN12313123
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Serial 1IPO2CH41OI2H41 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Serial 12HC4P1H2C4OI12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Serial 24CH1IP2C4H12IC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Serial 24JHPIC12J4PC1J already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Serial 24CJP1O2JC4POJC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Serial 2J4CP12J4CP124C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Serial 2JC4P12OJ4P1O2C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Serial C1J2P4J12PO4JC1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Serial C1J24P12JC4PO12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Serial NPV12H4N12IO4N1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Serial PO2C41P2O4P12CO already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Serial 4C12O4C1[2P4COP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Serial C1O2[4PC1O2C4[P already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Serial SAC12OI4C12H4OI already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C123C12312X3123 (imei2: ) with status: Good Stock
+Serial C123C12312X3123 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TESTADMIN12313123 (imei2: ) with status: Good Stock
+Serial TESTADMIN12313123 already in stock or already used/sold, skipping stock insertion
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-09-28 17:11:03 ===
+POST data: Array
+(
+    [po_id] => 250
+    [status] => Received
+    [serial_numbers] => [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TESTADMIN12313123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TESTSUPERADMIN123"}]
+)
+
+PO ID: 250
+New Status: Received
+Invoice Number: 
+Receiving Branch: 
+Serial Numbers Raw: [{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"1IPO2CH41OI2H41"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"12HC4P1H2C4OI12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CH1IP2C4H12IC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24JHPIC12J4PC1J"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"24CJP1O2JC4POJC"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2J4CP12J4CP124C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"2JC4P12OJ4P1O2C"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C2J4POJAWP4JCWP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J2P4J12PO4JC1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1J24P12JC4PO12"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"NPV12H4N12IO4N1"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"PO2C41P2O4P12CO"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"4C12O4C1[2P4COP"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C1O2[4PC1O2C4[P"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"SAC12OI4C12H4OI"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"C123C12312X3123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TESTADMIN12313123"},{"family_code":"IPHONE 16 128GB","item_no":1,"serial_number":"TESTSUPERADMIN123"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TESTADMIN12313123
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TESTSUPERADMIN123
+        )
+
+)
+
+Serial Numbers Count: 18
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Preserving existing received_by: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received' WHERE id = 250
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 16 128GB-1 (has_serial=1) with serials: '1IPO2CH41OI2H41\n12HC4P1H2C4OI12\n24CH1IP2C4H12IC\n24JHPIC12J4PC1J\n24CJP1O2JC4POJC\n2J4CP12J4CP124C\n2JC4P12OJ4P1O2C\nC2J4POJAWP4JCWP\nC1J2P4J12PO4JC1\nC1J24P12JC4PO12\nNPV12H4N12IO4N1\nPO2C41P2O4P12CO\n4C12O4C1[2P4COP\nC1O2[4PC1O2C4[P\nSAC12OI4C12H4OI\nC123C12312X3123\nTESTADMIN12313123\nTESTSUPERADMIN123', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 250
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 740
+    [po_id] => 250
+    [po_number] => PO-2026-035
+    [item_no] => 1
+    [family_code] => IPHONE 16 128GB
+    [item_model] => IPHONE-16-128GB-BLACK
+    [item_description] => IPHONE 16 128GB BLACK
+    [serial_number] => 1IPO2CH41OI2H41
+12HC4P1H2C4OI12
+24CH1IP2C4H12IC
+24JHPIC12J4PC1J
+24CJP1O2JC4POJC
+2J4CP12J4CP124C
+2JC4P12OJ4P1O2C
+C2J4POJAWP4JCWP
+C1J2P4J12PO4JC1
+C1J24P12JC4PO12
+NPV12H4N12IO4N1
+PO2C41P2O4P12CO
+4C12O4C1[2P4COP
+C1O2[4PC1O2C4[P
+SAC12OI4C12H4OI
+C123C12312X3123
+    [quantity] => 18
+    [allocated_quantity] => 18
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-09-28 17:10:21
+    [received_qty] => 18
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-16-128GB-BLACK, Desc: IPHONE 16 128GB BLACK, FC: IPHONE 16 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 1IPO2CH41OI2H41
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 12HC4P1H2C4OI12
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CH1IP2C4H12IC
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24JHPIC12J4PC1J
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 24CJP1O2JC4POJC
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2J4CP12J4CP124C
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 2JC4P12OJ4P1O2C
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C2J4POJAWP4JCWP
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J2P4J12PO4JC1
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1J24P12JC4PO12
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => NPV12H4N12IO4N1
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => PO2C41P2O4P12CO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => 4C12O4C1[2P4COP
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C1O2[4PC1O2C4[P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => SAC12OI4C12H4OI
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => C123C12312X3123
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TESTADMIN12313123
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 1
+            [serial_number] => TESTSUPERADMIN123
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: 1IPO2CH41OI2H41 (imei2: ) with status: Good Stock
+Serial 1IPO2CH41OI2H41 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 12HC4P1H2C4OI12 (imei2: ) with status: Good Stock
+Serial 12HC4P1H2C4OI12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CH1IP2C4H12IC (imei2: ) with status: Good Stock
+Serial 24CH1IP2C4H12IC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24JHPIC12J4PC1J (imei2: ) with status: Good Stock
+Serial 24JHPIC12J4PC1J already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 24CJP1O2JC4POJC (imei2: ) with status: Good Stock
+Serial 24CJP1O2JC4POJC already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2J4CP12J4CP124C (imei2: ) with status: Good Stock
+Serial 2J4CP12J4CP124C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 2JC4P12OJ4P1O2C (imei2: ) with status: Good Stock
+Serial 2JC4P12OJ4P1O2C already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C2J4POJAWP4JCWP (imei2: ) with status: Good Stock
+Serial C2J4POJAWP4JCWP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J2P4J12PO4JC1 (imei2: ) with status: Good Stock
+Serial C1J2P4J12PO4JC1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1J24P12JC4PO12 (imei2: ) with status: Good Stock
+Serial C1J24P12JC4PO12 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: NPV12H4N12IO4N1 (imei2: ) with status: Good Stock
+Serial NPV12H4N12IO4N1 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: PO2C41P2O4P12CO (imei2: ) with status: Good Stock
+Serial PO2C41P2O4P12CO already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: 4C12O4C1[2P4COP (imei2: ) with status: Good Stock
+Serial 4C12O4C1[2P4COP already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C1O2[4PC1O2C4[P (imei2: ) with status: Good Stock
+Serial C1O2[4PC1O2C4[P already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: SAC12OI4C12H4OI (imei2: ) with status: Good Stock
+Serial SAC12OI4C12H4OI already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: C123C12312X3123 (imei2: ) with status: Good Stock
+Serial C123C12312X3123 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TESTADMIN12313123 (imei2: ) with status: Good Stock
+Serial TESTADMIN12313123 already in stock or already used/sold, skipping stock insertion
+Adding serial to stock: TESTSUPERADMIN123 (imei2: ) with status: Good Stock
+Serial TESTSUPERADMIN123 already in stock or already used/sold, skipping stock insertion
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
