@@ -1,19 +1,21 @@
-Timestamp: 2026-09-24 17:32:02
+Timestamp: 2026-09-28 17:59:35
 POST Data:
 Array
 (
     [imei_primary_order] => 1
-    [item_id] => 134
-    [item_code] => IPHONE-16-128GB-PINK
-    [description] => IPHONE 16 128GB PINK
+    [item_id] => 127
+    [item_code] => IPHONE-16-128GB-BLACK
+    [description] => IPHONE 16 128GB BLACK
     [brand] => APPLE
     [family_code] => IPHONE 16 128GB
     [group] => APPLE MOBILE
     [department] => MOBILE
-    [srp] => 49990.00
-    [commission] => 0.00
+    [srp] => 49,990.00
+    [commission] => 50.00
+    [has_commission] => on
     [tc_commission] => 0.00
-    [points] => 0.00
+    [points] => 50.00
+    [has_points] => on
     [freebie_item_code] => Array
         (
             [0] => 
@@ -25,11 +27,12 @@ Array
         )
 
     [use_serial] => on
-    [use_serial_2] => on
-    [voucher_amount] => 
-    [token_amount] => 
+    [has_voucher] => on
+    [voucher_amount] => 15.00
+    [has_token] => on
+    [token_amount] => 15.00
     [save_item] => 
-    [price_sets_json] => [{"label":"Price Set 1","branches":["ZUHAUSE HEAD OFFICE","ZUHAUSE INFANTA","ZUHAUSE LOPEZ","ZUHAUSE LUCBAN","ZUHAUSE LUCENA","ZUHAUSE MAUBAN","ZUHAUSE TAYABAS"],"srp":"49990.00","prices":{"BDO Straight":"49990.00","BDO 24 Months":"52780"},"actives":{"BDO Straight":true,"BDO 3 Months":false,"BDO 6 Months":false,"BDO 12 Months":false,"BDO 24 Months":true,"BPI Straight":false,"BPI 3 Months":false,"BPI 6 Months":false,"BPI 12 Months":false,"BPI 24 Months":false,"E-West Straight":false,"E-West 3 Months":false,"E-West 6 Months":false,"E-West 12 Months":false,"E-West 24 Months":false,"MBTC Straight":false,"MBTC 3 Months":false,"MBTC 6 Months":false,"MBTC 12 Months":false,"MBTC 24 Months":false,"PNB Straight":false,"PNB 3 Months":false,"PNB 6 Months":false,"PNB 12 Months":false,"PNB 24 Months":false,"RCBC Straight":false,"RCBC 3 Months":false,"RCBC 6 Months":false,"RCBC 12 Months":false,"RCBC 24 Months":false,"Dealer Price":false,"Others Bank":false}}]
+    [price_sets_json] => 
     [branch] => Array
         (
             [0] => ZUHAUSE HEAD OFFICE

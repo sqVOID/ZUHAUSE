@@ -1045,12 +1045,12 @@ require_once 'config.php';
             document.getElementById('displayStatus').textContent = status || 'All Status';
             tbody.innerHTML = '<tr><td class="td-no-data" colspan="11">Loading...</td></tr>';
 
-            // Fetch both preorder data and unclaimed freebies in parallel
+            // Fetch both preorder data and unclaimed freebies in parallel 
             const preorderPromise = fetch('fetch_preorder_report.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    date_from: dateFrom,
+                    date_from: dateFrom, 
                     date_to: dateTo,
                     branch: branch,
                     status: status

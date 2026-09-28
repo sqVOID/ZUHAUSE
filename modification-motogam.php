@@ -2525,7 +2525,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     Modifying Invoice: <span id="current_invoice"></span>
                     | Branch: <span id="current_branch"></span>
                     <span id="sales_status_container" style="display: none;"> | Status: <span id="current_status"
-                            style="color: #dc3545; font-weight: bold;">VOIDED!</span></span>
+                            style="color: #dc3545; font-weight: bold;">VOIDED</span></span>
                 </h3>
                 <div id="voided_header_actions"
                     style="position: absolute; top: 11px; right: 20px; display: flex; align-items: center; gap: 10px;">
