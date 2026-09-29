@@ -7,8 +7,7 @@ require_once 'config.php';
 
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="Icon/ZUHAUSE-LOGO.png?v=1">
-    <link rel="shortcut icon" type="image/png" href="Icon/ZUHAUSE-LOGO.png?v=1">
+    <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
     <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <title>Daily Sales</title>
     <style>

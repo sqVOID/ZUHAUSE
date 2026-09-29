@@ -961,7 +961,7 @@ require_once 'config.php';
 
             <button class="btn-search" onclick="loadTradeInReport()">Search</button>
             <button class="btn-print" onclick="printReport()">Print</button>
-            <button class="btn-export" onclick="exportToExcel()">Export to Excel</button>
+            <button class="btn-export" onclick="exportToExcel()">&#128196; Export</button>
         </div>
 
         <div class="tradein-report-wrapper">
