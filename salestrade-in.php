@@ -3351,12 +3351,23 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
 
                     const priceInput = row.querySelector('.price-input-table');
                     const qtyInput = row.querySelector('.qty-input');
-                    const pVal = priceInput
-                        ? (parseFloat(priceInput.value.replace(/,/g, '')) || 0)
-                        : (parseFloat((tds[3] ? tds[3].textContent : '0').replace(/,/g, '')) || 0);
+                    const priceText = tds[3] ? tds[3].textContent.trim() : '';
+                    const isFreeText = priceText.toUpperCase() === 'FREE';
+                    let pVal = 0;
+                    if (!isFreeText) {
+                        if (priceInput) {
+                            pVal = parseFloat(String(priceInput.value).replace(/,/g, '')) || 0;
+                        } else if (priceText) {
+                            pVal = (typeof parseNumber === 'function')
+                                ? parseNumber(priceText)
+                                : (parseFloat(priceText.replace(/,/g, '')) || 0);
+                        } else {
+                            pVal = parseFloat(row.getAttribute('data-base-price') || 0) || 0;
+                        }
+                    }
                     const qVal = qtyInput
                         ? (parseInt(qtyInput.value) || 1)
-                        : (parseInt(tds[2] ? tds[2].textContent : '1') || 1);
+                        : (parseInt(tds[2] ? tds[2].textContent.trim() : '1') || 1);
                     const rowTotal = pVal * qVal;
 
                     const hasVoucher = parseInt(row.getAttribute('data-has-voucher')) || 0;
@@ -3767,12 +3778,28 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     const serial = cells[1].textContent.trim();
                     const pricesStr = row.getAttribute('data-prices') || '{}';
                     const othersBankStr = row.getAttribute('data-others-bank-enabled') || '0';
+                    // Prefer .price-input-table / data-base-price; fall back to plain price cell text (trade-in rows)
                     const priceInput = row.querySelector('.price-input-table');
                     const qtyInput = row.querySelector('.qty-input');
                     const priceTd = cells[3];
-                    const isFreeText = priceTd && priceTd.textContent.trim().toUpperCase() === 'FREE';
-                    const pVal = isFreeText ? 0 : (parseFloat(priceInput ? priceInput.value.replace(/,/g, '') : (row.getAttribute('data-base-price') || 0)) || 0);
-                    const qVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+                    const qtyTd = cells[2];
+                    const priceText = priceTd ? priceTd.textContent.trim() : '';
+                    const isFreeText = priceText.toUpperCase() === 'FREE';
+                    let pVal = 0;
+                    if (!isFreeText) {
+                        if (priceInput) {
+                            pVal = parseFloat(String(priceInput.value).replace(/,/g, '')) || 0;
+                        } else if (priceText) {
+                            pVal = (typeof parseNumber === 'function')
+                                ? parseNumber(priceText)
+                                : (parseFloat(priceText.replace(/,/g, '')) || 0);
+                        } else {
+                            pVal = parseFloat(row.getAttribute('data-base-price') || 0) || 0;
+                        }
+                    }
+                    const qVal = qtyInput
+                        ? (parseInt(qtyInput.value) || 1)
+                        : (parseInt(qtyTd ? qtyTd.textContent.trim() : '1') || 1);
                     const rowTotal = pVal * qVal;
 
                     // If item price is 0.00 / FREE, it does not require payment, so do not include in unit dropdown
@@ -4215,12 +4242,13 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
             row.setAttribute('data-token-amount', token_amount);
             row.setAttribute('data-prices', JSON.stringify(pricesObj));
             row.setAttribute('data-others-bank-enabled', othersBankStr);
+            row.setAttribute('data-base-price', String(parseNumber(price) || 0));
 
             row.innerHTML = `
                 <td>${itemDesc}</td>
                 <td>${imei}</td>
                 <td>${qty}</td>
-                <td>${formatNumber(parseNumber(price))}</td>
+                <td>${formatNumber(parseNumber(price))}<input type="hidden" class="price-input-table" value="${parseNumber(price) || 0}"></td>
                 <td><button class="btn-delete-item" onclick="deleteSalesRow(this)">×</button></td>
             `;
 
@@ -6549,7 +6577,14 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
             document.body.addEventListener('change', function (e) {
                 if (e.target.matches('.unit-checkboxes input[type="checkbox"], input[name="payment_method"], input[name="down_payment_method"], .custom-multiselect input') || e.target.id === 'paymentPartnersDropdown' || e.target.id === 'cardPaymentDropdown' || e.target.id === 'qrDropdown') {
                     setTimeout(function () {
-                        if (typeof window.syncUnitSelectorsAcrossSections === 'function') {
+                        // Rebuild Unit selectors if cleared (e.g. after method toggle) — match salesentry
+                        const needsRebuild = Array.from(document.querySelectorAll('.unit-selector-row')).some(row => {
+                            return row.style.display !== 'none' && !row.querySelector('.unit-checkboxes');
+                        }) || (e.target.matches('input[name="payment_method"], input[name="down_payment_method"]') &&
+                            !document.querySelector('.unit-selector-row .unit-checkboxes'));
+                        if (needsRebuild && typeof populateInstallmentUnit === 'function') {
+                            populateInstallmentUnit();
+                        } else if (typeof window.syncUnitSelectorsAcrossSections === 'function') {
                             window.syncUnitSelectorsAcrossSections();
                         }
                         updateSectionTotal();
