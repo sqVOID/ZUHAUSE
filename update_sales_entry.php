@@ -110,18 +110,23 @@ if (is_array($payment_data_raw)) {
         if (isset($pd['loanTypeDropdown'])) {
             unset($pd['loanTypeDropdown']);
         }
-        if (!empty($pd['creditCardAmount']) && empty($pd['Amount'])) {
-            $pd['Amount'] = $pd['creditCardAmount'];
+
+        $ptype = strtolower(trim((string) ($pd['payment_type'] ?? '')));
+        $is_split = (strpos($ptype, '+') !== false || strpos($ptype, '&') !== false);
+
+        // Split payments (e.g. "Credit Card + Cash"): keep creditCardAmount / debitCardAmount
+        // and leave Amount as the cash (or other non-card) portion — do NOT collapse/delete.
+        if (!$is_split) {
+            if (!empty($pd['creditCardAmount']) && empty($pd['Amount'])) {
+                $pd['Amount'] = $pd['creditCardAmount'];
+            }
+            if (!empty($pd['debitCardAmount']) && empty($pd['Amount'])) {
+                $pd['Amount'] = $pd['debitCardAmount'];
+            }
+            // Single card-only: Amount is enough for most reports; keep card keys too for reload
+            // (do not unset creditCardAmount / debitCardAmount anymore)
         }
-        if (!empty($pd['debitCardAmount']) && empty($pd['Amount'])) {
-            $pd['Amount'] = $pd['debitCardAmount'];
-        }
-        if (isset($pd['creditCardAmount'])) {
-            unset($pd['creditCardAmount']);
-        }
-        if (isset($pd['debitCardAmount'])) {
-            unset($pd['debitCardAmount']);
-        }
+
         if (!empty($pd['cash_down_payment_amount']) && empty($pd['cash_dp_amount'])) {
             $pd['cash_dp_amount'] = $pd['cash_down_payment_amount'];
         }
@@ -134,8 +139,49 @@ if (is_array($payment_data_raw)) {
         if (empty($pd['Total']) && !empty($pd['Amount'])) {
             $pd['Total'] = $pd['Amount'];
         }
+        // For split without Total, sum card amounts + cash Amount
+        if (empty($pd['Total']) && $is_split) {
+            $sum = floatval(str_replace(',', '', (string) ($pd['creditCardAmount'] ?? 0)))
+                + floatval(str_replace(',', '', (string) ($pd['debitCardAmount'] ?? 0)))
+                + floatval(str_replace(',', '', (string) ($pd['Amount'] ?? $pd['amount'] ?? 0)));
+            if ($sum > 0) {
+                $pd['Total'] = number_format($sum, 2, '.', ',');
+            }
+        }
         if (empty($pd['amount']) && !empty($pd['Amount'])) {
             $pd['amount'] = $pd['Amount'];
+        }
+        if (empty($pd['amount']) && !empty($pd['creditCardAmount'])) {
+            $pd['amount'] = $pd['creditCardAmount'];
+        }
+        if (empty($pd['amount']) && !empty($pd['debitCardAmount'])) {
+            $pd['amount'] = $pd['debitCardAmount'];
+        }
+
+        // Dual keys for claim/history loaders
+        if (!empty($pd['Terminal Issuer']) && empty($pd['terminal_issuer'])) {
+            $pd['terminal_issuer'] = $pd['Terminal Issuer'];
+        }
+        if (!empty($pd['Terminal ID']) && empty($pd['terminal_id'])) {
+            $pd['terminal_id'] = $pd['Terminal ID'];
+        }
+        if (!empty($pd['Bank']) && empty($pd['bank'])) {
+            $pd['bank'] = $pd['Bank'];
+        }
+        if (!empty($pd['Terms']) && empty($pd['terms'])) {
+            $pd['terms'] = $pd['Terms'];
+        }
+        if (!empty($pd['MID']) && empty($pd['mid'])) {
+            $pd['mid'] = $pd['MID'];
+        }
+        if (!empty($pd['Card No']) && empty($pd['card_no'])) {
+            $pd['card_no'] = $pd['Card No'];
+        }
+        if (!empty($pd['Approval Code']) && empty($pd['approval_code'])) {
+            $pd['approval_code'] = $pd['Approval Code'];
+        }
+        if (!empty($pd['Batch']) && empty($pd['batch'])) {
+            $pd['batch'] = $pd['Batch'];
         }
     };
     $normalize_payment_keys($payment_data_raw);
@@ -494,23 +540,65 @@ try {
     if (!function_exists('getPaymentBlockAmount')) {
         function getPaymentBlockAmount($payment)
         {
-            if (!is_array($payment))
+            if (!is_array($payment)) {
                 return 0;
-            foreach (['Amount', 'amount', 'Total', 'total'] as $k) {
+            }
+            $ptype = strtolower(trim((string) ($payment['payment_type'] ?? '')));
+            $is_split = (strpos($ptype, '+') !== false || strpos($ptype, '&') !== false);
+
+            // Combined split in one object: prefer Total, else sum card + cash
+            if ($is_split) {
+                if (!empty($payment['Total'])) {
+                    return floatval(str_replace(',', '', (string) $payment['Total']));
+                }
+                if (!empty($payment['total'])) {
+                    return floatval(str_replace(',', '', (string) $payment['total']));
+                }
+                return floatval(str_replace(',', '', (string) ($payment['creditCardAmount'] ?? 0)))
+                    + floatval(str_replace(',', '', (string) ($payment['debitCardAmount'] ?? 0)))
+                    + floatval(str_replace(',', '', (string) ($payment['Amount'] ?? $payment['amount'] ?? 0)));
+            }
+
+            // Type-specific preference (matches report / invoice details)
+            if (strpos($ptype, 'credit') !== false) {
+                foreach (['creditCardAmount', 'credit_card_amount', 'Amount', 'amount', 'Total', 'total'] as $k) {
+                    if (isset($payment[$k]) && $payment[$k] !== '') {
+                        return floatval(str_replace(',', '', (string) $payment[$k]));
+                    }
+                }
+            }
+            if (strpos($ptype, 'debit') !== false) {
+                foreach (['debitCardAmount', 'debit_card_amount', 'Amount', 'amount', 'Total', 'total'] as $k) {
+                    if (isset($payment[$k]) && $payment[$k] !== '') {
+                        return floatval(str_replace(',', '', (string) $payment[$k]));
+                    }
+                }
+            }
+
+            foreach (['Amount', 'amount', 'creditCardAmount', 'debitCardAmount', 'Total', 'total'] as $k) {
                 if (isset($payment[$k]) && $payment[$k] !== '') {
-                    return floatval(str_replace(',', '', $payment[$k]));
+                    return floatval(str_replace(',', '', (string) $payment[$k]));
                 }
             }
             $dp_sum = 0;
-            if (isset($payment['payment_type']) && $payment['payment_type'] === 'payment_partners') {
+            if (isset($payment['payment_type']) && (
+                $payment['payment_type'] === 'payment_partners' ||
+                strpos($ptype, 'home credit') !== false ||
+                strpos($ptype, 'partner') !== false
+            )) {
+                if (isset($payment['Loan Balance'])) {
+                    $dp_sum += floatval(str_replace(',', '', (string) $payment['Loan Balance']));
+                } elseif (isset($payment['loan_balance'])) {
+                    $dp_sum += floatval(str_replace(',', '', (string) $payment['loan_balance']));
+                }
                 if (isset($payment['cash_dp_amount'])) {
-                    $dp_sum += floatval(str_replace(',', '', $payment['cash_dp_amount']));
+                    $dp_sum += floatval(str_replace(',', '', (string) $payment['cash_dp_amount']));
                 }
                 if (isset($payment['gcash_dp_amount'])) {
-                    $dp_sum += floatval(str_replace(',', '', $payment['gcash_dp_amount']));
+                    $dp_sum += floatval(str_replace(',', '', (string) $payment['gcash_dp_amount']));
                 }
                 if (isset($payment['maya_dp_amount'])) {
-                    $dp_sum += floatval(str_replace(',', '', $payment['maya_dp_amount']));
+                    $dp_sum += floatval(str_replace(',', '', (string) $payment['maya_dp_amount']));
                 }
             }
             return $dp_sum;
@@ -577,6 +665,111 @@ try {
                     $update_preorder_item->bind_param("ddi", $total_paid, $total_paid, $preorder_id);
                     $update_preorder_item->execute();
                     $update_preorder_item->close();
+
+                    // Sync each stage into preorder_payment_history so modification reload
+                    // (which prefers history) stays accurate after UPDATE
+                    if (isset($payment_data_decoded['payments']) && is_array($payment_data_decoded['payments'])) {
+                        $hist_by_seq = $conn->prepare("
+                            SELECT id FROM preorder_payment_history
+                            WHERE preorder_id = ? AND payment_sequence = ?
+                            ORDER BY id DESC LIMIT 1
+                        ");
+                        $hist_by_inv = $conn->prepare("
+                            SELECT id FROM preorder_payment_history
+                            WHERE preorder_id = ? AND invoice_no = ?
+                            ORDER BY id ASC LIMIT 1
+                        ");
+                        $hist_update = $conn->prepare("
+                            UPDATE preorder_payment_history SET
+                                invoice_no = ?,
+                                payment_date = COALESCE(NULLIF(?, ''), payment_date),
+                                payment_type = ?,
+                                payment_method = ?,
+                                amount = ?,
+                                payment_data = ?,
+                                payment_sequence = ?,
+                                status_after_payment = COALESCE(NULLIF(?, ''), status_after_payment)
+                            WHERE id = ?
+                        ");
+
+                        foreach ($payment_data_decoded['payments'] as $idx => $payment) {
+                            if (!is_array($payment)) {
+                                continue;
+                            }
+                            $seq = isset($payment['payment_sequence']) ? intval($payment['payment_sequence']) : ($idx + 1);
+                            if ($seq <= 0) {
+                                $seq = $idx + 1;
+                            }
+                            $block_inv = trim((string) ($payment['block_invoice_no'] ?? ''));
+                            if ($block_inv === '') {
+                                // Fall back: first stages use original/preorder invoice, last uses claim invoice
+                                $is_claim = !empty($payment['is_claim_stage']);
+                                $block_inv = $is_claim
+                                    ? ($new_invoice_no ?: $invoice_no)
+                                    : ($new_original_invoice_no ?: $old_original_invoice_no ?: $invoice_no);
+                            }
+                            $pay_date = trim((string) ($payment['block_payment_date'] ?? ''));
+                            if ($pay_date !== '' && strlen($pay_date) === 10) {
+                                $pay_date .= ' 00:00:00';
+                            }
+                            $ptype = (string) ($payment['payment_type'] ?? 'unknown');
+                            $pmethod = $ptype;
+                            if (stripos($ptype, 'credit') !== false) {
+                                $pmethod = 'Credit Card';
+                            } elseif (stripos($ptype, 'debit') !== false) {
+                                $pmethod = 'Debit Card';
+                            } elseif (stripos($ptype, 'cash') !== false) {
+                                $pmethod = 'Cash';
+                            } elseif (!empty($payment['payment_partner'])) {
+                                $pmethod = $payment['payment_partner'];
+                            } elseif (!empty($payment['E-Wallet-Text'])) {
+                                $pmethod = $payment['E-Wallet-Text'];
+                            } elseif (!empty($payment['Bank-Text'])) {
+                                $pmethod = $payment['Bank-Text'];
+                            } else {
+                                $pmethod = ucwords(str_replace('_', ' ', $ptype));
+                            }
+                            $amt = getPaymentBlockAmount($payment);
+                            $status_after = trim((string) ($payment['status_after_payment'] ?? ''));
+                            $pay_json = json_encode($payment);
+
+                            $hist_id = 0;
+                            $hist_by_seq->bind_param("ii", $preorder_id, $seq);
+                            $hist_by_seq->execute();
+                            $hr = $hist_by_seq->get_result();
+                            if ($hr && $hr->num_rows > 0) {
+                                $hist_id = (int) $hr->fetch_assoc()['id'];
+                            }
+                            if ($hist_id <= 0 && $block_inv !== '') {
+                                $hist_by_inv->bind_param("is", $preorder_id, $block_inv);
+                                $hist_by_inv->execute();
+                                $hr2 = $hist_by_inv->get_result();
+                                if ($hr2 && $hr2->num_rows > 0) {
+                                    $hist_id = (int) $hr2->fetch_assoc()['id'];
+                                }
+                            }
+
+                            if ($hist_id > 0) {
+                                $hist_update->bind_param(
+                                    "ssssdsisi",
+                                    $block_inv,
+                                    $pay_date,
+                                    $ptype,
+                                    $pmethod,
+                                    $amt,
+                                    $pay_json,
+                                    $seq,
+                                    $status_after,
+                                    $hist_id
+                                );
+                                $hist_update->execute();
+                            }
+                        }
+
+                        $hist_by_seq->close();
+                        $hist_by_inv->close();
+                        $hist_update->close();
+                    }
                 }
                 $check_preorder->close();
             } else {

@@ -2530,7 +2530,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 <div id="voided_header_actions"
                     style="position: absolute; top: 11px; right: 20px; display: flex; align-items: center; gap: 10px;">
                     <!-- Header REVERT VOIDED button removed - using bottom button only -->
-                   <!-- <span id="voided_badge" style="display: none; position: static;">VOIDED!</span> -->
+                    <!-- <span id="voided_badge" style="display: none; position: static;">VOIDED!</span> -->
                 </div>
             </div>
 
@@ -4372,6 +4372,214 @@ if ($promos_result && $promos_result->num_rows > 0) {
             updateBreakdownTable();
         }
 
+        // ── Unit Dropdown helpers (mirrors salesentry.php) ───────────────────
+        function populateInstallmentUnit() {
+            const unitRows = document.querySelectorAll('.unit-selector-row');
+            if (unitRows.length === 0) return;
+
+            // Build item list from itemsArray (skip 0-price items)
+            const items = [];
+            itemsArray.forEach(item => {
+                const price = parseFloat(item.price) || 0;
+                const qty   = parseInt(item.quantity) || 1;
+                if (price * qty <= 0.009) return;
+                const desc   = (item.item_description || '').trim();
+                const serial = (item.imei || '').trim();
+                if (!desc) return;
+                items.push({ desc, serial });
+            });
+
+            unitRows.forEach((unitRow, unitRowIdx) => {
+                if (items.length === 0) {
+                    unitRow.style.display = 'none';
+                    unitRow.innerHTML = '';
+                    return;
+                }
+
+                unitRow.style.display = '';
+                unitRow.innerHTML = `
+                    <label style="min-width: 120px;">Unit:</label>
+                    <div class="custom-multiselect" style="position: relative; flex: 1; min-width: 200px;">
+                        <div class="multiselect-selected hc-input" style="cursor: pointer; background: ${items.length === 1 ? '#f5f5f5' : '#fff'}; display: flex; align-items: center; justify-content: space-between;"
+                             onclick="const d = this.nextElementSibling; d.style.display = d.style.display === 'none' ? 'block' : 'none';">
+                            <span class="selected-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px;">-- Select Units --</span>
+                            <span style="font-size: 10px;">&#x25BE;</span>
+                        </div>
+                        <div class="unit-checkboxes multiselect-dropdown" style="display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: white; border: 1px solid #bfbfbf; border-radius: 4px; max-height: 150px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 5px;"></div>
+                    </div>
+                `;
+
+                const container = unitRow.querySelector('.unit-checkboxes');
+                const textSpan  = unitRow.querySelector('.selected-text');
+
+                // "Select All" for multiple items
+                if (items.length > 1) {
+                    const selectAllLbl = document.createElement('label');
+                    Object.assign(selectAllLbl.style, {
+                        margin: '0 0 5px 0', display: 'flex', alignItems: 'center',
+                        gap: '8px', fontWeight: 'bold', lineHeight: '1.2',
+                        color: '#1e40af', cursor: 'pointer', padding: '5px',
+                        borderBottom: '1px solid #e5e7eb', borderRadius: '3px'
+                    });
+                    selectAllLbl.onmouseover = () => selectAllLbl.style.backgroundColor = '#eff6ff';
+                    selectAllLbl.onmouseout  = () => selectAllLbl.style.backgroundColor = 'transparent';
+
+                    const selectAllCb = document.createElement('input');
+                    selectAllCb.type = 'checkbox';
+                    selectAllCb.className = 'select-all-units-cb';
+                    Object.assign(selectAllCb.style, { marginTop: '0', width: '16px', height: '16px' });
+                    selectAllCb.addEventListener('change', function () {
+                        const visibleCbs = Array.from(container.querySelectorAll('input[name="Unit"]'))
+                            .filter(cb => cb.closest('label').style.display !== 'none');
+                        visibleCbs.forEach(cb => cb.checked = this.checked);
+                        syncUnitSelectorsAcrossSections(unitRow);
+                    });
+                    selectAllLbl.appendChild(selectAllCb);
+                    selectAllLbl.appendChild(document.createTextNode('Select All'));
+                    container.appendChild(selectAllLbl);
+                }
+
+                items.forEach((item) => {
+                    const labelText = item.serial ? item.desc + ' (' + item.serial + ')' : item.desc;
+
+                    const lbl = document.createElement('label');
+                    Object.assign(lbl.style, {
+                        margin: '0', display: 'flex', alignItems: 'flex-start',
+                        gap: '8px', fontWeight: 'normal', lineHeight: '1.2',
+                        color: '#333', cursor: 'pointer', padding: '5px', borderRadius: '3px'
+                    });
+                    lbl.onmouseover = () => lbl.style.backgroundColor = '#f0f0f0';
+                    lbl.onmouseout  = () => lbl.style.backgroundColor = 'transparent';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'Unit';
+                    cb.value = labelText;
+                    Object.assign(cb.style, { marginTop: '2px', width: '16px', height: '16px' });
+                    cb.checked = (unitRowIdx === 0); // first section pre-checks all by default
+                    cb.addEventListener('change', function () {
+                        syncUnitSelectorsAcrossSections(unitRow);
+                    });
+
+                    lbl.appendChild(cb);
+                    lbl.appendChild(document.createTextNode(labelText));
+                    container.appendChild(lbl);
+                });
+            });
+
+            syncUnitSelectorsAcrossSections();
+        }
+
+        function syncUnitSelectorsAcrossSections(triggeredUnitRow) {
+            const sections = [
+                '.home-credit-section',
+                '.credit-card-section',
+                '.debit-card-section',
+                '.qr-ph-section',
+                '.starpay-qr-section',
+                '.ewallet-section',
+                '.online-banking-section',
+                '.cash-section'
+            ];
+
+            const activeSections = sections
+                .map(s => document.querySelector(s))
+                .filter(el => el && el.style.display !== 'none');
+
+            if (activeSections.length === 0) return;
+
+            // Build net-due map from itemsArray
+            const itemNetDueMap = {};
+            itemsArray.forEach(item => {
+                const price  = parseFloat(item.price) || 0;
+                const qty    = parseInt(item.quantity) || 1;
+                const disc   = parseFloat(item.discount_amount) || 0;
+                const vch    = parseFloat(item.voucher_amount) || 0;
+                const tok    = parseFloat(item.token_amount) || 0;
+                const serial = (item.imei || '').trim();
+                const desc   = (item.item_description || '').trim();
+                const lbl    = serial ? desc + ' (' + serial + ')' : desc;
+                const netDue = Math.max(0, price * qty - disc - vch - tok);
+                if (netDue > 0.009) itemNetDueMap[lbl] = netDue;
+            });
+
+            activeSections.forEach(targetSecEl => {
+                const unitRow = targetSecEl.querySelector('.unit-selector-row');
+                if (!unitRow) return;
+                const container = unitRow.querySelector('.unit-checkboxes');
+                if (!container) return;
+
+                unitRow.style.display = (Object.keys(itemNetDueMap).length > 0) ? '' : 'none';
+
+                // How much already paid by OTHER active sections per item
+                const otherPaid = {};
+                Object.keys(itemNetDueMap).forEach(lbl => otherPaid[lbl] = 0);
+
+                activeSections.forEach(otherSecEl => {
+                    if (otherSecEl === targetSecEl) return;
+                    const otherRow = otherSecEl.querySelector('.unit-selector-row');
+                    if (!otherRow) return;
+                    const otherChecked = Array.from(otherRow.querySelectorAll('input[name="Unit"]:checked'));
+                    if (otherChecked.length === 0) return;
+
+                    // Simple allocation: split other-section amount equally among its checked items
+                    const otherAmtInput = otherSecEl.querySelector('.hc-input:not(.multiselect-selected)');
+                    const otherAmt = otherAmtInput ? (parseFloat(otherAmtInput.value) || 0) : 0;
+                    const perItem = otherAmt > 0 ? otherAmt / otherChecked.length : 0;
+                    otherChecked.forEach(cb => {
+                        if (otherPaid[cb.value] !== undefined) {
+                            otherPaid[cb.value] += perItem;
+                        }
+                    });
+                });
+
+                const itemLabels = Array.from(container.querySelectorAll('label')).filter(l => !l.querySelector('.select-all-units-cb'));
+                itemLabels.forEach(lbl => {
+                    const cb = lbl.querySelector('input[name="Unit"]');
+                    if (!cb) return;
+                    const due       = itemNetDueMap[cb.value] || 0;
+                    const remaining = due - (otherPaid[cb.value] || 0);
+                    if (due <= 0.009 || (remaining <= 0.009 && !cb.checked)) {
+                        lbl.style.display = 'none';
+                        cb.checked = false;
+                    } else {
+                        lbl.style.display = 'flex';
+                    }
+                });
+
+                const visibleCbs  = Array.from(container.querySelectorAll('input[name="Unit"]')).filter(cb => cb.closest('label').style.display !== 'none');
+                const checkedCbs  = visibleCbs.filter(cb => cb.checked);
+
+                // Auto-select if only one visible and nothing checked
+                if (checkedCbs.length === 0 && visibleCbs.length === 1 && !triggeredUnitRow) {
+                    visibleCbs[0].checked = true;
+                }
+
+                const selectAllCb  = container.querySelector('.select-all-units-cb');
+                const selectAllLbl = selectAllCb ? selectAllCb.closest('label') : null;
+                if (selectAllLbl) selectAllLbl.style.display = (visibleCbs.length > 1) ? 'flex' : 'none';
+                if (selectAllCb) selectAllCb.checked = (visibleCbs.length > 0 && checkedCbs.length === visibleCbs.length);
+
+                const textSpan = unitRow.querySelector('.selected-text');
+                if (textSpan) {
+                    const finalChecked = visibleCbs.filter(cb => cb.checked);
+                    if (visibleCbs.length === 0)              textSpan.textContent = '-- No Units Available --';
+                    else if (finalChecked.length === 0)       textSpan.textContent = '-- Select Units --';
+                    else if (finalChecked.length === 1)       textSpan.textContent = finalChecked[0].value;
+                    else if (finalChecked.length === visibleCbs.length) textSpan.textContent = 'All Available Units (' + finalChecked.length + ')';
+                    else                                      textSpan.textContent = finalChecked.length + ' Units Selected';
+                }
+            });
+        }
+
+        // Close unit dropdowns on outside click
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.custom-multiselect')) {
+                document.querySelectorAll('.multiselect-dropdown').forEach(d => d.style.display = 'none');
+            }
+        });
+        // ─────────────────────────────────────────────────────────────────────
+
         function renderItemsTable() {
             const tbody = document.getElementById('itemsTableBody');
             tbody.innerHTML = '';
@@ -4422,6 +4630,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             syncItemDeductionTotals();
             calculateTotals();
             updateBreakdownTable();
+            populateInstallmentUnit();
             if (typeof filterBanksByTerminalId === 'function') {
                 filterBanksByTerminalId('cc');
                 filterBanksByTerminalId('dc');
@@ -5532,7 +5741,18 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 let paymentTotal = 0;
                 paymentsToSum.forEach((p) => {
                     if (!p || typeof p !== 'object') return;
-                    let blockAmt = parseAmount(p.Total || p.amount || p.Amount || p.creditCardAmount || p.debitCardAmount || 0);
+                    const pType = String(p.payment_type || '');
+                    let blockAmt = 0;
+                    if (pType.includes('+') || pType.includes('&')) {
+                        blockAmt = parseAmount(p.Total || p.total || 0);
+                        if (blockAmt <= 0) {
+                            blockAmt = parseAmount(p.creditCardAmount || 0)
+                                + parseAmount(p.debitCardAmount || 0)
+                                + parseAmount(p.Amount || p.amount || 0);
+                        }
+                    } else {
+                        blockAmt = extractTypedPaymentAmount(p, pType);
+                    }
                     if (blockAmt <= 0 && (p['Loan Type'] || p.loan_type || p['Loan Balance'] || p.loan_balance || p.payment_partner)) {
                         blockAmt += parseAmount(p['Loan Balance'] || p.loan_balance || 0);
                         blockAmt += parseAmount(p.cash_down_payment_amount || p.cash_dp_amount || 0);
@@ -5872,9 +6092,10 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (type === 'qr_ph' || type === 'qr ph') return 'qr_ph';
             if (type === 'starpay_qr' || type === 'starpay qr') return 'starpay_qr';
 
-            // Fallbacks based on fields
-            if (p['Terminal Issuer'] || p['Terminal ID'] || p.creditCardAmount || p.debitCardAmount) {
-                if (p.debitCardAmount) return 'debit_card';
+            // Fallbacks based on fields (support both display keys and snake_case from claim/history)
+            if (p['Terminal Issuer'] || p['Terminal ID'] || p.terminal_issuer || p.terminal_id ||
+                p.ccTerminalIssuer || p.dcTerminalIssuer || p.creditCardAmount || p.debitCardAmount) {
+                if (p.debitCardAmount || p.payment_type === 'debit_card') return 'debit_card';
                 return 'credit_card';
             }
             if (p['E-Wallet'] || p['E-Wallet-Text'] || p['ewallet_type']) return 'ewallet';
@@ -5890,6 +6111,109 @@ if ($promos_result && $promos_result->num_rows > 0) {
             return parseFloat(val.toString().replace(/,/g, '')) || 0;
         }
 
+        // Prefer type-specific amount keys (matches report.php / invoice details)
+        function extractTypedPaymentAmount(p, payType) {
+            if (!p || typeof p !== 'object') return 0;
+            const norm = String(payType || p.payment_type || '').toLowerCase();
+
+            if (norm.includes('credit')) {
+                return parseAmount(
+                    p.creditCardAmount || p.credit_card_amount || p['Credit Card Amount'] ||
+                    p.ccAmount || p.card_amount || p.Amount || p.amount || p.Total || p.total || 0
+                );
+            }
+            if (norm.includes('debit')) {
+                return parseAmount(
+                    p.debitCardAmount || p.debit_card_amount || p['Debit Card Amount'] ||
+                    p.dcAmount || p.Amount || p.amount || p.Total || p.total || 0
+                );
+            }
+            if (norm.includes('cash')) {
+                // In "Credit Card + Cash" splits, Amount is usually cash; Total is grand total
+                const cashAmt = parseAmount(
+                    p.cashAmount || p.cash_amount || p['Cash Amount'] || p.Amount || p.amount || 0
+                );
+                if (cashAmt > 0) return cashAmt;
+                return parseAmount(p.Total || p.total || 0);
+            }
+            if (norm.includes('ewallet') || norm.includes('e-wallet') || norm.includes('gcash') || norm.includes('maya')) {
+                return parseAmount(p.ewalletAmount || p.Amount || p.amount || p.Total || p.total || 0);
+            }
+            if (norm.includes('online')) {
+                return parseAmount(p.bankAmount || p.Amount || p.amount || p.Total || p.total || 0);
+            }
+            return parseAmount(p.Amount || p.amount || p.Total || p.total || p.creditCardAmount || p.debitCardAmount || 0);
+        }
+
+        // Expand legacy "Credit Card + Cash" / "A & B" into one object per method with correct amounts
+        function expandCombinedPaymentTypes(payments) {
+            const expanded = [];
+            (payments || []).forEach(p => {
+                if (!p || typeof p !== 'object') {
+                    expanded.push(p);
+                    return;
+                }
+                const pt = String(p.payment_type || '');
+                if (pt && pt !== 'multiple' && (pt.includes('+') || pt.includes('&'))) {
+                    const parts = pt.split(/\s*[+&]\s*/).map(t => t.trim()).filter(Boolean);
+                    parts.forEach((part, idx) => {
+                        const newP = { payment_type: part };
+                        Object.keys(p).forEach(key => {
+                            if (key === 'payment_type' || key === 'payments' || key === 'unit_payment_map') return;
+                            const val = p[key];
+                            if (typeof val === 'string' && val.includes('|')) {
+                                const valParts = val.split('|').map(v => v.trim());
+                                newP[key] = (idx < valParts.length) ? valParts[idx] : (valParts[valParts.length - 1] || '');
+                            } else if (typeof val === 'string' && val.includes(' | ')) {
+                                const valParts = val.split(' | ').map(v => v.trim());
+                                newP[key] = (idx < valParts.length) ? valParts[idx] : (valParts[valParts.length - 1] || '');
+                            } else {
+                                newP[key] = val;
+                            }
+                        });
+
+                        const typedAmt = extractTypedPaymentAmount(p, part);
+                        const formatted = typedAmt > 0
+                            ? typedAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : '';
+                        const partLower = part.toLowerCase();
+                        if (partLower.includes('credit')) {
+                            if (formatted) {
+                                newP.creditCardAmount = formatted;
+                                newP.Amount = formatted;
+                                newP.amount = formatted;
+                            }
+                        } else if (partLower.includes('debit')) {
+                            if (formatted) {
+                                newP.debitCardAmount = formatted;
+                                newP.Amount = formatted;
+                                newP.amount = formatted;
+                            }
+                        } else if (partLower.includes('cash')) {
+                            if (formatted) {
+                                newP.Amount = formatted;
+                                newP.amount = formatted;
+                            }
+                            // Avoid credit-card field fallbacks mis-detecting cash as card
+                            delete newP.creditCardAmount;
+                            delete newP.debitCardAmount;
+                            delete newP['Terminal Issuer'];
+                            delete newP['Terminal ID'];
+                            delete newP.terminal_issuer;
+                            delete newP.terminal_id;
+                        } else if (formatted) {
+                            newP.Amount = formatted;
+                            newP.amount = formatted;
+                        }
+                        expanded.push(newP);
+                    });
+                } else {
+                    expanded.push(p);
+                }
+            });
+            return expanded;
+        }
+
         function mapPaymentFieldKey(key) {
             if (!key) return key;
             if (key === 'loanTypeDropdown') return 'Loan Type';
@@ -5897,8 +6221,18 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (key === 'ccTerminalId' || key === 'dcTerminalId') return 'Terminal ID';
             if (key === 'creditCardBankDropdown' || key === 'debitCardBankDropdown') return 'Bank';
             if (key === 'creditCardTermsDropdown' || key === 'debitCardTermsDropdown') return 'Terms';
-            if (key === 'creditCardAmount' || key === 'debitCardAmount') return 'Amount';
+            // Keep creditCardAmount / debitCardAmount distinct (salesentry split format: CC amount vs Cash Amount)
             return key;
+        }
+
+        // Resolve card fields from either report-style keys ("Terminal Issuer") or snake_case (terminal_issuer)
+        function getCardField(p, ...keys) {
+            if (!p || typeof p !== 'object') return '';
+            for (let i = 0; i < keys.length; i++) {
+                const v = p[keys[i]];
+                if (v != null && String(v).trim() !== '') return String(v).trim();
+            }
+            return '';
         }
 
         function ensureSelectOption(selectEl, value, label) {
@@ -6090,16 +6424,20 @@ if ($promos_result && $promos_result->num_rows > 0) {
         }
 
         // Scopes population of a payment object to a specific payment method box/form
-        function populatePaymentBlock(block, p) {
-            // Clear all checkboxes first
-            block.querySelectorAll('input[name="payment_method"]').forEach(cb => {
-                cb.checked = false;
-            });
+        // options.reset !== false clears other methods first (set false to layer split methods like Credit Card + Cash)
+        function populatePaymentBlock(block, p, options) {
+            const reset = !options || options.reset !== false;
+            if (reset) {
+                // Clear all checkboxes first
+                block.querySelectorAll('input[name="payment_method"]').forEach(cb => {
+                    cb.checked = false;
+                });
 
-            // Hide all sections first
-            block.querySelectorAll('.home-credit-section, .credit-card-section, .debit-card-section, .qr-ph-section, .starpay-qr-section, .ewallet-section, .online-banking-section, .cash-section').forEach(section => {
-                section.style.display = 'none';
-            });
+                // Hide all sections first
+                block.querySelectorAll('.home-credit-section, .credit-card-section, .debit-card-section, .qr-ph-section, .starpay-qr-section, .ewallet-section, .online-banking-section, .cash-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+            }
 
             const pType = getPaymentType(p);
             if (!pType) return;
@@ -6111,10 +6449,10 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 if (chkCash) chkCash.checked = true;
                 if (cashSection) {
                     cashSection.style.display = 'block';
-                    const amt = p.amount || p.Amount || p.Total || p.total || 0;
-                    const amountInput = cashSection.querySelector('.hc-input');
+                    const amt = extractTypedPaymentAmount(p, 'cash');
+                    const amountInput = cashSection.querySelector('input.hc-input, select.hc-input');
                     if (amountInput) {
-                        amountInput.value = parseAmount(amt) > 0 ? parseAmount(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                        amountInput.value = amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
                     }
                     const totalInput = cashSection.querySelector('.total-input');
                     if (totalInput) {
@@ -6164,7 +6502,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const refVal = p['Reference No'] || p.reference_no || '';
                     const amt = p.Amount || p.amount || p.Total || p.total || 0;
 
-                    const inputs = ewalletSection.querySelectorAll('.hc-input');
+                    const inputs = ewalletSection.querySelectorAll('input.hc-input, select.hc-input');
                     if (inputs.length >= 4) {
                         if (inputs[0] && inputs[0].tagName === 'SELECT') {
                             ensureSelectOption(inputs[0], walletType, p['E-Wallet-Text'] || walletType);
@@ -6224,7 +6562,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             : (partnerVal || 'Home Credit');
                         updateLoanTypeOptions(selectedPartnerText, loanTypeDropdown);
                     }
-                    const inputs = homeCreditSection.querySelectorAll('.hc-input');
+                    const inputs = homeCreditSection.querySelectorAll('input.hc-input, select.hc-input');
                     if (inputs.length >= 5) {
                         setSelectByValueOrText(inputs[0], loanType);
                         setSelectByValueOrText(inputs[1], loanTerms);
@@ -6297,15 +6635,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 if (creditCardSection) {
                     creditCardSection.style.display = 'block';
 
-                    const terminalIssuer = p['Terminal Issuer'] || '';
-                    const terminalId = p['Terminal ID'] || '';
-                    const bank = p['Bank'] || '';
-                    const terms = p['Terms'] || '';
-                    const mid = p['MID'] || '';
-                    const cardNo = p['Card No'] || '';
-                    const approvalCode = p['Approval Code'] || '';
-                    const batch = p['Batch'] || '';
-                    const amt = p['Amount'] || p.creditCardAmount || p.amount || p.Total || p.total || 0;
+                    const terminalIssuer = getCardField(p, 'Terminal Issuer', 'ccTerminalIssuer', 'terminal_issuer');
+                    const terminalId = getCardField(p, 'Terminal ID', 'ccTerminalId', 'terminal_id');
+                    const bank = getCardField(p, 'Bank', 'creditCardBankDropdown', 'Bank-Text', 'bank');
+                    const terms = getCardField(p, 'Terms', 'creditCardTermsDropdown', 'terms');
+                    const mid = getCardField(p, 'MID', 'mid');
+                    const cardNo = getCardField(p, 'Card No', 'card_no', 'cardNo');
+                    const approvalCode = getCardField(p, 'Approval Code', 'approval_code', 'approvalCode');
+                    const batch = getCardField(p, 'Batch', 'batch');
+                    const amt = extractTypedPaymentAmount(p, 'credit_card');
 
                     const ccIssuerEl = block.querySelector('#ccTerminalIssuer');
                     const ccIdEl = block.querySelector('#ccTerminalId');
@@ -6313,26 +6651,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const ccTermsEl = block.querySelector('#creditCardTermsDropdown');
                     const ccAmtEl = block.querySelector('#creditCardAmount');
 
+                    // Step 1: Set issuer and rebuild Terminal ID options
                     if (ccIssuerEl) {
                         ensureSelectOption(ccIssuerEl, terminalIssuer);
                         setSelectByValueOrText(ccIssuerEl, terminalIssuer);
-                        // Rebuild terminal ID options for this issuer
-                        const prevEvent = window.event;
-                        try {
-                            window.event = { target: ccIssuerEl };
-                            filterTerminalIds('cc');
-                        } finally {
-                            window.event = prevEvent;
-                        }
+                        filterTerminalIdsInBlock('cc', block);
                     }
+                    // Step 2: Set terminal ID (options now populated) then rebuild Bank/Terms
                     if (ccIdEl) {
                         ensureSelectOption(ccIdEl, terminalId);
                         setSelectByValueOrText(ccIdEl, terminalId);
-                        // Populate banks when Terminal ID is set, preserving bank and terms values
-                        if (terminalId) {
-                            filterBanksByTerminalId('cc', bank, terms);
+                        if (terminalId || bank) {
+                            filterBanksByTerminalId('cc', bank, terms, block);
                         }
                     }
+                    // Step 3: Ensure Bank and Terms are set (filterBanksByTerminalId may have set them, but ensure)
                     if (ccBankEl) {
                         ensureSelectOption(ccBankEl, bank);
                         setSelectByValueOrText(ccBankEl, bank);
@@ -6354,10 +6687,10 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const cardNoEl = getByLabel('Card No'); if (cardNoEl) cardNoEl.value = cardNo;
                     const approvalEl = getByLabel('Approval Code'); if (approvalEl) approvalEl.value = approvalCode;
                     const batchEl = getByLabel('Batch'); if (batchEl) batchEl.value = batch;
-                    if (ccAmtEl) ccAmtEl.value = parseAmount(amt) > 0 ? parseAmount(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                    if (ccAmtEl) ccAmtEl.value = amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
 
                     const totalInput = creditCardSection.querySelector('.total-input');
-                    if (totalInput) totalInput.value = ccAmtEl ? ccAmtEl.value : (parseAmount(amt) > 0 ? parseAmount(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+                    if (totalInput) totalInput.value = ccAmtEl ? ccAmtEl.value : (amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
                 }
             }
 
@@ -6372,15 +6705,15 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 if (debitCardSection) {
                     debitCardSection.style.display = 'block';
 
-                    const terminalIssuer = p['Terminal Issuer'] || '';
-                    const terminalId = p['Terminal ID'] || '';
-                    const bank = p['Bank'] || '';
-                    const terms = p['Terms'] || '';
-                    const mid = p['MID'] || '';
-                    const cardNo = p['Card No'] || '';
-                    const approvalCode = p['Approval Code'] || '';
-                    const batch = p['Batch'] || '';
-                    const amt = p['Amount'] || p.debitCardAmount || p.amount || p.Total || p.total || 0;
+                    const terminalIssuer = getCardField(p, 'Terminal Issuer', 'dcTerminalIssuer', 'terminal_issuer');
+                    const terminalId = getCardField(p, 'Terminal ID', 'dcTerminalId', 'terminal_id');
+                    const bank = getCardField(p, 'Bank', 'debitCardBankDropdown', 'Bank-Text', 'bank');
+                    const terms = getCardField(p, 'Terms', 'debitCardTermsDropdown', 'terms');
+                    const mid = getCardField(p, 'MID', 'mid');
+                    const cardNo = getCardField(p, 'Card No', 'card_no', 'cardNo');
+                    const approvalCode = getCardField(p, 'Approval Code', 'approval_code', 'approvalCode');
+                    const batch = getCardField(p, 'Batch', 'batch');
+                    const amt = extractTypedPaymentAmount(p, 'debit_card');
 
                     const dcIssuerEl = block.querySelector('#dcTerminalIssuer');
                     const dcIdEl = block.querySelector('#dcTerminalId');
@@ -6388,25 +6721,21 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const dcTermsEl = block.querySelector('#debitCardTermsDropdown');
                     const dcAmtEl = block.querySelector('#debitCardAmount');
 
+                    // Step 1: Set issuer and rebuild Terminal ID options
                     if (dcIssuerEl) {
                         ensureSelectOption(dcIssuerEl, terminalIssuer);
                         setSelectByValueOrText(dcIssuerEl, terminalIssuer);
-                        const prevEvent = window.event;
-                        try {
-                            window.event = { target: dcIssuerEl };
-                            filterTerminalIds('dc');
-                        } finally {
-                            window.event = prevEvent;
-                        }
+                        filterTerminalIdsInBlock('dc', block);
                     }
+                    // Step 2: Set terminal ID then rebuild Bank/Terms
                     if (dcIdEl) {
                         ensureSelectOption(dcIdEl, terminalId);
                         setSelectByValueOrText(dcIdEl, terminalId);
-                        // Populate banks when Terminal ID is set, preserving bank and terms values
-                        if (terminalId) {
-                            filterBanksByTerminalId('dc', bank, terms);
+                        if (terminalId || bank) {
+                            filterBanksByTerminalId('dc', bank, terms, block);
                         }
                     }
+                    // Step 3: Ensure Bank and Terms are set
                     if (dcBankEl) {
                         ensureSelectOption(dcBankEl, bank);
                         setSelectByValueOrText(dcBankEl, bank);
@@ -6429,14 +6758,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const approvalEl = getByLabel('Approval Code'); if (approvalEl) approvalEl.value = approvalCode;
                     const batchEl = getByLabel('Batch'); if (batchEl) batchEl.value = batch;
                     if (dcAmtEl) {
-                        dcAmtEl.value = parseAmount(amt) > 0 ? parseAmount(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                        dcAmtEl.value = amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
                     } else {
                         const amtEl = getByLabel('Amount');
-                        if (amtEl) amtEl.value = parseAmount(amt) > 0 ? parseAmount(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                        if (amtEl) amtEl.value = amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
                     }
 
                     const totalInput = debitCardSection.querySelector('.total-input');
-                    if (totalInput) totalInput.value = parseAmount(amt) > 0 ? parseAmount(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                    if (totalInput) totalInput.value = amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
                 }
             }
 
@@ -6857,36 +7186,19 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 payments = [paymentData];
             }
 
-            // Expand any payment type with " + " (legacy multiple format)
-            let expandedPayments = [];
-            payments.forEach(p => {
-                if (p && typeof p.payment_type === 'string' && p.payment_type.includes(' + ') && p.payment_type !== 'multiple') {
-                    const parts = p.payment_type.split(' + ').map(t => t.trim());
-                    parts.forEach((part, idx) => {
-                        const newP = { payment_type: part };
-                        Object.keys(p).forEach(key => {
-                            if (key === 'payment_type') return;
-                            const val = p[key];
-                            if (typeof val === 'string' && val.includes(' | ')) {
-                                const valParts = val.split(' | ').map(v => v.trim());
-                                newP[key] = valParts[idx] || valParts[0] || '';
-                            } else {
-                                newP[key] = val;
-                            }
-                        });
-                        expandedPayments.push(newP);
-                    });
-                } else {
-                    expandedPayments.push(p);
-                }
-            });
-            payments = expandedPayments;
+            // Expand legacy "Credit Card + Cash" / "A & B" into separate methods with correct amounts
+            payments = expandCombinedPaymentTypes(payments);
 
             console.log('Normalized Payments Array to process:', payments);
 
-            // Populate the single payment block
-            populatePaymentBlock(singleSectionEl, payments[0]);
-
+            // Populate ALL methods in the same single payment form (split payments share one block)
+            if (payments.length > 0) {
+                payments.forEach((p, idx) => {
+                    populatePaymentBlock(singleSectionEl, p, { reset: idx === 0 });
+                });
+                if (typeof calculateGlobalTotal === 'function') calculateGlobalTotal();
+                if (typeof populateInstallmentUnit === 'function') populateInstallmentUnit();
+            }
             // Render Payment History Breakdown in paymentBreakdownBanner if it is a multiple payment
             let breakdownRowsHtml = '';
             if (paymentData.payment_type === 'multiple' && Array.isArray(paymentData.payments)) {
@@ -7216,19 +7528,59 @@ if ($promos_result && $promos_result->num_rows > 0) {
             console.log('Terminal IDs populated. Total options:', terminalSelect.options.length);
         }
 
+        // Block-scoped version of filterTerminalIds — bypasses window.event hack
+        function filterTerminalIdsInBlock(section, blockEl) {
+            const issuerSelect = blockEl.querySelector(section === 'cc' ? '#ccTerminalIssuer' : '#dcTerminalIssuer');
+            const terminalSelect = blockEl.querySelector(section === 'cc' ? '#ccTerminalId' : '#dcTerminalId');
+            if (!issuerSelect || !terminalSelect) return;
+
+            const selectedIssuer = issuerSelect.value;
+            terminalSelect.innerHTML = '<option value="">Select Terminal ID</option>';
+
+            // Also clear bank/terms so they get re-populated by filterBanksByTerminalId
+            if (section === 'cc') {
+                const bankDropdown = blockEl.querySelector('#creditCardBankDropdown');
+                const termsDropdown = blockEl.querySelector('#creditCardTermsDropdown');
+                if (bankDropdown) bankDropdown.innerHTML = '<option value="">Select Bank</option>';
+                if (termsDropdown) termsDropdown.innerHTML = '<option value="">Select Terms</option>';
+            }
+            if (section === 'dc') {
+                const bankDropdown = blockEl.querySelector('#debitCardBankDropdown');
+                const termsDropdown = blockEl.querySelector('#debitCardTermsDropdown');
+                if (bankDropdown) bankDropdown.innerHTML = '<option value="">Select Bank</option>';
+                if (termsDropdown) termsDropdown.innerHTML = '<option value="">Select Terms</option>';
+            }
+
+            if (!selectedIssuer) return;
+
+            const filtered = allTerminalIds.filter(tid => {
+                const issuers = tid.terminal_issuer.split(',').map(s => s.trim());
+                return issuers.some(iss => iss === selectedIssuer || iss.startsWith(selectedIssuer));
+            });
+            filtered.forEach(tid => {
+                const opt = document.createElement('option');
+                opt.value = tid.terminal_id;
+                opt.textContent = tid.terminal_id;
+                opt.setAttribute('data-issuers', tid.terminal_issuer);
+                terminalSelect.appendChild(opt);
+            });
+        }
+
         /**
          * Populate the Bank dropdown with banks from item_prices and others_bank tables
          * @param {string} section - 'cc' or 'dc'
          * @param {string} preserveBank - Optional: preserve this bank value after populating
          * @param {string} preserveTerms - Optional: preserve this terms value after populating
+         * @param {HTMLElement} [blockEl] - Optional: scope to a payment block (multi-payment mode)
          */
-        function filterBanksByTerminalId(section, preserveBank, preserveTerms) {
+        function filterBanksByTerminalId(section, preserveBank, preserveTerms, blockEl) {
             console.log('filterBanksByTerminalId called with section:', section, 'preserveBank:', preserveBank, 'preserveTerms:', preserveTerms);
 
             const isCC = (section === 'cc');
-            const bankDropdown = document.getElementById(isCC ? 'creditCardBankDropdown' : 'debitCardBankDropdown');
-            const termsDropdown = document.getElementById(isCC ? 'creditCardTermsDropdown' : 'debitCardTermsDropdown');
-            const amountInput = document.getElementById(isCC ? 'creditCardAmount' : 'debitCardAmount');
+            const scope = blockEl || document;
+            const bankDropdown = scope.querySelector(isCC ? '#creditCardBankDropdown' : '#debitCardBankDropdown');
+            const termsDropdown = scope.querySelector(isCC ? '#creditCardTermsDropdown' : '#debitCardTermsDropdown');
+            const amountInput = scope.querySelector(isCC ? '#creditCardAmount' : '#debitCardAmount');
 
             console.log('bankDropdown:', bankDropdown);
 
@@ -7486,147 +7838,150 @@ if ($promos_result && $promos_result->num_rows > 0) {
         }
 
         // Collect payment details from a specific payment method block/form
+        // Mirrors salesentry.php: split = "Credit Card + Cash" with creditCardAmount + Amount (cash) + Total
         function collectDataFromBlock(block) {
             const data = {};
             let sectionName = '';
             let hasValues = false;
+            let sectionAmountSum = 0;
 
             const paymentPartnersDropdown = block.querySelector('#paymentPartnersDropdown');
 
             function collectSectionData(sectionClass, type) {
                 const section = block.querySelector(sectionClass);
-                if (section && section.style.display === 'block') {
-                    let displayType = type;
-                    if (type === 'Home Credit' && paymentPartnersDropdown && paymentPartnersDropdown.value !== '') {
-                        displayType = paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text;
-                    }
+                if (!(section && section.style.display === 'block')) return;
 
-                    if (sectionName) {
-                        sectionName += ' + ' + displayType;
-                    } else {
-                        sectionName = displayType;
-                    }
-                    data.payment_type = sectionName;
+                let displayType = type;
+                if (type === 'Home Credit' && paymentPartnersDropdown && paymentPartnersDropdown.value !== '') {
+                    displayType = paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text;
+                }
 
-                    const inputs = section.querySelectorAll('input, select');
-                    inputs.forEach(input => {
-                        if (input.type === 'hidden') return;
+                if (sectionName) {
+                    sectionName += ' + ' + displayType;
+                } else {
+                    sectionName = displayType;
+                }
+                data.payment_type = sectionName;
 
-                        let key = input.id;
+                const inputs = section.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    if (input.type === 'hidden') return;
+                    // Unit checkboxes handled via unit_payment_map below
+                    if (input.name === 'Unit' || (input.classList && input.classList.contains('select-all-units-cb'))) return;
+
+                    let key = input.id;
+                    if (!key) {
+                        const formGroup = input.closest('.hc-form-group');
+                        if (formGroup) {
+                            const label = formGroup.querySelector('label');
+                            if (label) key = label.innerText.replace(':', '').trim();
+                        }
                         if (!key) {
-                            const formGroup = input.closest('.hc-form-group');
-                            if (formGroup) {
-                                const label = formGroup.querySelector('label');
+                            const parentRow = input.closest('.enter-amount-row');
+                            if (parentRow) {
+                                const label = parentRow.querySelector('label');
                                 if (label) key = label.innerText.replace(':', '').trim();
                             }
-                            if (!key) {
-                                const parentRow = input.closest('.enter-amount-row');
-                                if (parentRow) {
-                                    const label = parentRow.querySelector('label');
-                                    if (label) key = label.innerText.replace(':', '').trim();
-                                }
+                        }
+                    }
+                    if (!key && input.name) key = input.name;
+                    if (!key && input.className) key = input.className;
+                    key = mapPaymentFieldKey(key);
+                    if (!key || key === 'total-input') return;
+
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                        if (input.checked) {
+                            hasValues = true;
+                            if (input.name === 'payment_method') return;
+                            if (data[key]) {
+                                data[key] += ', ' + input.value;
+                            } else {
+                                data[key] = input.value;
                             }
                         }
-                        if (!key && input.name) key = input.name;
-                        if (!key && input.className) key = input.className;
-                        key = mapPaymentFieldKey(key);
-                        if (!key || key === 'total-input') return;
-
-                        if (input.type === 'checkbox' || input.type === 'radio') {
-                            if (input.checked) {
-                                hasValues = true;
-                                if (input.name === 'payment_method') return;
-                                if (data[key]) {
-                                    data[key] += ', ' + input.value;
-                                } else {
-                                    data[key] = input.value;
-                                }
+                    } else {
+                        if (input.tagName === 'SELECT') {
+                            data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
+                            if (key === 'E-Wallet' && input.selectedIndex > 0) {
+                                data['E-Wallet-Text'] = data['E-Wallet-Text']
+                                    ? data['E-Wallet-Text'] + ' | ' + input.options[input.selectedIndex].text
+                                    : input.options[input.selectedIndex].text;
+                            }
+                            if (key === 'Bank' && input.selectedIndex > 0) {
+                                data['Bank-Text'] = data['Bank-Text']
+                                    ? data['Bank-Text'] + ' | ' + input.options[input.selectedIndex].text
+                                    : input.options[input.selectedIndex].text;
                             }
                         } else {
-                            if (input.tagName === 'SELECT') {
-                                data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
-                                if (key === 'E-Wallet' && input.selectedIndex > 0) {
-                                    data['E-Wallet-Text'] = data['E-Wallet-Text'] ? data['E-Wallet-Text'] + ' | ' + input.options[input.selectedIndex].text : input.options[input.selectedIndex].text;
-                                }
-                                if (key === 'Bank' && input.selectedIndex > 0) {
-                                    data['Bank-Text'] = data['Bank-Text'] ? data['Bank-Text'] + ' | ' + input.options[input.selectedIndex].text : input.options[input.selectedIndex].text;
-                                }
-                            } else {
-                                data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
-                            }
-                            if (input.value && input.value.trim() !== '') {
-                                hasValues = true;
-                            }
+                            data[key] = data[key] ? data[key] + ' | ' + input.value : input.value;
                         }
-                    });
-
-                    // Capture Total from block's section total-input or global calculation
-                    const totalInput = section.querySelector('.total-input');
-                    if (totalInput) {
-                        data['Total'] = totalInput.value;
-                    } else {
-                        const amtInput = Array.from(inputs).find(inp => inp.id && inp.id.toLowerCase().includes('amount'));
-                        if (amtInput) data['Total'] = amtInput.value;
+                        if (input.value && input.value.trim() !== '') {
+                            hasValues = true;
+                        }
                     }
+                });
 
-                    // Keep Home Credit / payment-partner fields in the same keys salesentry.php uses
-                    if (section.classList.contains('home-credit-section')) {
-                        const hcSelects = section.querySelectorAll('select.hc-input');
-                        const loanTypeSelect = section.querySelector('#loanTypeDropdown') || hcSelects[0];
-                        const loanTermsSelect = hcSelects[1];
-                        if (loanTypeSelect) {
-                            data['Loan Type'] = loanTypeSelect.value;
-                            delete data.loanTypeDropdown;
-                        }
-                        if (loanTermsSelect) {
-                            data['Loan Terms'] = loanTermsSelect.value;
-                        }
-                        if (paymentPartnersDropdown && paymentPartnersDropdown.selectedIndex > 0) {
-                            data.payment_partner = paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text;
-                        }
-                        if (data.cash_down_payment_amount && !data.cash_dp_amount) {
-                            data.cash_dp_amount = data.cash_down_payment_amount;
-                        }
-                        if (data.gcash_down_payment_amount && !data.gcash_dp_amount) {
-                            data.gcash_dp_amount = data.gcash_down_payment_amount;
-                        }
-                        if (data.maya_down_payment_amount && !data.maya_dp_amount) {
-                            data.maya_dp_amount = data.maya_down_payment_amount;
-                        }
-                        const computedTotal = parseAmount(data['Loan Balance']) +
-                            parseAmount(data.cash_down_payment_amount) +
-                            parseAmount(data.gcash_down_payment_amount) +
-                            parseAmount(data.maya_down_payment_amount);
-                        if (computedTotal > 0) {
-                            data['Total'] = computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        }
-                    } else {
-                        // Card / QR / E-Wallet / Online Banking / Cash — normalize Amount + Total
-                        if (data.creditCardAmount && !data.Amount) data.Amount = data.creditCardAmount;
-                        if (data.debitCardAmount && !data.Amount) data.Amount = data.debitCardAmount;
-                        delete data.creditCardAmount;
-                        delete data.debitCardAmount;
+                // Home Credit / payment-partner field normalization
+                if (section.classList.contains('home-credit-section')) {
+                    const hcSelects = section.querySelectorAll('select.hc-input');
+                    const loanTypeSelect = section.querySelector('#loanTypeDropdown') || hcSelects[0];
+                    const loanTermsSelect = hcSelects[1];
+                    if (loanTypeSelect) {
+                        data['Loan Type'] = loanTypeSelect.value;
+                        delete data.loanTypeDropdown;
+                    }
+                    if (loanTermsSelect) {
+                        data['Loan Terms'] = loanTermsSelect.value;
+                    }
+                    if (paymentPartnersDropdown && paymentPartnersDropdown.selectedIndex > 0) {
+                        data.payment_partner = paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text;
+                    }
+                    if (data.cash_down_payment_amount && !data.cash_dp_amount) {
+                        data.cash_dp_amount = data.cash_down_payment_amount;
+                    }
+                    if (data.gcash_down_payment_amount && !data.gcash_dp_amount) {
+                        data.gcash_dp_amount = data.gcash_down_payment_amount;
+                    }
+                    if (data.maya_down_payment_amount && !data.maya_dp_amount) {
+                        data.maya_dp_amount = data.maya_down_payment_amount;
+                    }
+                    const computedTotal = parseAmount(data['Loan Balance']) +
+                        parseAmount(data.cash_down_payment_amount) +
+                        parseAmount(data.gcash_down_payment_amount) +
+                        parseAmount(data.maya_down_payment_amount);
+                    if (computedTotal > 0) {
+                        sectionAmountSum += computedTotal;
+                        data['Total'] = computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        data.amount = data['Total'];
+                    }
+                } else if (section.classList.contains('credit-card-section')) {
+                    const ccAmt = parseAmount(data.creditCardAmount || 0);
+                    sectionAmountSum += ccAmt;
+                } else if (section.classList.contains('debit-card-section')) {
+                    const dcAmt = parseAmount(data.debitCardAmount || 0);
+                    sectionAmountSum += dcAmt;
+                } else {
+                    // Cash / QR / E-Wallet / Online Banking — Amount from labeled field
+                    const amtEl = Array.from(section.querySelectorAll('input.hc-input')).find(inp => {
+                        if (inp.classList.contains('total-input')) return false;
+                        if (inp.id && inp.id.toLowerCase().includes('amount')) return true;
+                        const fg = inp.closest('.hc-form-group, .enter-amount-row');
+                        const lbl = fg ? fg.querySelector('label') : null;
+                        return lbl && lbl.innerText.toLowerCase().includes('amount');
+                    });
+                    const sectionAmt = parseAmount(amtEl ? amtEl.value : (data.Amount || data.amount || 0));
+                    sectionAmountSum += sectionAmt;
 
-                        const amountVal = parseAmount(data.Amount || data.amount || data.Total || 0);
-                        if (amountVal > 0) {
-                            const formatted = amountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                            data.Amount = data.Amount || formatted;
-                            data.Total = data.Total || formatted;
-                            data.amount = data.amount || formatted;
-                        }
-
-                        // Prefer display text for selects used by report/invoice modal
-                        const ewalletSelect = section.querySelector('select.hc-input');
-                        if (section.classList.contains('ewallet-section') && ewalletSelect && ewalletSelect.selectedIndex > 0) {
-                            data['E-Wallet'] = ewalletSelect.value;
-                            data['E-Wallet-Text'] = ewalletSelect.options[ewalletSelect.selectedIndex].text;
-                        }
-                        if ((section.classList.contains('online-banking-section') ||
-                            section.classList.contains('qr-ph-section') ||
-                            section.classList.contains('starpay-qr-section')) && ewalletSelect && ewalletSelect.selectedIndex > 0) {
-                            data['Bank'] = ewalletSelect.value;
-                            data['Bank-Text'] = ewalletSelect.options[ewalletSelect.selectedIndex].text;
-                        }
+                    const ewalletSelect = section.querySelector('select.hc-input');
+                    if (section.classList.contains('ewallet-section') && ewalletSelect && ewalletSelect.selectedIndex > 0) {
+                        data['E-Wallet'] = ewalletSelect.value;
+                        data['E-Wallet-Text'] = ewalletSelect.options[ewalletSelect.selectedIndex].text;
+                    }
+                    if ((section.classList.contains('online-banking-section') ||
+                        section.classList.contains('qr-ph-section') ||
+                        section.classList.contains('starpay-qr-section')) && ewalletSelect && ewalletSelect.selectedIndex > 0) {
+                        data['Bank'] = ewalletSelect.value;
+                        data['Bank-Text'] = ewalletSelect.options[ewalletSelect.selectedIndex].text;
                     }
                 }
             }
@@ -7644,8 +7999,103 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             sections.forEach(sec => collectSectionData(sec.class, sec.name));
 
-            if (data.Total) {
-                data.amount = data.Total;
+            if (!sectionName) return null;
+
+            // Build unit_payment_map like salesentry (needed by invoice details / report)
+            const unitPaymentMap = {};
+            sections.forEach(sec => {
+                const secEl = block.querySelector(sec.class);
+                if (!secEl || secEl.style.display !== 'block') return;
+                let displayName = sec.name;
+                if (sec.name === 'E-Wallet' && data['E-Wallet-Text']) {
+                    displayName = String(data['E-Wallet-Text']).split(' | ')[0];
+                } else if (sec.name === 'Online Banking' && data['Bank-Text']) {
+                    displayName = String(data['Bank-Text']).split(' | ')[0];
+                } else if (sec.name === 'Home Credit' && paymentPartnersDropdown && paymentPartnersDropdown.selectedIndex > 0) {
+                    displayName = paymentPartnersDropdown.options[paymentPartnersDropdown.selectedIndex].text;
+                }
+                secEl.querySelectorAll('.unit-selector-row input[type="checkbox"][name="Unit"]:checked').forEach(cb => {
+                    unitPaymentMap[cb.value] = displayName;
+                });
+            });
+            if (Object.keys(unitPaymentMap).length > 0) {
+                data.unit_payment_map = unitPaymentMap;
+            }
+
+            const isSplit = sectionName.includes(' + ');
+            const isCardOnly = (sectionName === 'Credit Card' || sectionName === 'Debit Card');
+
+            // Split format (salesentry): keep creditCardAmount / debitCardAmount; Amount = cash (or non-card) portion
+            if (isSplit) {
+                // Prefer global total for combined Total
+                const globalTotalInput = document.getElementById('globalTotalInput');
+                const globalTotal = parseAmount(globalTotalInput ? globalTotalInput.value : 0);
+                const totalVal = globalTotal > 0 ? globalTotal : sectionAmountSum;
+                if (totalVal > 0) {
+                    data.Total = totalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+                // Amount should be cash portion when Cash is part of split (report uses Amount for cash)
+                if (sectionName.toLowerCase().includes('cash')) {
+                    const cashSection = block.querySelector('.cash-section');
+                    const cashAmtInput = cashSection
+                        ? cashSection.querySelector('input.hc-input:not(.multiselect-selected)')
+                        : null;
+                    const cashAmt = parseAmount(cashAmtInput ? cashAmtInput.value : data.Amount);
+                    if (cashAmt > 0) {
+                        data.Amount = cashAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                }
+                // Do not delete creditCardAmount / debitCardAmount
+            } else if (isCardOnly) {
+                // Single card: alias Amount from card amount field (and keep card-specific key)
+                if (data.creditCardAmount) {
+                    data.Amount = data.creditCardAmount;
+                } else if (data.debitCardAmount) {
+                    data.Amount = data.debitCardAmount;
+                }
+                const amtVal = parseAmount(data.Amount || data.creditCardAmount || data.debitCardAmount || 0);
+                if (amtVal > 0) {
+                    const formatted = amtVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    data.Amount = formatted;
+                    data.Total = formatted;
+                    data.amount = formatted;
+                }
+            } else {
+                const amtVal = parseAmount(data.Amount || data.amount || sectionAmountSum || 0);
+                if (amtVal > 0) {
+                    const formatted = amtVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    data.Amount = formatted;
+                    data.Total = data.Total || formatted;
+                    data.amount = formatted;
+                }
+            }
+
+            // Dual keys for claim/history loaders (snake_case) — keep display keys for report
+            if (data['Terminal Issuer'] && !data.terminal_issuer) data.terminal_issuer = data['Terminal Issuer'];
+            if (data['Terminal ID'] && !data.terminal_id) data.terminal_id = data['Terminal ID'];
+            if (data['Bank'] && !data.bank) data.bank = String(data['Bank']).split(' | ')[0];
+            if (data['Terms'] && !data.terms) data.terms = String(data['Terms']).split(' | ')[0];
+            if (data['MID'] && !data.mid) data.mid = data['MID'];
+            if (data['Card No'] && !data.card_no) data.card_no = data['Card No'];
+            if (data['Approval Code'] && !data.approval_code) data.approval_code = data['Approval Code'];
+            if (data['Batch'] && !data.batch) data.batch = data['Batch'];
+            if (data.creditCardAmount && !data.amount && !isSplit) data.amount = data.creditCardAmount;
+            if (data.debitCardAmount && !data.amount && !isSplit) data.amount = data.debitCardAmount;
+            if (!data.amount && data.Amount) data.amount = data.Amount;
+            if (!data.amount && data.Total) data.amount = data.Total;
+
+            // Normalize payment_type for multi-block / claim style when only one method in this block
+            if (!isSplit) {
+                const lower = sectionName.toLowerCase();
+                if (lower === 'credit card') data.payment_type = 'credit_card';
+                else if (lower === 'debit card') data.payment_type = 'debit_card';
+                else if (lower === 'online banking') data.payment_type = 'online_banking';
+                else if (lower === 'e-wallet' || lower === 'ewallet') data.payment_type = 'ewallet';
+                else if (lower === 'qr ph') data.payment_type = 'qr_ph';
+                else if (lower === 'starpay qr') data.payment_type = 'starpay_qr';
+                else if (lower === 'cash') data.payment_type = 'cash';
+                // Payment partners keep partner display name / payment_partner
+                else if (data.payment_partner) data.payment_type = 'payment_partners';
             }
 
             // Capture the editable invoice number and date from the block header
@@ -7661,6 +8111,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (block._paymentStageMeta) {
                 if (block._paymentStageMeta.stage_label) data.stage_label = block._paymentStageMeta.stage_label;
                 if (block._paymentStageMeta.is_claim_stage != null) data.is_claim_stage = block._paymentStageMeta.is_claim_stage;
+                if (block._paymentStageMeta.payment_sequence != null) data.payment_sequence = block._paymentStageMeta.payment_sequence;
             } else {
                 const hdr = block.querySelector('.payment-block-header');
                 if (hdr) {
@@ -7668,6 +8119,13 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     data.is_claim_stage = hdr.dataset.isClaim === '1' ? 1 : 0;
                 }
             }
+
+            // Units array from checked unit selectors (claim/history style)
+            const units = [];
+            block.querySelectorAll('.unit-selector-row input[name="Unit"]:checked').forEach(cb => {
+                if (cb.value && !units.includes(cb.value)) units.push(cb.value);
+            });
+            if (units.length > 0) data.units = units;
 
             return hasValues ? data : null;
         }
