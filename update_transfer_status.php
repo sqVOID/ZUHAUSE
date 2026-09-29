@@ -67,15 +67,15 @@ try {
         $stmtStatus->bind_param('ssss', $status, $approver, $approver, $st_number);
         $stmtStatus->execute();
         $stmtStatus->close();
-        
+
         // Revert stock_on_hand status from "In Transit" back to "Good Stock"
         // Get all items from this transfer
         $stmtItems = $conn->prepare("SELECT item_code, imei, quantity FROM stock_transfer_items WHERE st_number = ?");
         $stmtItems->bind_param('s', $st_number);
         $stmtItems->execute();
         $itemsResult = $stmtItems->get_result();
-        
-        
+
+
         // Look up the branch_name from branch_code for stock_on_hand updates
         $branch_from_name = $branchFromInput; // Default to the value from transfer
         $branch_lookup = $conn->prepare("SELECT branch_name FROM branches WHERE branch_code = ? LIMIT 1");
@@ -86,18 +86,18 @@ try {
             $branch_from_name = $res->fetch_assoc()['branch_name'];
         }
         $branch_lookup->close();
-        
+
         // Also try to get branch_name if branchFromInput is already a name
         if ($branch_from_name === $branchFromInput) {
             // branchFromInput might already be a branch name, keep it as is
             $branch_from_name = $branchFromInput;
         }
-        
+
         while ($item = $itemsResult->fetch_assoc()) {
             $itemCode = $item['item_code'];
             $imei = isset($item['imei']) ? trim($item['imei']) : '';
-            $transferQty = (int)$item['quantity'];
-            
+            $transferQty = (int) $item['quantity'];
+
             if (!empty($imei)) {
                 // For serialized items (IMEI), revert status from "In Transit" to "Good Stock"
                 $revertStmt = $conn->prepare("UPDATE stock_on_hand 
@@ -121,12 +121,12 @@ try {
                 $getTransitStmt->bind_param('ss', $itemCode, $branch_from_name);
                 $getTransitStmt->execute();
                 $transitResult = $getTransitStmt->get_result();
-                
+
                 if ($transitResult && $transitResult->num_rows > 0) {
                     $transitRow = $transitResult->fetch_assoc();
                     $transitId = $transitRow['id'];
                     $transitQty = $transitRow['quantity'];
-                    
+
                     // 2. Find "Good Stock" record to add quantity back
                     $getGoodStockStmt = $conn->prepare("SELECT id, quantity 
                                                          FROM stock_on_hand 
@@ -139,18 +139,18 @@ try {
                     $getGoodStockStmt->bind_param('ss', $itemCode, $branch_from_name);
                     $getGoodStockStmt->execute();
                     $goodStockResult = $getGoodStockStmt->get_result();
-                    
+
                     if ($goodStockResult && $goodStockResult->num_rows > 0) {
                         // Add quantity back to existing "Good Stock" record
                         $goodStockRow = $goodStockResult->fetch_assoc();
                         $goodStockId = $goodStockRow['id'];
                         $newQty = $goodStockRow['quantity'] + $transitQty;
-                        
+
                         $addBackStmt = $conn->prepare("UPDATE stock_on_hand SET quantity = ? WHERE id = ?");
                         $addBackStmt->bind_param('ii', $newQty, $goodStockId);
                         $addBackStmt->execute();
                         $addBackStmt->close();
-                        
+
                         // Delete the "In Transit" record
                         $deleteTransitStmt = $conn->prepare("DELETE FROM stock_on_hand WHERE id = ?");
                         $deleteTransitStmt->bind_param('i', $transitId);
@@ -163,14 +163,14 @@ try {
                         $changeStatusStmt->execute();
                         $changeStatusStmt->close();
                     }
-                    
+
                     $getGoodStockStmt->close();
                 }
                 $getTransitStmt->close();
             }
         }
         $stmtItems->close();
-        
+
         $conn->commit();
         echo json_encode(['success' => true, 'message' => "Transfer Disapproved successfully and stock status reverted"]);
         exit;
@@ -185,7 +185,7 @@ try {
         $stmtStatus->bind_param('sss', $status, $approver, $st_number);
         $stmtStatus->execute();
         $stmtStatus->close();
-        
+
         // Approval stage only marks the transfer as approved.
         // Actual stock movement happens when the transfer is received.
         $conn->commit();
@@ -222,8 +222,8 @@ try {
     // Branch mapping:
     // - stock_transfers.branch_from is typically branch_code
     // - stock_transfers.branch_to is typically branch_name
-    $fromInput = (string)$branchFromInput;
-    $toInput = (string)$branchToInput;
+    $fromInput = (string) $branchFromInput;
+    $toInput = (string) $branchToInput;
 
     $fromName = null;
     $fromCodeFromName = null;
@@ -271,8 +271,10 @@ try {
     $stmt->close();
 
     // Defaults when lookups fail.
-    if ($toName === null) $toName = $toInput;
-    if ($toCode === null) $toCode = $toInput;
+    if ($toName === null)
+        $toName = $toInput;
+    if ($toCode === null)
+        $toCode = $toInput;
 
     // Candidate from-branch values (stock_on_hand.branch might store either code or name).
     $fromCandidates = array_values(array_unique(array_filter([$fromInput, $fromName, $fromCodeFromName])));
@@ -295,10 +297,10 @@ try {
     $itemsRes = $stmtItems->get_result();
 
     while ($item = $itemsRes->fetch_assoc()) {
-        $itemCode = (string)($item['item_code'] ?? '');
-        $itemDesc = (string)($item['item_description'] ?? '');
-        $imei = isset($item['imei']) ? trim((string)$item['imei']) : '';
-        $qty = (int)($item['quantity'] ?? 0);
+        $itemCode = (string) ($item['item_code'] ?? '');
+        $itemDesc = (string) ($item['item_description'] ?? '');
+        $imei = isset($item['imei']) ? trim((string) $item['imei']) : '';
+        $qty = (int) ($item['quantity'] ?? 0);
 
         if ($itemCode === '' || $qty <= 0) {
             continue;
@@ -341,37 +343,56 @@ try {
 
             // Preserve the original dr_number (PO reference) — do NOT overwrite with ST number
             $originalDrNumber = !empty($fullRow['dr_number']) ? $fullRow['dr_number'] : $st_number;
-            
+
             // Preserve the original system_entry_date to maintain IOU days
             $originalSystemEntryDate = !empty($fullRow['system_entry_date']) ? $fullRow['system_entry_date'] : date('Y-m-d H:i:s');
-            
+
             // Determine the new status: if current status is "In Transit", change to "Good Stock"
             $currentStatus = !empty($fullRow['status']) ? $fullRow['status'] : 'Good Stock';
             $newStatus = ($currentStatus === 'In Transit') ? 'Good Stock' : $currentStatus;
 
-            // Update: Reset Aging (dr_date = NOW()) but preserve IOU (keep original system_entry_date) and update status
+            // Check if family_code needs repair for serial item
+            $serialFamilyCode = $fullRow['family_code'] ?? '';
+            if (empty($serialFamilyCode) || $serialFamilyCode === '0') {
+                $metaLookup = $conn->prepare("SELECT family_code FROM items WHERE item_code = ? LIMIT 1");
+                if ($metaLookup) {
+                    $metaLookup->bind_param('s', $itemCode);
+                    $metaLookup->execute();
+                    $metaRes = $metaLookup->get_result();
+                    if ($metaRes && $metaRes->num_rows > 0) {
+                        $fCode = $metaRes->fetch_assoc()['family_code'] ?? '';
+                        if (!empty($fCode) && $fCode !== '0') {
+                            $serialFamilyCode = $fCode;
+                        }
+                    }
+                    $metaLookup->close();
+                }
+            }
+
+            // Update: Reset Aging (dr_date = NOW()) but preserve IOU (keep original system_entry_date), update status and ensure family_code
             $sqlUpdate = "UPDATE stock_on_hand
                            SET branch = ?,
                                dr_number = ?,
                                dr_date = NOW(),
                                system_entry_date = ?,
                                status = ?,
+                               family_code = CASE WHEN ? != '' AND ? != '0' THEN ? ELSE family_code END,
                                quantity = 1
                            WHERE id = ?";
             $stmtUpdate = $conn->prepare($sqlUpdate);
-            $stmtUpdate->bind_param('ssssi', $targetBranchValue, $originalDrNumber, $originalSystemEntryDate, $newStatus, $rowSerial['id']);
+            $stmtUpdate->bind_param('sssssssi', $targetBranchValue, $originalDrNumber, $originalSystemEntryDate, $newStatus, $serialFamilyCode, $serialFamilyCode, $serialFamilyCode, $rowSerial['id']);
             $stmtUpdate->execute();
             $stmtUpdate->close();
         } else {
             // Non-serialized item (Accessories): deduct qty then insert qty into destination.
             $needed = $qty;
 
-            $sqlSource = "SELECT id, quantity, description, family_code, branch, system_entry_date, status
+            $sqlSource = "SELECT id, quantity, description, family_code, branch, system_entry_date, status, group_name, department, brand, dr_number
                            FROM stock_on_hand
                            WHERE item_code = ?
                              AND item_type = 'Accessories'
                              AND branch IN ($fromPlaceholders)
-                             AND (LOWER(TRIM(status)) = 'active' OR LOWER(TRIM(status)) = 'available' OR LOWER(TRIM(status)) = 'good stock')
+                             AND (LOWER(TRIM(status)) = 'in transit')
                              AND quantity > 0
                            ORDER BY dr_date ASC, id ASC";
 
@@ -386,11 +407,13 @@ try {
             $oldestSystemEntryDate = null;
             $preservedStatus = 'Good Stock'; // Default status
             while ($row = $sourceRes->fetch_assoc()) {
-                if ($needed <= 0) break;
+                if ($needed <= 0)
+                    break;
 
-                $rowId = (int)$row['id'];
-                $rowQty = (int)$row['quantity'];
-                if ($rowQty <= 0) continue;
+                $rowId = (int) $row['id'];
+                $rowQty = (int) $row['quantity'];
+                if ($rowQty <= 0)
+                    continue;
 
                 if ($firstSource === null) {
                     $firstSource = $row;
@@ -427,33 +450,79 @@ try {
                 throw new Exception("Accessories source stock not found for item {$itemCode}");
             }
 
-            $insertDescription = (string)($firstSource['description'] ?? $itemDesc);
-            $insertFamilyCode = (string)($firstSource['family_code'] ?? '');
-            $srcBranchValue = (string)$firstSource['branch'];
+            $insertDescription = (string) ($firstSource['description'] ?? $itemDesc);
+            $insertFamilyCode = (string) ($firstSource['family_code'] ?? '');
+            $insertGroupName = (string) ($firstSource['group_name'] ?? '');
+            $insertDepartment = (string) ($firstSource['department'] ?? '');
+            $insertBrand = (string) ($firstSource['brand'] ?? '');
+            $insertDrNumber = !empty($firstSource['dr_number']) ? (string) $firstSource['dr_number'] : $st_number;
+            $srcBranchValue = (string) $firstSource['branch'];
             $srcIsCode = in_array($srcBranchValue, $fromCodeValues, true);
             $targetBranchValue = $srcIsCode ? $toCode : $toName;
-            
+
+            // If family_code or other metadata is missing or '0', resolve from items table
+            if (empty($insertFamilyCode) || $insertFamilyCode === '0' || empty($insertGroupName) || empty($insertDepartment) || empty($insertBrand)) {
+                $metaLookup = $conn->prepare("SELECT family_code, group_name, department, brand FROM items WHERE item_code = ? LIMIT 1");
+                if ($metaLookup) {
+                    $metaLookup->bind_param('s', $itemCode);
+                    $metaLookup->execute();
+                    $metaRes = $metaLookup->get_result();
+                    if ($metaRes && $metaRes->num_rows > 0) {
+                        $metaData = $metaRes->fetch_assoc();
+                        if ((empty($insertFamilyCode) || $insertFamilyCode === '0') && !empty($metaData['family_code']) && $metaData['family_code'] !== '0') {
+                            $insertFamilyCode = $metaData['family_code'];
+                        }
+                        if (empty($insertGroupName) && !empty($metaData['group_name'])) {
+                            $insertGroupName = $metaData['group_name'];
+                        }
+                        if (empty($insertDepartment) && !empty($metaData['department'])) {
+                            $insertDepartment = $metaData['department'];
+                        }
+                        if (empty($insertBrand) && !empty($metaData['brand'])) {
+                            $insertBrand = $metaData['brand'];
+                        }
+                    }
+                    $metaLookup->close();
+                }
+            }
+
+            // Fallback: Check other stock_on_hand records if family_code is still empty or '0'
+            if (empty($insertFamilyCode) || $insertFamilyCode === '0') {
+                $sohLookup = $conn->prepare("SELECT family_code FROM stock_on_hand WHERE item_code = ? AND family_code IS NOT NULL AND family_code != '' AND family_code != '0' LIMIT 1");
+                if ($sohLookup) {
+                    $sohLookup->bind_param('s', $itemCode);
+                    $sohLookup->execute();
+                    $sohRes = $sohLookup->get_result();
+                    if ($sohRes && $sohRes->num_rows > 0) {
+                        $insertFamilyCode = $sohRes->fetch_assoc()['family_code'];
+                    }
+                    $sohLookup->close();
+                }
+            }
+
             // Preserve original system_entry_date to maintain IOU days
             $preservedSystemEntryDate = $oldestSystemEntryDate ?? date('Y-m-d H:i:s');
 
             // Create new stock row for the transferred qty.
-            // Reset Aging (dr_date = NOW()) but preserve IOU (original system_entry_date) and status
+            // Reset Aging (dr_date = NOW()) but preserve IOU (original system_entry_date), status, and original dr_number
             $sqlInsert = "INSERT INTO stock_on_hand
                            (item_code, description, item_type, dr_number, branch,
-                            dr_date, system_entry_date, status, quantity, family_code)
-                           VALUES (?, ?, 'Accessories', ?, ?, NOW(), ?, ?, ?, ?)";
+                            dr_date, system_entry_date, status, quantity, family_code, group_name, department, brand)
+                           VALUES (?, ?, 'Accessories', ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)";
             $stmtIns = $conn->prepare($sqlInsert);
-            $drNumber = $st_number;
             $stmtIns->bind_param(
-                'sssssssi',
+                'ssssssissss',
                 $itemCode,
                 $insertDescription,
-                $drNumber,
+                $insertDrNumber,
                 $targetBranchValue,
                 $preservedSystemEntryDate,
                 $preservedStatus,
                 $qty,
-                $insertFamilyCode
+                $insertFamilyCode,
+                $insertGroupName,
+                $insertDepartment,
+                $insertBrand
             );
             $stmtIns->execute();
             $stmtIns->close();

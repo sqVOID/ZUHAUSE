@@ -69,10 +69,10 @@ if (isset($_SESSION['user_branch'])) {
 
 $booklet = getBookletConfig($conn, $user_branch_code, 'stocktransfer');
 
-if ($booklet) { 
+if ($booklet) {
     // Use booklet number configuration
     $st_number = generateInvoiceNumber($booklet);
-    
+
     // Auto-increment for numeric formats
     // Also increment 'custom' format if current_number is purely numeric (e.g. 0000001)
     if ($booklet['booklet_format'] === 'numeric') {
@@ -81,7 +81,7 @@ if ($booklet) {
     } elseif ($booklet['booklet_format'] === 'custom' && is_numeric(ltrim($booklet['current_number'], '0') ?: '0')) {
         // current_number is a zero-padded numeric string (e.g. "0000001") — safe to auto-increment
         $current_num = intval($booklet['current_number']);
-        $padding     = strlen($booklet['current_number']);
+        $padding = strlen($booklet['current_number']);
         $next_number = str_pad($current_num + 1, $padding, '0', STR_PAD_LEFT);
         updateInvoiceNumber($conn, $booklet['id'], $next_number);
     }
@@ -93,9 +93,9 @@ if ($booklet) {
         // Generate fallback format: ST-YYYYMMDD-###
         $today = date('Ymd');
         $prefix = "ST-{$today}-";
-        
+
         $st_query = $conn->query("SELECT st_number FROM stock_transfers WHERE st_number LIKE 'ST-%' ORDER BY st_number DESC LIMIT 1");
-        
+
         if ($st_query && $st_query->num_rows > 0) {
             $row = $st_query->fetch_assoc();
             $last_st = $row['st_number'];
@@ -105,7 +105,7 @@ if ($booklet) {
         } else {
             $next_id = 1;
         }
-        
+
         $formatted_id = str_pad($next_id, 3, '0', STR_PAD_LEFT);
         $st_number = $prefix . $formatted_id;
     }
@@ -149,7 +149,7 @@ foreach ($items as $item) {
                       WHERE sti.imei = '$imei' 
                       AND st.status = 'Pending'";
         $check_result = $conn->query($check_sql);
-        
+
         if ($check_result && $check_result->num_rows > 0) {
             $row = $check_result->fetch_assoc();
             $pending_serials[] = $imei . ' (already in pending transfer ' . $row['st_number'] . ' to ' . $row['branch_to'] . ')';
@@ -177,7 +177,7 @@ $sql = "INSERT INTO stock_transfers (st_number, st_date, branch_from, branch_to,
 if ($conn->query($sql) === TRUE) {
     // Insert items and update stock_on_hand status to "In Transit"
     $items_inserted = true;
-    
+
     // Look up the branch_name from branch_code for stock_on_hand updates
     $branch_from_name = $branch_from; // Default to the value sent
     $branch_lookup = $conn->query("SELECT branch_name FROM branches WHERE branch_code = '$branch_from' LIMIT 1");
@@ -185,21 +185,21 @@ if ($conn->query($sql) === TRUE) {
         $branch_row = $branch_lookup->fetch_assoc();
         $branch_from_name = $branch_row['branch_name'];
     }
-    
+
     foreach ($items as $item) {
         $item_code = isset($item['item_code']) ? $conn->real_escape_string($item['item_code']) : '';
         $item_description = isset($item['item_description']) ? $conn->real_escape_string($item['item_description']) : '';
         $imei = isset($item['imei']) ? $conn->real_escape_string($item['imei']) : '';
         $quantity = isset($item['quantity']) ? intval($item['quantity']) : 0;
-        
+
         $item_sql = "INSERT INTO stock_transfer_items (st_number, item_code, item_description, imei, quantity, created_at) 
                      VALUES ('$st_number', '$item_code', '$item_description', '$imei', $quantity, NOW())";
-        
+
         if ($conn->query($item_sql) !== TRUE) {
             $items_inserted = false;
             break;
         }
-        
+
         // Update stock_on_hand status to "In Transit" immediately when transfer is saved
         if (!empty($imei)) {
             // For serialized items (IMEI), update the specific IMEI record to "In Transit"
@@ -213,7 +213,7 @@ if ($conn->query($sql) === TRUE) {
             // For non-serialized items (Accessories/Freebies), split the quantity:
             // 1. Deduct the transfer quantity from existing stock
             // 2. Create new record with transfer quantity and status "In Transit"
-            
+
             // First, get the existing stock record for this item
             $get_stock_sql = "SELECT id, quantity, description, family_code, group_name, department, brand, dr_number, dr_date, system_entry_date, status, item_type 
                               FROM stock_on_hand 
@@ -224,20 +224,45 @@ if ($conn->query($sql) === TRUE) {
                               ORDER BY dr_date ASC
                               LIMIT 1";
             $stock_result = $conn->query($get_stock_sql);
-            
+
             if ($stock_result && $stock_result->num_rows > 0) {
                 $stock_row = $stock_result->fetch_assoc();
                 $stock_id = $stock_row['id'];
                 $current_qty = $stock_row['quantity'];
                 $remaining_qty = $current_qty - $quantity;
-                
+
+                // Lookup items table in case family_code or other metadata is missing from source row
+                $transit_family = $stock_row['family_code'] ?? '';
+                $transit_group = $stock_row['group_name'] ?? '';
+                $transit_dept = $stock_row['department'] ?? '';
+                $transit_brand = $stock_row['brand'] ?? '';
+
+                if (empty($transit_family) || $transit_family === '0' || empty($transit_group) || empty($transit_dept) || empty($transit_brand)) {
+                    $item_meta_res = $conn->query("SELECT family_code, group_name, department, brand FROM items WHERE item_code = '$item_code' LIMIT 1");
+                    if ($item_meta_res && $item_meta_res->num_rows > 0) {
+                        $meta_row = $item_meta_res->fetch_assoc();
+                        if ((empty($transit_family) || $transit_family === '0') && !empty($meta_row['family_code']) && $meta_row['family_code'] !== '0') {
+                            $transit_family = $meta_row['family_code'];
+                        }
+                        if (empty($transit_group) && !empty($meta_row['group_name'])) {
+                            $transit_group = $meta_row['group_name'];
+                        }
+                        if (empty($transit_dept) && !empty($meta_row['department'])) {
+                            $transit_dept = $meta_row['department'];
+                        }
+                        if (empty($transit_brand) && !empty($meta_row['brand'])) {
+                            $transit_brand = $meta_row['brand'];
+                        }
+                    }
+                }
+
                 if ($remaining_qty > 0) {
                     // Deduct the transfer quantity from existing record
                     $deduct_sql = "UPDATE stock_on_hand 
                                    SET quantity = $remaining_qty 
                                    WHERE id = $stock_id";
                     $conn->query($deduct_sql);
-                    
+
                     // Create new record with transfer quantity and status "In Transit"
                     $insert_transit_sql = "INSERT INTO stock_on_hand 
                                           (item_code, description, item_type, branch, dr_number, dr_date, system_entry_date, quantity, status, family_code, group_name, department, brand) 
@@ -251,23 +276,27 @@ if ($conn->query($sql) === TRUE) {
                                               '" . $stock_row['system_entry_date'] . "', 
                                               $quantity, 
                                               'In Transit', 
-                                              '" . $conn->real_escape_string($stock_row['family_code']) . "', 
-                                              '" . $conn->real_escape_string($stock_row['group_name']) . "', 
-                                              '" . $conn->real_escape_string($stock_row['department']) . "', 
-                                              '" . $conn->real_escape_string($stock_row['brand']) . "'
+                                              '" . $conn->real_escape_string($transit_family) . "', 
+                                              '" . $conn->real_escape_string($transit_group) . "', 
+                                              '" . $conn->real_escape_string($transit_dept) . "', 
+                                              '" . $conn->real_escape_string($transit_brand) . "'
                                           )";
                     $conn->query($insert_transit_sql);
                 } else if ($remaining_qty == 0) {
-                    // If transferring entire quantity, just update status to "In Transit"
+                    // If transferring entire quantity, update status to "In Transit" and sync family_code/metadata
                     $update_all_sql = "UPDATE stock_on_hand 
-                                       SET status = 'In Transit' 
+                                       SET status = 'In Transit',
+                                           family_code = '" . $conn->real_escape_string($transit_family) . "',
+                                           group_name = '" . $conn->real_escape_string($transit_group) . "',
+                                           department = '" . $conn->real_escape_string($transit_dept) . "',
+                                           brand = '" . $conn->real_escape_string($transit_brand) . "'
                                        WHERE id = $stock_id";
                     $conn->query($update_all_sql);
                 }
             }
         }
     }
-    
+
     if ($items_inserted) {
         echo json_encode(['success' => true, 'message' => 'Stock transfer saved successfully and pending approval']);
     } else {

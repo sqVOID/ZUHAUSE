@@ -283,7 +283,8 @@ if ($has_full_access) {
                 </div>
 
                 <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Item Status:</label>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Item
+                        Status:</label>
                     <select name="status" class="searchable-select"
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                         <option value="">Item Status</option>
@@ -294,7 +295,8 @@ if ($has_full_access) {
                         <option value="Serviced" <?php echo $status_f === 'Serviced' ? 'selected' : ''; ?>>Serviced
                         </option>
                         <option value="Demo" <?php echo $status_f === 'Demo' ? 'selected' : ''; ?>>Demo</option>
-                        <option value="In Transit" <?php echo $status_f === 'In Transit' ? 'selected' : ''; ?>>In Transit</option>
+                        <option value="In Transit" <?php echo $status_f === 'In Transit' ? 'selected' : ''; ?>>In Transit
+                        </option>
                     </select>
                 </div>
 
@@ -532,7 +534,7 @@ if ($has_full_access) {
             display: inline-block;
         }
 
-         .status-demo {
+        .status-demo {
             color: #f57c00;
             font-weight: 600;
             background-color: #fff3e0;
