@@ -4247,7 +4247,7 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
             row.innerHTML = `
                 <td>${itemDesc}</td>
                 <td>${imei}</td>
-                <td>${qty}</td>
+                <td>${parseInt(qty) || 0}</td>
                 <td>${formatNumber(parseNumber(price))}<input type="hidden" class="price-input-table" value="${parseNumber(price) || 0}"></td>
                 <td><button class="btn-delete-item" onclick="deleteSalesRow(this)">×</button></td>
             `;
