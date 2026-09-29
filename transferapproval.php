@@ -924,17 +924,16 @@ $conn->query($create_items);
                         <th>BRANCH FROM</th>
                         <th>BRANCH TO</th>
                         <th>PREPARED BY</th>
-                        <th>APPROVER</th>
-                        <th>STATUS</th>
                         <th>REMARKS</th>
                         <th>VIEW</th>
+                        <th>STATUS</th>
                         <th>DISAPPROVED</th>
                         <th>APPROVED</th>
                     </tr>
                 </thead>
                 <tbody id="approvalTableBody">
                     <tr>
-                        <td colspan="11" style="text-align: center; padding: 30px 20px;">
+                        <td colspan="10" style="text-align: center; padding: 30px 20px;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -1021,7 +1020,7 @@ $conn->query($create_items);
                 const tbody = document.getElementById('approvalTableBody');
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="11" style="text-align: center; padding: 30px 20px;">
+                        <td colspan="10" style="text-align: center; padding: 30px 20px;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -1073,7 +1072,7 @@ $conn->query($create_items);
                             renderTable(data);
                         } else if (data.error) {
                             document.getElementById('approvalTableBody').innerHTML =
-                                `<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error: ${data.error}</td></tr>`;
+                                `<tr><td colspan="10" style="text-align:center; padding:20px; color:#c62828;">Error: ${data.error}</td></tr>`;
                         } else {
                             renderTable([]);
                         }
@@ -1081,13 +1080,13 @@ $conn->query($create_items);
                         console.error('JSON parse error:', e);
                         console.error('Response was:', text);
                         document.getElementById('approvalTableBody').innerHTML =
-                            '<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error: Invalid response from server. Check console for details.</td></tr>';
+                            '<tr><td colspan="10" style="text-align:center; padding:20px; color:#c62828;">Error: Invalid response from server. Check console for details.</td></tr>';
                     }
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
                     document.getElementById('approvalTableBody').innerHTML =
-                        '<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error loading transfers</td></tr>';
+                        '<tr><td colspan="10" style="text-align:center; padding:20px; color:#c62828;">Error loading transfers</td></tr>';
                 });
         }
 
@@ -1096,12 +1095,12 @@ $conn->query($create_items);
 
             // Check if response contains an error
             if (transfers && transfers.error) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error: ${transfers.error}<br>File: ${transfers.file || 'unknown'}<br>Line: ${transfers.line || 'unknown'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#c62828;">Error: ${transfers.error}<br>File: ${transfers.file || 'unknown'}<br>Line: ${transfers.line || 'unknown'}</td></tr>`;
                 return;
             }
 
             if (!transfers || transfers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px;">No transfers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">No transfers found</td></tr>';
                 return;
             }
 
@@ -1110,22 +1109,24 @@ $conn->query($create_items);
                 const tr = document.createElement('tr');
                 let statusBadge = `<span class="status-badge ${transfer.status.toLowerCase()}">${transfer.status}</span>`;
                 
-                // Show disapprove button for Pending, show red badge for Disapproved status
+                // Show disapprove button for Pending, show full name for Disapproved status
+                const disapprovedBy = transfer.disapproved_by || '-';
                 let disapproveBtn;
                 if (transfer.status === 'Pending') {
                     disapproveBtn = `<button class="btn-disapprove" onclick="updateStatus('${transfer.st_number}', 'Disapproved')">Disapprove</button>`;
                 } else if (transfer.status === 'Disapproved') {
-                    disapproveBtn = `<span class="status-badge disapproved">Disapproved</span>`;
+                    disapproveBtn = disapprovedBy;
                 } else {
                     disapproveBtn = '-';
                 }
                 
-                // Show approve button for Pending, show green badge for Approved status
+                // Show approve button for Pending, show green badge for Approved/Received status
                 let approveBtn;
                 if (transfer.status === 'Pending') {
                     approveBtn = `<button class="btn-approve" onclick="updateStatus('${transfer.st_number}', 'Approved')">Approve</button>`;
-                } else if (transfer.status === 'Approved') {
-                    approveBtn = `<span class="status-badge approved">Approved</span>`;
+                } else if (transfer.status === 'Approved' || transfer.status === 'Received') {
+                    // Show approver full name for both Approved and Received status (because they were approved)
+                    approveBtn = transfer.approver || '-';
                 } else {
                     approveBtn = '-';
                 }
@@ -1136,10 +1137,9 @@ $conn->query($create_items);
                     <td>${transfer.branch_from}</td>
                     <td>${transfer.branch_to}</td>
                     <td>${transfer.prepared_by}</td>
-                    <td>${transfer.approver || '-'}</td>
-                    <td>${statusBadge}</td>
                     <td>${transfer.remarks || '-'}</td>
                     <td><button class="btn-preview" onclick="printTransfer('${transfer.st_number}')">Preview</button></td>
+                    <td>${statusBadge}</td>
                     <td>${disapproveBtn}</td>
                     <td>${approveBtn}</td>
                 `;

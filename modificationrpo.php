@@ -2355,7 +2355,7 @@ if ($edit_query && $edit_query->num_rows > 0) {
                     <!-- Created entry -->
                     <div class="workflow-entry">
                         <div class="wf-dot" style="background:#1a7a35;"></div>
-                        <div class="wf-text">
+                        <div class  ="wf-text">
                             <div class="wf-action">Created</div>
                             <div class="wf-by">by
                                 <?php echo htmlspecialchars($created_by); ?><?php if (!empty($created_branch_name)): ?>

@@ -68,9 +68,111 @@ try {
         $stmtStatus->execute();
         $stmtStatus->close();
         
-        // No stock movement on disapproval.
+        // Revert stock_on_hand status from "In Transit" back to "Good Stock"
+        // Get all items from this transfer
+        $stmtItems = $conn->prepare("SELECT item_code, imei, quantity FROM stock_transfer_items WHERE st_number = ?");
+        $stmtItems->bind_param('s', $st_number);
+        $stmtItems->execute();
+        $itemsResult = $stmtItems->get_result();
+        
+        
+        // Look up the branch_name from branch_code for stock_on_hand updates
+        $branch_from_name = $branchFromInput; // Default to the value from transfer
+        $branch_lookup = $conn->prepare("SELECT branch_name FROM branches WHERE branch_code = ? LIMIT 1");
+        $branch_lookup->bind_param('s', $branchFromInput);
+        $branch_lookup->execute();
+        $res = $branch_lookup->get_result();
+        if ($res && $res->num_rows > 0) {
+            $branch_from_name = $res->fetch_assoc()['branch_name'];
+        }
+        $branch_lookup->close();
+        
+        // Also try to get branch_name if branchFromInput is already a name
+        if ($branch_from_name === $branchFromInput) {
+            // branchFromInput might already be a branch name, keep it as is
+            $branch_from_name = $branchFromInput;
+        }
+        
+        while ($item = $itemsResult->fetch_assoc()) {
+            $itemCode = $item['item_code'];
+            $imei = isset($item['imei']) ? trim($item['imei']) : '';
+            $transferQty = (int)$item['quantity'];
+            
+            if (!empty($imei)) {
+                // For serialized items (IMEI), revert status from "In Transit" to "Good Stock"
+                $revertStmt = $conn->prepare("UPDATE stock_on_hand 
+                                               SET status = 'Good Stock' 
+                                               WHERE item_code = ? 
+                                               AND imei = ? 
+                                               AND status = 'In Transit'");
+                $revertStmt->bind_param('ss', $itemCode, $imei);
+                $revertStmt->execute();
+                $revertStmt->close();
+            } else {
+                // For non-serialized items (Accessories), merge "In Transit" quantity back to "Good Stock"
+                // 1. Get the "In Transit" record
+                $getTransitStmt = $conn->prepare("SELECT id, quantity, description, family_code, group_name, department, brand, dr_number, dr_date, system_entry_date 
+                                                   FROM stock_on_hand 
+                                                   WHERE item_code = ? 
+                                                   AND branch = ? 
+                                                   AND item_type = 'Accessories' 
+                                                   AND status = 'In Transit' 
+                                                   LIMIT 1");
+                $getTransitStmt->bind_param('ss', $itemCode, $branch_from_name);
+                $getTransitStmt->execute();
+                $transitResult = $getTransitStmt->get_result();
+                
+                if ($transitResult && $transitResult->num_rows > 0) {
+                    $transitRow = $transitResult->fetch_assoc();
+                    $transitId = $transitRow['id'];
+                    $transitQty = $transitRow['quantity'];
+                    
+                    // 2. Find "Good Stock" record to add quantity back
+                    $getGoodStockStmt = $conn->prepare("SELECT id, quantity 
+                                                         FROM stock_on_hand 
+                                                         WHERE item_code = ? 
+                                                         AND branch = ? 
+                                                         AND item_type = 'Accessories' 
+                                                         AND status = 'Good Stock' 
+                                                         ORDER BY dr_date ASC 
+                                                         LIMIT 1");
+                    $getGoodStockStmt->bind_param('ss', $itemCode, $branch_from_name);
+                    $getGoodStockStmt->execute();
+                    $goodStockResult = $getGoodStockStmt->get_result();
+                    
+                    if ($goodStockResult && $goodStockResult->num_rows > 0) {
+                        // Add quantity back to existing "Good Stock" record
+                        $goodStockRow = $goodStockResult->fetch_assoc();
+                        $goodStockId = $goodStockRow['id'];
+                        $newQty = $goodStockRow['quantity'] + $transitQty;
+                        
+                        $addBackStmt = $conn->prepare("UPDATE stock_on_hand SET quantity = ? WHERE id = ?");
+                        $addBackStmt->bind_param('ii', $newQty, $goodStockId);
+                        $addBackStmt->execute();
+                        $addBackStmt->close();
+                        
+                        // Delete the "In Transit" record
+                        $deleteTransitStmt = $conn->prepare("DELETE FROM stock_on_hand WHERE id = ?");
+                        $deleteTransitStmt->bind_param('i', $transitId);
+                        $deleteTransitStmt->execute();
+                        $deleteTransitStmt->close();
+                    } else {
+                        // No "Good Stock" record exists, just change status of "In Transit" to "Good Stock"
+                        $changeStatusStmt = $conn->prepare("UPDATE stock_on_hand SET status = 'Good Stock' WHERE id = ?");
+                        $changeStatusStmt->bind_param('i', $transitId);
+                        $changeStatusStmt->execute();
+                        $changeStatusStmt->close();
+                    }
+                    
+                    $getGoodStockStmt->close();
+                }
+                $getTransitStmt->close();
+            }
+        }
+        $stmtItems->close();
+        
         $conn->commit();
-        echo json_encode(['success' => true, 'message' => "Transfer Disapproved successfully"]);
+        echo json_encode(['success' => true, 'message' => "Transfer Disapproved successfully and stock status reverted"]);
         exit;
     } elseif ($status === 'Approved') {
         // For approval, set approver and approval_date
@@ -243,10 +345,11 @@ try {
             // Preserve the original system_entry_date to maintain IOU days
             $originalSystemEntryDate = !empty($fullRow['system_entry_date']) ? $fullRow['system_entry_date'] : date('Y-m-d H:i:s');
             
-            // Preserve the original status
-            $originalStatus = !empty($fullRow['status']) ? $fullRow['status'] : 'Good Stock';
+            // Determine the new status: if current status is "In Transit", change to "Good Stock"
+            $currentStatus = !empty($fullRow['status']) ? $fullRow['status'] : 'Good Stock';
+            $newStatus = ($currentStatus === 'In Transit') ? 'Good Stock' : $currentStatus;
 
-            // Update: Reset Aging (dr_date = NOW()) but preserve IOU (keep original system_entry_date) and status
+            // Update: Reset Aging (dr_date = NOW()) but preserve IOU (keep original system_entry_date) and update status
             $sqlUpdate = "UPDATE stock_on_hand
                            SET branch = ?,
                                dr_number = ?,
@@ -256,7 +359,7 @@ try {
                                quantity = 1
                            WHERE id = ?";
             $stmtUpdate = $conn->prepare($sqlUpdate);
-            $stmtUpdate->bind_param('ssssi', $targetBranchValue, $originalDrNumber, $originalSystemEntryDate, $originalStatus, $rowSerial['id']);
+            $stmtUpdate->bind_param('ssssi', $targetBranchValue, $originalDrNumber, $originalSystemEntryDate, $newStatus, $rowSerial['id']);
             $stmtUpdate->execute();
             $stmtUpdate->close();
         } else {
@@ -293,8 +396,9 @@ try {
                     $firstSource = $row;
                     // Track the oldest system_entry_date to preserve IOU
                     $oldestSystemEntryDate = $row['system_entry_date'] ?? null;
-                    // Preserve the original status
-                    $preservedStatus = $row['status'] ?? 'Good Stock';
+                    // Determine the new status: if current is "In Transit", change to "Good Stock"
+                    $currentStatus = $row['status'] ?? 'Good Stock';
+                    $preservedStatus = ($currentStatus === 'In Transit') ? 'Good Stock' : $currentStatus;
                 }
 
                 $take = min($rowQty, $needed);

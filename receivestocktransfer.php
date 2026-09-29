@@ -531,6 +531,7 @@ include 'config.php';
                         <option value="">Select Status</option>
                         <option value="all">All Status</option>
                         <option value="Approved">Approved</option>
+                        <option value="Received">Received</option>
                         <option value="Disapproved">Disapproved</option>
                     </select>
                 </div>
@@ -550,17 +551,16 @@ include 'config.php';
                         <th>BRANCH TO</th>
                         <th>PREPARED BY</th>
                         <th>APPROVED BY</th>
-                        <th style="display: none;">RECEIVED BY</th>
-                        <th>STATUS</th>
                         <th>REMARKS</th>
                         <th>VIEW</th>
+                        <th>STATUS</th>
                         <th>DISAPPROVED</th>
                         <th>RECEIVE</th>
                     </tr>
                 </thead>
                 <tbody id="receiveTableBody">
                     <tr>
-                        <td colspan="12" style="text-align: center; padding: 30px 20px;">
+                        <td colspan="11" style="text-align: center; padding: 30px 20px;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -622,7 +622,7 @@ include 'config.php';
                 const tbody = document.getElementById('receiveTableBody');
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="12" style="text-align: center; padding: 30px 20px;">
+                        <td colspan="11" style="text-align: center; padding: 30px 20px;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -652,18 +652,18 @@ include 'config.php';
                             renderTable(data);
                         } else if (data && data.error) {
                             document.getElementById('receiveTableBody').innerHTML =
-                                `<tr><td colspan="12" style="text-align:center; padding:20px; color:#c62828;">Error: ${data.error}</td></tr>`;
+                                `<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error: ${data.error}</td></tr>`;
                         } else {
                             renderTable([]);
                         }
                     } catch (e) {
                         document.getElementById('receiveTableBody').innerHTML =
-                            '<tr><td colspan="12" style="text-align:center; padding:20px; color:#c62828;">Error: Invalid response from server.</td></tr>';
+                            '<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error: Invalid response from server.</td></tr>';
                     }
                 })
                 .catch(() => {
                     document.getElementById('receiveTableBody').innerHTML =
-                        '<tr><td colspan="12" style="text-align:center; padding:20px; color:#c62828;">Error loading transfers</td></tr>';
+                        '<tr><td colspan="11" style="text-align:center; padding:20px; color:#c62828;">Error loading transfers</td></tr>';
                 });
         }
 
@@ -671,7 +671,7 @@ include 'config.php';
             const tbody = document.getElementById('receiveTableBody');
 
             if (!transfers || transfers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:20px;">No transfers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px;">No transfers found</td></tr>';
                 return;
             }
 
@@ -681,16 +681,17 @@ include 'config.php';
                 const statusBadge = `<span class="status-badge ${statusClass}">${transfer.status}</span>`;
 
                 const canReceive = transfer.status === 'Approved';
+                const receivedBy = transfer.received_by || '-';
                 const receiveBtn = canReceive
                     ? `<button class="btn-approve" onclick="receiveTransfer('${transfer.st_number}')">Receive</button>`
-                    : '-';
+                    : (transfer.status === 'Received' ? receivedBy : '-');
 
                 const canDisapprove = transfer.status === 'Approved';
+                const disapprovedBy = transfer.disapproved_by || '-';
                 const disapproveBtn = canDisapprove
                     ? `<button class="btn-disapprove" onclick="disapproveTransfer('${transfer.st_number}')">Disapprove</button>`
-                    : '-';
+                    : (transfer.status === 'Disapproved' ? disapprovedBy : '-');
 
-                const receivedBy = transfer.received_by || '-';
                 const approver = transfer.approver || '-';
 
                 const tr = document.createElement('tr');
@@ -701,10 +702,9 @@ include 'config.php';
                     <td>${transfer.branch_to}</td>
                     <td>${transfer.prepared_by}</td>
                     <td>${approver}</td>
-                    <td style="display: none;">${receivedBy}</td>
-                    <td>${statusBadge}</td>
                     <td>${transfer.remarks || '-'}</td>
                     <td><button class="btn-preview" onclick="printTransfer('${transfer.st_number}')">Preview</button></td>
+                    <td>${statusBadge}</td>
                     <td>${disapproveBtn}</td>
                     <td>${receiveBtn}</td>
                 `;

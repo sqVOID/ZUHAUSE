@@ -69,7 +69,7 @@ if (isset($_SESSION['user_branch'])) {
 
 $booklet = getBookletConfig($conn, $user_branch_code, 'stocktransfer');
 
-if ($booklet) {
+if ($booklet) { 
     // Use booklet number configuration
     $st_number = generateInvoiceNumber($booklet);
     
@@ -175,8 +175,17 @@ $sql = "INSERT INTO stock_transfers (st_number, st_date, branch_from, branch_to,
         VALUES ('$st_number', '$st_date', '$branch_from', '$branch_to', '$store_name', '$prepared_by', 'Pending', '$remarks', $total_quantity, NOW())";
 
 if ($conn->query($sql) === TRUE) {
-    // Insert items
+    // Insert items and update stock_on_hand status to "In Transit"
     $items_inserted = true;
+    
+    // Look up the branch_name from branch_code for stock_on_hand updates
+    $branch_from_name = $branch_from; // Default to the value sent
+    $branch_lookup = $conn->query("SELECT branch_name FROM branches WHERE branch_code = '$branch_from' LIMIT 1");
+    if ($branch_lookup && $branch_lookup->num_rows > 0) {
+        $branch_row = $branch_lookup->fetch_assoc();
+        $branch_from_name = $branch_row['branch_name'];
+    }
+    
     foreach ($items as $item) {
         $item_code = isset($item['item_code']) ? $conn->real_escape_string($item['item_code']) : '';
         $item_description = isset($item['item_description']) ? $conn->real_escape_string($item['item_description']) : '';
@@ -189,6 +198,73 @@ if ($conn->query($sql) === TRUE) {
         if ($conn->query($item_sql) !== TRUE) {
             $items_inserted = false;
             break;
+        }
+        
+        // Update stock_on_hand status to "In Transit" immediately when transfer is saved
+        if (!empty($imei)) {
+            // For serialized items (IMEI), update the specific IMEI record to "In Transit"
+            $update_status_sql = "UPDATE stock_on_hand 
+                                  SET status = 'In Transit' 
+                                  WHERE item_code = '$item_code' 
+                                  AND imei = '$imei' 
+                                  AND branch = '$branch_from_name'";
+            $conn->query($update_status_sql);
+        } else {
+            // For non-serialized items (Accessories/Freebies), split the quantity:
+            // 1. Deduct the transfer quantity from existing stock
+            // 2. Create new record with transfer quantity and status "In Transit"
+            
+            // First, get the existing stock record for this item
+            $get_stock_sql = "SELECT id, quantity, description, family_code, group_name, department, brand, dr_number, dr_date, system_entry_date, status, item_type 
+                              FROM stock_on_hand 
+                              WHERE item_code = '$item_code' 
+                              AND branch = '$branch_from_name' 
+                              AND (imei IS NULL OR imei = '')
+                              AND quantity >= $quantity
+                              ORDER BY dr_date ASC
+                              LIMIT 1";
+            $stock_result = $conn->query($get_stock_sql);
+            
+            if ($stock_result && $stock_result->num_rows > 0) {
+                $stock_row = $stock_result->fetch_assoc();
+                $stock_id = $stock_row['id'];
+                $current_qty = $stock_row['quantity'];
+                $remaining_qty = $current_qty - $quantity;
+                
+                if ($remaining_qty > 0) {
+                    // Deduct the transfer quantity from existing record
+                    $deduct_sql = "UPDATE stock_on_hand 
+                                   SET quantity = $remaining_qty 
+                                   WHERE id = $stock_id";
+                    $conn->query($deduct_sql);
+                    
+                    // Create new record with transfer quantity and status "In Transit"
+                    $insert_transit_sql = "INSERT INTO stock_on_hand 
+                                          (item_code, description, item_type, branch, dr_number, dr_date, system_entry_date, quantity, status, family_code, group_name, department, brand) 
+                                          VALUES (
+                                              '$item_code', 
+                                              '" . $conn->real_escape_string($stock_row['description']) . "', 
+                                              '" . $conn->real_escape_string($stock_row['item_type']) . "', 
+                                              '$branch_from_name', 
+                                              '" . $conn->real_escape_string($stock_row['dr_number']) . "', 
+                                              '" . $stock_row['dr_date'] . "', 
+                                              '" . $stock_row['system_entry_date'] . "', 
+                                              $quantity, 
+                                              'In Transit', 
+                                              '" . $conn->real_escape_string($stock_row['family_code']) . "', 
+                                              '" . $conn->real_escape_string($stock_row['group_name']) . "', 
+                                              '" . $conn->real_escape_string($stock_row['department']) . "', 
+                                              '" . $conn->real_escape_string($stock_row['brand']) . "'
+                                          )";
+                    $conn->query($insert_transit_sql);
+                } else if ($remaining_qty == 0) {
+                    // If transferring entire quantity, just update status to "In Transit"
+                    $update_all_sql = "UPDATE stock_on_hand 
+                                       SET status = 'In Transit' 
+                                       WHERE id = $stock_id";
+                    $conn->query($update_all_sql);
+                }
+            }
         }
     }
     

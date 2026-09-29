@@ -249,6 +249,7 @@ if ($has_full_access) {
                         <option value="Serviced" <?php echo $status_f === 'Serviced' ? 'selected' : ''; ?>>Serviced
                         </option>
                         <option value="Demo" <?php echo $status_f === 'Demo' ? 'selected' : ''; ?>>Demo</option>
+                        <option value="In Transit" <?php echo $status_f === 'In Transit' ? 'selected' : ''; ?>>In Transit</option>
                     </select>  
                 </div>
 
@@ -381,6 +382,8 @@ if ($has_full_access) {
                                             $status_class = 'status-serviced';
                                         } elseif ($status === 'Demo') {
                                             $status_class = 'status-demo';
+                                        } elseif ($status === 'In Transit') {
+                                            $status_class = 'status-transit';
                                         }
                                         ?>
                                         <span class="<?php echo $status_class; ?>"><?php echo htmlspecialchars($status); ?></span>
@@ -530,6 +533,15 @@ if ($has_full_access) {
             color: #f57c00;
             font-weight: 600;
             background-color: #fff3e0;
+            padding: 4px 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-transit {
+            color: #f57f17;
+            font-weight: 600;
+            background-color: #fff9b8ff;
             padding: 4px 12px;
             border-radius: 4px;
             display: inline-block;

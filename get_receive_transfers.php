@@ -54,8 +54,12 @@ try {
                 CONCAT(st.branch_from, ' - ', COALESCE(bf.branch_name, '')) as branch_from,
                 CONCAT(COALESCE(bt.branch_code, ''), ' - ', st.branch_to) as branch_to,
                 COALESCE(CONCAT(acc_prep.first_name, ' ', acc_prep.last_name), st.prepared_by) as prepared_by,
-                COALESCE(CONCAT(acc_appr.first_name, ' ', acc_appr.last_name), st.approver) as approver,
-                st.received_by,
+                CASE 
+                    WHEN st.status = 'Disapproved' THEN NULL
+                    ELSE COALESCE(CONCAT(acc_appr.first_name, ' ', acc_appr.last_name), st.approver)
+                END as approver,
+                COALESCE(CONCAT(acc_recv.first_name, ' ', acc_recv.last_name), st.received_by) as received_by,
+                COALESCE(CONCAT(acc_disapp.first_name, ' ', acc_disapp.last_name), st.disapproved_by) as disapproved_by,
                 st.status, 
                 st.remarks 
             FROM stock_transfers st
@@ -63,7 +67,9 @@ try {
             LEFT JOIN branches bt ON bt.branch_name = st.branch_to
             LEFT JOIN accounts acc_prep ON st.prepared_by = acc_prep.username
             LEFT JOIN accounts acc_appr ON st.approver = acc_appr.username
-            WHERE st.status != 'Received'";
+            LEFT JOIN accounts acc_recv ON st.received_by = acc_recv.username
+            LEFT JOIN accounts acc_disapp ON st.disapproved_by = acc_disapp.username
+            WHERE 1=1";
     
     // CRITICAL: For receivestocktransfer.php, only show transfers TO user's branch
     // Only Super-Admin sees all branches

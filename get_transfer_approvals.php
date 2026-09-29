@@ -58,15 +58,20 @@ try {
                 CONCAT(COALESCE(bt.branch_code, ''), ' - ', st.branch_to) as branch_to,
                 COALESCE(CONCAT(acc_prep.first_name, ' ', acc_prep.last_name), st.prepared_by) as prepared_by,
                 COALESCE(CONCAT(acc_appr.first_name, ' ', acc_appr.last_name), st.approver) as approver,
+                COALESCE(CONCAT(acc_disapp.first_name, ' ', acc_disapp.last_name), st.disapproved_by) as disapproved_by,
                 st.received_by,
-                st.status, 
+                CASE 
+                    WHEN st.status = 'Received' THEN 'Approved'
+                    ELSE st.status 
+                END as status,
                 st.remarks 
             FROM stock_transfers st
             LEFT JOIN branches bf ON bf.branch_code = st.branch_from
             LEFT JOIN branches bt ON bt.branch_name = st.branch_to
             LEFT JOIN accounts acc_prep ON st.prepared_by = acc_prep.username
             LEFT JOIN accounts acc_appr ON st.approver = acc_appr.username
-            WHERE st.status != 'Received'";
+            LEFT JOIN accounts acc_disapp ON st.disapproved_by = acc_disapp.username
+            WHERE 1=1";
     
     // Filter by user's branch - only Super-Admin sees all branches
     // Regular users and Sub-admins see transfers FROM or TO their assigned branch(es)

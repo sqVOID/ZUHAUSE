@@ -118,7 +118,9 @@ $pdf->Cell(95, 6, 'BRANCH TO: ' . $branch_to_display, 0, 1, 'R');
 // Use full name for prepared_by
 $prepared_by_display = !empty($transfer['prepared_by_full_name']) ? $transfer['prepared_by_full_name'] : $transfer['prepared_by'];
 $pdf->Cell(95, 6, 'PREPARED BY: ' . $prepared_by_display, 0, 0, 'L');
-$pdf->Cell(95, 6, 'STATUS: ' . strtoupper($transfer['status']), 0, 1, 'R');
+// Show "Approved" instead of "Received" for consistency with transfer approval page
+$display_status = ($transfer['status'] == 'Received') ? 'APPROVED' : strtoupper($transfer['status']);
+$pdf->Cell(95, 6, 'STATUS: ' . $display_status, 0, 1, 'R');
 
 // Show APPROVER with full name, but blank if Super-Admin
 if (!empty($transfer['approver'])) {

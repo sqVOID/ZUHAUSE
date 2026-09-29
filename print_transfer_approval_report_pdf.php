@@ -119,13 +119,16 @@ if (count($transfers) === 0) {
     $pdf->Cell(270, 8, 'NO RECORDS FOUND', 1, 1, 'C');
 } else {
     foreach ($transfers as $transfer) {
+        // Show "Approved" instead of "Received" for consistency with transfer approval page
+        $display_status = ($transfer['status'] == 'Received') ? 'Approved' : $transfer['status'];
+        
         $pdf->Cell(25, 6, $transfer['st_number'], 1, 0, 'C');
         $pdf->Cell(22, 6, date('m/d/Y', strtotime($transfer['date'])), 1, 0, 'C');
         $pdf->Cell(35, 6, substr($transfer['branch_from'], 0, 20), 1, 0, 'C');
         $pdf->Cell(35, 6, substr($transfer['branch_to'], 0, 20), 1, 0, 'C');
         $pdf->Cell(35, 6, substr($transfer['prepared_by'], 0, 20), 1, 0, 'C');
         $pdf->Cell(35, 6, substr($transfer['approver'] ?: '-', 0, 20), 1, 0, 'C');
-        $pdf->Cell(25, 6, $transfer['status'], 1, 0, 'C');
+        $pdf->Cell(25, 6, $display_status, 1, 0, 'C');
         $pdf->Cell(58, 6, substr($transfer['remarks'] ?: '-', 0, 35), 1, 1, 'L');
     }
 }
