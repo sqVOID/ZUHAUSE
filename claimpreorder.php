@@ -7,12 +7,36 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $branch_code = '000'; // Default
+$user_branch_name = '';
 if (isset($_SESSION['user_branch'])) {
     $user_branch_name = $_SESSION['user_branch'];
     $branch_query = $conn->query("SELECT branch_code FROM branches WHERE branch_name = '$user_branch_name'");
     if ($branch_query && $branch_query->num_rows > 0) {
         $branch_data = $branch_query->fetch_assoc();
         $branch_code = $branch_data['branch_code'];
+    }
+}
+
+// Fetch terminal issuers (Active only)
+$terminal_issuers_result = $conn->query("SELECT bank_name FROM terminal_issuers WHERE status='Active' ORDER BY bank_name");
+
+// Fetch other banks (Active only) for Card Payment
+$others_bank_result = $conn->query("SELECT bank_name FROM others_bank WHERE status='Active' ORDER BY bank_name");
+
+// Fetch terminal IDs for current branch (Active only)
+$escaped_branch = isset($user_branch_name) ? $conn->real_escape_string($user_branch_name) : '';
+$terminal_ids_result = $conn->query("SELECT * FROM terminal_ids WHERE status='Active' AND (branches LIKE '%$escaped_branch%' OR branches = '' OR branches IS NULL) ORDER BY terminal_id");
+
+// Build a PHP array of terminal IDs for JS
+$terminal_ids_for_js = [];
+if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
+    while ($tid_row = $terminal_ids_result->fetch_assoc()) {
+        $terminal_ids_for_js[] = [
+            'id' => $tid_row['id'],
+            'terminal_id' => $tid_row['terminal_id'],
+            'terminal_issuer' => $tid_row['terminal_issuer'],
+            'branches' => $tid_row['branches']
+        ];
     }
 }
 ?>
@@ -2245,12 +2269,15 @@ if (isset($_SESSION['user_branch'])) {
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
+        const allTerminalIds = <?php echo json_encode($terminal_ids_for_js); ?>;
         let currentPreOrderData = null;
         let claimItems = [];
         let currentSearchResults = [];
         let totalBalancePaid = 0;
         let preorderGrandTotal = 0;
         let hasUnpaidBalance = false; // Track if there was an unpaid balance when modal opened
+        let currentItemPrices = {};
+        let currentItemOthersBankEnabled = false;
 
         function toggleSidebar() {
             const menuBtn = document.querySelector('.menu-btn');
@@ -2825,7 +2852,9 @@ if (isset($_SESSION['user_branch'])) {
                     itemCode: itemCode,
                     quantity: quantity,
                     price: price,
-                    total: quantity * price
+                    total: quantity * price,
+                    prices: currentItemPrices || {},
+                    others_bank_enabled: currentItemOthersBankEnabled || false
                 };
 
                 claimItems.push(claimItem);
@@ -2854,8 +2883,10 @@ if (isset($_SESSION['user_branch'])) {
 
             let html = '';
             claimItems.forEach(item => {
+                const pricesJson = JSON.stringify(item.prices || {}).replace(/"/g, '&quot;');
+                const othersBankStr = item.others_bank_enabled ? 'true' : 'false';
                 html += `
-                    <tr>
+                    <tr data-item-code="${item.itemCode || ''}" data-serial="${item.imei || ''}" data-prices="${pricesJson}" data-others-bank-enabled="${othersBankStr}">
                         <td>${item.description}</td>
                         <td>${item.imei || ''}</td>
                         <td style="text-align: center;">${item.quantity}</td>
@@ -2905,6 +2936,9 @@ if (isset($_SESSION['user_branch'])) {
             document.getElementById('familyCodeInput').value = '';
             document.getElementById('quantityInput').value = '';
             priceInput.value = '';
+
+            currentItemPrices = {};
+            currentItemOthersBankEnabled = false;
 
             // Simple price field reset
             priceInput.setAttribute('readonly', 'readonly');
@@ -3005,6 +3039,9 @@ if (isset($_SESSION['user_branch'])) {
 
                         logToDebugConsole(`IMEI Lookup validation PASSED.`, 'success');
 
+                        currentItemPrices = data.data.prices || {};
+                        currentItemOthersBankEnabled = data.data.others_bank_enabled || false;
+
                         const priceInput = document.getElementById('priceInput');
 
                         // Populate fields with found data
@@ -3060,6 +3097,8 @@ if (isset($_SESSION['user_branch'])) {
                             document.getElementById('descriptionInput').value = '';
                             priceInput.value = '';
                             imeiField.value = '';
+                            currentItemPrices = {};
+                            currentItemOthersBankEnabled = false;
 
                             // Make IMEI field editable for manual entry
                             imeiField.removeAttribute('readonly');
@@ -3078,6 +3117,9 @@ if (isset($_SESSION['user_branch'])) {
 
                         logToDebugConsole(`Selected non-serialized item: code=${code}, desc=${description}, family_code=${item.family_code}`, 'info');
                         // Item is not serialized - proceed normally
+                        currentItemPrices = item.prices || {};
+                        currentItemOthersBankEnabled = item.others_bank_enabled || false;
+
                         document.getElementById('itemCodeInput').value = code;
                         document.getElementById('descriptionInput').value = description;
                         // Store family_code: for non-serialized items it comes from the search result
@@ -3443,11 +3485,12 @@ if (isset($_SESSION['user_branch'])) {
 
             // Display payment breakdown for fully paid pre-orders
             if (isFullyPaid && totalBalancePaid > 0) {
-                renderPaymentBreakdown(totalBalancePaid, claimItemsTotal);
+                renderPaymentBreakdown(totalBalancePaid, getClaimCartAndPaymentContext());
             }
 
             // Populate Unit dropdowns from the items table
             populateUnitSelector();
+            recalcTotalPayment();
 
             // Attach payment method checkbox listeners
             const paymentPartnersDropdown = document.getElementById('paymentPartnersDropdown');
@@ -3630,19 +3673,25 @@ if (isset($_SESSION['user_branch'])) {
         }
 
         function populateUnitSelector() {
-            const tbody = document.getElementById('claimItemsTable');
-            if (!tbody) return;
-            const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.querySelector('td') && r.querySelector('td').textContent.trim() !== '');
             const unitRows = document.querySelectorAll('.unit-selector-row');
             if (unitRows.length === 0) return;
 
             const items = [];
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 2) {
-                    const desc = cells[0].textContent.trim();
-                    if (desc) items.push({ desc });
-                }
+            claimItems.forEach(item => {
+                // Exclude 0.00 / free items from unit selector
+                if (parseFloat(item.price) <= 0) return;
+                const label = item.imei && item.imei.trim() !== ''
+                    ? `${item.description} (${item.imei})`
+                    : item.description;
+                items.push({
+                    desc: label,
+                    rawDesc: item.description,
+                    serial: item.imei || '',
+                    itemCode: item.itemCode || '',
+                    prices: item.prices || {},
+                    othersBankEnabled: item.others_bank_enabled || false,
+                    price: item.price
+                });
             });
 
             unitRows.forEach(unitRow => {
@@ -3680,9 +3729,22 @@ if (isset($_SESSION['user_branch'])) {
                     lbl.onmouseout = () => lbl.style.backgroundColor = 'transparent';
 
                     const cb = document.createElement('input');
-                    cb.type = 'checkbox'; cb.name = 'Unit'; cb.value = item.desc;
+                    cb.type = 'checkbox';
+                    cb.name = 'Unit';
+                    cb.value = item.desc;
+                    cb.setAttribute('data-item-code', item.itemCode);
+                    cb.setAttribute('data-serial', item.serial);
+                    cb.setAttribute('data-prices', JSON.stringify(item.prices));
+                    cb.setAttribute('data-others-bank-enabled', item.othersBankEnabled ? 'true' : 'false');
                     cb.style.cssText = 'margin-top:2px; width:16px; height:16px;';
-                    cb.addEventListener('change', updateText);
+                    cb.addEventListener('change', function() {
+                        updateText();
+                        const section = cb.closest('.credit-card-section') ? 'cc' : (cb.closest('.debit-card-section') ? 'dc' : null);
+                        if (section) {
+                            filterBanksByTerminalId(section, null);
+                        }
+                        recalcTotalPayment();
+                    });
 
                     if (items.length === 1) cb.checked = true;
 
@@ -3702,12 +3764,614 @@ if (isset($_SESSION['user_branch'])) {
                     }
                 });
             }
+
+            // Trigger initial filtering for credit card and debit card sections
+            filterBanksByTerminalId('cc', null);
+            filterBanksByTerminalId('dc', null);
+            setupCardPaymentListeners();
+        }
+
+        /**
+         * Filter Terminal ID dropdown based on selected Terminal Issuer.
+         * @param {string} section - 'cc' for Credit Card, 'dc' for Debit Card
+         */
+        function filterTerminalIds(section) {
+            const issuerSelect = document.getElementById(section === 'cc' ? 'ccTerminalIssuer' : 'dcTerminalIssuer');
+            const terminalSelect = document.getElementById(section === 'cc' ? 'ccTerminalId' : 'dcTerminalId');
+            if (!issuerSelect || !terminalSelect) return;
+
+            const selectedIssuer = issuerSelect.value;
+
+            // Reset Terminal ID dropdown
+            terminalSelect.innerHTML = '<option value="">Select Terminal ID</option>';
+
+            // Also reset bank dropdown when issuer changes
+            filterBanksByTerminalId(section, null);
+
+            if (!selectedIssuer) return;
+
+            // Filter terminal IDs where the terminal_issuer field contains the selected issuer
+            const filtered = allTerminalIds.filter(tid => {
+                const issuers = (tid.terminal_issuer || '').split(',').map(s => s.trim());
+                return issuers.some(iss => iss === selectedIssuer || iss.startsWith(selectedIssuer));
+            });
+
+            filtered.forEach(tid => {
+                const opt = document.createElement('option');
+                opt.value = tid.terminal_id;
+                opt.textContent = tid.terminal_id;
+                opt.setAttribute('data-issuers', tid.terminal_issuer);
+                terminalSelect.appendChild(opt);
+            });
+
+            // Wire change event (remove old listener first to avoid duplicates)
+            const newSelect = terminalSelect.cloneNode(true);
+            terminalSelect.parentNode.replaceChild(newSelect, terminalSelect);
+            newSelect.addEventListener('change', function () {
+                const selectedOpt = this.options[this.selectedIndex];
+                const issuers = selectedOpt ? selectedOpt.getAttribute('data-issuers') : null;
+                filterBanksByTerminalId(section, issuers);
+            });
+        }
+
+        /**
+         * Helper to get prices and Others Bank status for the currently selected unit(s) in a payment section.
+         */
+        function getSelectedUnitPrices(section) {
+            let secEl = null;
+            if (section === 'cc' || section === '.credit-card-section') {
+                secEl = document.querySelector('.credit-card-section');
+            } else if (section === 'dc' || section === '.debit-card-section') {
+                secEl = document.querySelector('.debit-card-section');
+            } else if (typeof section === 'string' && section.startsWith('.')) {
+                secEl = document.querySelector(section);
+            }
+
+            let mergedPrices = {};
+            let othersBankEnabled = false;
+            let hasCheckedUnit = false;
+
+            if (secEl) {
+                const checkedCbs = Array.from(secEl.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
+                if (checkedCbs.length > 0) {
+                    hasCheckedUnit = true;
+                    if (checkedCbs.length === 1) {
+                        try {
+                            mergedPrices = JSON.parse(checkedCbs[0].getAttribute('data-prices') || '{}');
+                        } catch (e) { }
+                        const ob = checkedCbs[0].getAttribute('data-others-bank-enabled');
+                        othersBankEnabled = (ob === '1' || ob === 'true');
+                    } else {
+                        const unitPricesList = [];
+                        let allHaveOthersBank = true;
+
+                        checkedCbs.forEach(cb => {
+                            let p = {};
+                            try {
+                                p = JSON.parse(cb.getAttribute('data-prices') || '{}');
+                            } catch (e) { }
+                            unitPricesList.push(p);
+
+                            const ob = cb.getAttribute('data-others-bank-enabled');
+                            if (ob !== '1' && ob !== 'true') {
+                                allHaveOthersBank = false;
+                            }
+                        });
+
+                        othersBankEnabled = allHaveOthersBank;
+
+                        const anyUnitEmpty = unitPricesList.some(p => Object.keys(p).length === 0);
+                        if (!anyUnitEmpty && unitPricesList.length > 0) {
+                            const firstUnitKeys = Object.keys(unitPricesList[0]);
+                            firstUnitKeys.forEach(key => {
+                                const existsInAll = unitPricesList.every(p => p[key] !== undefined && p[key] !== null && p[key] !== '');
+                                if (existsInAll) {
+                                    const sumPrice = unitPricesList.reduce((sum, p) => sum + (parseFloat(p[key]) || 0), 0);
+                                    mergedPrices[key] = sumPrice;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Fallback if no specific unit is checked in this section
+            if (!hasCheckedUnit) {
+                if (claimItems.length === 1) {
+                    mergedPrices = claimItems[0].prices || {};
+                    othersBankEnabled = claimItems[0].others_bank_enabled || false;
+                } else if (claimItems.length > 1) {
+                    const unitPricesList = [];
+                    let allHaveOthersBank = true;
+                    claimItems.forEach(ci => {
+                        unitPricesList.push(ci.prices || {});
+                        if (!ci.others_bank_enabled) allHaveOthersBank = false;
+                    });
+                    othersBankEnabled = allHaveOthersBank;
+                    if (unitPricesList.length > 0) {
+                        const firstKeys = Object.keys(unitPricesList[0]);
+                        firstKeys.forEach(key => {
+                            if (unitPricesList.every(p => p[key] !== undefined && p[key] !== null && p[key] !== '')) {
+                                mergedPrices[key] = unitPricesList.reduce((sum, p) => sum + (parseFloat(p[key]) || 0), 0);
+                            }
+                        });
+                    }
+                }
+            }
+
+            return { prices: mergedPrices, othersBankEnabled: othersBankEnabled };
+        }
+        window.getSelectedUnitPrices = getSelectedUnitPrices;
+
+        /**
+         * Populate the Bank dropdown with ALL banks from the selected unit prices.
+         */
+        function filterBanksByTerminalId(section, issuersStr) {
+            const isCC = (section === 'cc');
+            const bankDropdown = document.getElementById(isCC ? 'creditCardBankDropdown' : 'debitCardBankDropdown');
+            const termsDropdown = document.getElementById(isCC ? 'creditCardTermsDropdown' : 'debitCardTermsDropdown');
+            const amountInput = document.getElementById(isCC ? 'creditCardAmount' : 'debitCardAmount');
+            if (!bankDropdown) return;
+
+            const previousBank = bankDropdown.value;
+            const previousTerm = termsDropdown ? termsDropdown.value : '';
+            const previousAmount = amountInput ? amountInput.value : '';
+
+            bankDropdown.innerHTML = '<option value="">Select Bank</option>';
+            if (!previousBank) {
+                if (termsDropdown) termsDropdown.innerHTML = '<option value="">Select Terms</option>';
+                if (amountInput) { amountInput.value = ''; amountInput.removeAttribute('readonly'); }
+            }
+
+            const unitInfo = getSelectedUnitPrices(section);
+            const currentPrices = unitInfo.prices;
+            const currentOthersBank = unitInfo.othersBankEnabled;
+
+            const banks = new Set();
+
+            if (Object.keys(currentPrices).length > 0) {
+                for (const key in currentPrices) {
+                    if (key === '__SRP__' || key === 'SRP') continue;
+                    const spaceIndex = key.indexOf(' ');
+                    if (spaceIndex !== -1) {
+                        const bankName = key.substring(0, spaceIndex);
+                        if (bankName !== 'Others') {
+                            banks.add(bankName);
+                        }
+                    }
+                }
+            }
+
+            if (currentOthersBank) {
+                <?php
+                if ($others_bank_result && $others_bank_result->num_rows > 0) {
+                    echo "const otherBanks = [";
+                    $others_bank_result->data_seek(0);
+                    $bank_list = [];
+                    while ($ob_row = $others_bank_result->fetch_assoc()) {
+                        $bank_list[] = "'" . addslashes($ob_row['bank_name']) . "'";
+                    }
+                    echo implode(", ", $bank_list);
+                    echo "];\n";
+                    echo "                    otherBanks.forEach(bank => banks.add(bank));\n";
+                }
+                ?>
+            }
+
+            const sortedBanks = Array.from(banks).sort();
+            sortedBanks.forEach(bank => {
+                const option = document.createElement('option');
+                option.value = bank;
+                option.textContent = bank;
+                bankDropdown.appendChild(option);
+            });
+
+            if (previousBank && Array.from(bankDropdown.options).some(opt => opt.value === previousBank)) {
+                bankDropdown.value = previousBank;
+                if (previousTerm) {
+                    if (termsDropdown) {
+                        termsDropdown.innerHTML = '<option value="">Select Terms</option>';
+                        const searchPrefix = previousBank + ' ';
+                        const otherBanksList = [<?php
+                        if ($others_bank_result && $others_bank_result->num_rows > 0) {
+                            $others_bank_result->data_seek(0);
+                            $bank_list2 = [];
+                            while ($ob_row2 = $others_bank_result->fetch_assoc()) {
+                                $bank_list2[] = "'" . addslashes($ob_row2['bank_name']) . "'";
+                            }
+                            echo implode(", ", $bank_list2);
+                        }
+                        ?>];
+                        const isOtherBank = otherBanksList.includes(previousBank);
+                        if (isOtherBank) {
+                            ['24 Months', '12 Months', '6 Months', '3 Months'].forEach(term => {
+                                const opt = document.createElement('option');
+                                opt.value = term; opt.textContent = term;
+                                opt.setAttribute('data-is-other-bank', 'true');
+                                termsDropdown.appendChild(opt);
+                            });
+                        } else {
+                            for (const key in currentPrices) {
+                                if (key.startsWith(searchPrefix)) {
+                                    const term = key.substring(searchPrefix.length);
+                                    const opt = document.createElement('option');
+                                    opt.value = term;
+                                    opt.textContent = term.replace(/<[^>]*>/g, '').trim();
+                                    opt.setAttribute('data-full-key', key);
+                                    opt.setAttribute('data-actual-bank', previousBank);
+                                    termsDropdown.appendChild(opt);
+                                }
+                            }
+                        }
+                        sortTermsDropdownDescending(termsDropdown);
+                        if (Array.from(termsDropdown.options).some(opt => opt.value === previousTerm)) {
+                            termsDropdown.value = previousTerm;
+                        }
+                    }
+                    if (amountInput && previousAmount) {
+                        amountInput.value = previousAmount;
+                        amountInput.removeAttribute('readonly');
+                    }
+                } else {
+                    bankDropdown.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+
+        function sortTermsDropdownDescending(termsDropdown) {
+            if (!termsDropdown) return;
+            const placeholder = Array.from(termsDropdown.options).find(opt => opt.value === '');
+            const options = Array.from(termsDropdown.options).filter(opt => opt.value !== '');
+            const rank = (opt) => {
+                const text = (opt.textContent || opt.value || '').replace(/<[^>]*>/g, '').trim();
+                const m = text.match(/(\d+)\s*Months?/i);
+                return m ? parseInt(m[1], 10) : -1;
+            };
+            options.sort((a, b) => rank(b) - rank(a));
+            termsDropdown.innerHTML = '';
+            if (placeholder) {
+                termsDropdown.appendChild(placeholder);
+            } else {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Select Terms';
+                termsDropdown.appendChild(opt);
+            }
+            options.forEach(o => termsDropdown.appendChild(o));
+        }
+
+        /**
+         * When Credit/Debit Card has Bank+Terms selected, the installment set price
+         * is what must be covered across payments. Elevate each unit's due accordingly.
+         */
+        function applyCardSetPriceToItemDueMap(itemNetDueMap, deductionsByLabel) {
+            if (!itemNetDueMap) return itemNetDueMap;
+            const cardConfigs = [
+                { section: '.credit-card-section', bankId: 'creditCardBankDropdown', termsId: 'creditCardTermsDropdown' },
+                { section: '.debit-card-section', bankId: 'debitCardBankDropdown', termsId: 'debitCardTermsDropdown' }
+            ];
+
+            cardConfigs.forEach(cfg => {
+                const secEl = document.querySelector(cfg.section);
+                if (!secEl || secEl.style.display !== 'block') return;
+
+                const bankEl = document.getElementById(cfg.bankId);
+                const termsEl = document.getElementById(cfg.termsId);
+                const bank = bankEl ? bankEl.value : '';
+                const terms = termsEl ? termsEl.value : '';
+                if (!bank || !terms) return;
+
+                const priceKey = bank + ' ' + terms;
+                const checkedCbs = Array.from(secEl.querySelectorAll('input[type="checkbox"][name="Unit"]:checked'));
+
+                const evaluateUnit = (uLabel, prices) => {
+                    const setPrice = parseFloat(prices[priceKey]) || 0;
+                    if (setPrice <= 0) return;
+                    const deductions = (deductionsByLabel && deductionsByLabel[uLabel]) || 0;
+                    const netSetDue = Math.max(0, setPrice - deductions);
+                    if (itemNetDueMap[uLabel] === undefined) {
+                        itemNetDueMap[uLabel] = netSetDue;
+                    } else {
+                        itemNetDueMap[uLabel] = Math.max(itemNetDueMap[uLabel], netSetDue);
+                    }
+                };
+
+                if (checkedCbs.length === 0) {
+                    claimItems.forEach(ci => {
+                        if (parseFloat(ci.price) <= 0) return;
+                        const uLabel = ci.imei && ci.imei.trim() !== '' ? `${ci.description} (${ci.imei})` : ci.description;
+                        evaluateUnit(uLabel, ci.prices || {});
+                    });
+                } else {
+                    checkedCbs.forEach(cb => {
+                        const uLabel = cb.value;
+                        let prices = {};
+                        try { prices = JSON.parse(cb.getAttribute('data-prices') || '{}'); } catch (e) { }
+                        evaluateUnit(uLabel, prices);
+                    });
+                }
+            });
+            return itemNetDueMap;
+        }
+        window.applyCardSetPriceToItemDueMap = applyCardSetPriceToItemDueMap;
+
+        // Context helper for claim cart and payment details
+        function getClaimCartAndPaymentContext() {
+            const sections = [
+                { class: '.home-credit-section', name: 'Home Credit' },
+                { class: '.credit-card-section', name: 'Credit Card' },
+                { class: '.debit-card-section', name: 'Debit Card' },
+                { class: '.qr-ph-section', name: 'QR PH' },
+                { class: '.starpay-qr-section', name: 'Starpay QR' },
+                { class: '.ewallet-section', name: 'E-Wallet' },
+                { class: '.online-banking-section', name: 'Online Banking' },
+                { class: '.cash-section', name: 'Cash' }
+            ];
+
+            let selectedUnitLabels = [];
+            let hasActiveUnitSelector = false;
+
+            sections.forEach(s => {
+                const secEl = document.querySelector(s.class);
+                if (secEl && secEl.style.display === 'block') {
+                    const unitRow = secEl.querySelector('.unit-selector-row');
+                    if (unitRow && unitRow.style.display !== 'none') {
+                        const allUnitCbs = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]');
+                        if (allUnitCbs.length > 0) {
+                            hasActiveUnitSelector = true;
+                            const checkedCbs = unitRow.querySelectorAll('input[type="checkbox"][name="Unit"]:checked');
+                            checkedCbs.forEach(cb => {
+                                if (!selectedUnitLabels.includes(cb.value)) {
+                                    selectedUnitLabels.push(cb.value);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+
+            const items = [];
+            let overallDue = 0;
+            let activeSelectedDue = 0;
+
+            claimItems.forEach(item => {
+                const descText = item.description;
+                const serialText = item.imei || '';
+                const labelText = serialText ? (descText + ' (' + serialText + ')') : descText;
+                const pVal = parseFloat(item.price) || 0;
+                const qVal = parseInt(item.quantity) || 1;
+                const rowTotal = pVal * qVal;
+                const isZeroPrice = (rowTotal <= 0.009);
+                const isSelected = (!hasActiveUnitSelector) ? true : (isZeroPrice || selectedUnitLabels.includes(labelText));
+                const itemNetDue = rowTotal;
+
+                items.push({
+                    descText,
+                    serialText,
+                    labelText,
+                    pVal,
+                    qVal,
+                    rowTotal,
+                    effectivePrice: rowTotal,
+                    isSelected,
+                    itemNetDue,
+                    isZeroPrice,
+                    prices: item.prices || {}
+                });
+
+                overallDue += itemNetDue;
+                if (isSelected) {
+                    activeSelectedDue += itemNetDue;
+                }
+            });
+
+            // Apply card set price elevation
+            const itemDueMap = {};
+            const deductionsByLabel = {};
+            const relevantItems = hasActiveUnitSelector ? items.filter(it => it.isSelected) : items;
+
+            // Allocate preorder deposit (totalBalancePaid) across items
+            let depositRemaining = totalBalancePaid || 0;
+            relevantItems.forEach(it => {
+                const alloc = Math.min(it.itemNetDue, depositRemaining);
+                deductionsByLabel[it.labelText] = alloc;
+                itemDueMap[it.labelText] = Math.max(0, it.itemNetDue - alloc);
+                depositRemaining -= alloc;
+            });
+
+            applyCardSetPriceToItemDueMap(itemDueMap, deductionsByLabel);
+
+            let elevatedNetDue = 0;
+            let elevatedTotalUnits = 0;
+            relevantItems.forEach(it => {
+                const netDue = (itemDueMap[it.labelText] !== undefined) ? itemDueMap[it.labelText] : it.itemNetDue;
+                it.effectivePrice = netDue + (deductionsByLabel[it.labelText] || 0);
+                elevatedNetDue += netDue;
+                elevatedTotalUnits += it.effectivePrice;
+            });
+
+            finalTargetDue = elevatedNetDue;
+
+            return {
+                items,
+                sections,
+                hasActiveUnitSelector,
+                selectedUnitLabels,
+                elevatedTotalUnits,
+                totalBalancePaid: totalBalancePaid || 0,
+                activeSelectedDue: finalTargetDue,
+                overallDue
+            };
+        }
+        window.getClaimCartAndPaymentContext = getClaimCartAndPaymentContext;
+
+        /** True when Credit Card or Debit Card section is visible and has an Amount > 0. */
+        function hasCardPaymentAmount() {
+            const parseAmt = (id) => {
+                const el = document.getElementById(id);
+                return parseFloat((el && el.value ? el.value : '0').replace(/[^0-9.-]/g, '')) || 0;
+            };
+            const ccSec = document.querySelector('.credit-card-section');
+            const dcSec = document.querySelector('.debit-card-section');
+            const ccActive = ccSec && ccSec.style.display === 'block' && parseAmt('creditCardAmount') > 0;
+            const dcActive = dcSec && dcSec.style.display === 'block' && parseAmt('debitCardAmount') > 0;
+            return !!(ccActive || dcActive);
+        }
+        window.hasCardPaymentAmount = hasCardPaymentAmount;
+
+        /** e.g. "12 Months" -> "12 Terms Amount"; "Straight" -> "Straight Amount" */
+        function formatCardTermsAmountLabel(amountInputId) {
+            const termsId = (amountInputId === 'debitCardAmount')
+                ? 'debitCardTermsDropdown'
+                : 'creditCardTermsDropdown';
+            const termsEl = document.getElementById(termsId);
+            if (!termsEl || !termsEl.value) return 'Amount';
+            const raw = (termsEl.options[termsEl.selectedIndex]
+                ? termsEl.options[termsEl.selectedIndex].text
+                : termsEl.value) || '';
+            const clean = String(raw).replace(/<[^>]*>/g, '').trim();
+            if (!clean) return 'Amount';
+            const m = clean.match(/(\d+)\s*Months?/i);
+            if (m) return m[1] + ' Terms Amount';
+            return clean + ' Amount';
+        }
+        window.formatCardTermsAmountLabel = formatCardTermsAmountLabel;
+
+        // Card Payment bank and terms change listeners
+        function setupCardPaymentListeners() {
+            const pairs = [
+                { bankId: 'creditCardBankDropdown', termsId: 'creditCardTermsDropdown', amountId: 'creditCardAmount', sectionClass: '.credit-card-section', sectionCode: 'cc' },
+                { bankId: 'debitCardBankDropdown', termsId: 'debitCardTermsDropdown', amountId: 'debitCardAmount', sectionClass: '.debit-card-section', sectionCode: 'dc' }
+            ];
+
+            pairs.forEach(pair => {
+                const bankDropdown = document.getElementById(pair.bankId);
+                const termsDropdown = document.getElementById(pair.termsId);
+                const amountInput = document.getElementById(pair.amountId);
+
+                if (bankDropdown && !bankDropdown._cardListenerAttached) {
+                    bankDropdown._cardListenerAttached = true;
+                    bankDropdown.addEventListener('change', function () {
+                        const selectedBank = this.value;
+                        const previousTerm = termsDropdown ? termsDropdown.value : '';
+
+                        if (termsDropdown) termsDropdown.innerHTML = '<option value="">Select Terms</option>';
+                        if (amountInput) {
+                            amountInput.value = '';
+                            amountInput.removeAttribute('readonly');
+                            amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+
+                        if (selectedBank) {
+                            const unitInfo = getSelectedUnitPrices(pair.sectionCode);
+                            const currentPrices = unitInfo.prices;
+
+                            const otherBanksList = [<?php
+                            if ($others_bank_result && $others_bank_result->num_rows > 0) {
+                                $others_bank_result->data_seek(0);
+                                $bank_list = [];
+                                while ($ob_row = $others_bank_result->fetch_assoc()) {
+                                    $bank_list[] = "'" . addslashes($ob_row['bank_name']) . "'";
+                                }
+                                echo implode(", ", $bank_list);
+                            }
+                            ?>];
+
+                            const isOtherBank = otherBanksList.includes(selectedBank);
+
+                            if (isOtherBank) {
+                                const standardTerms = ['24 Months', '12 Months', '6 Months', '3 Months'];
+                                standardTerms.forEach(term => {
+                                    const option = document.createElement('option');
+                                    option.value = term;
+                                    option.textContent = term;
+                                    option.setAttribute('data-is-other-bank', 'true');
+                                    termsDropdown.appendChild(option);
+                                });
+                                sortTermsDropdownDescending(termsDropdown);
+
+                                if (previousTerm && standardTerms.includes(previousTerm)) {
+                                    termsDropdown.value = previousTerm;
+                                    termsDropdown.dispatchEvent(new Event('change'));
+                                }
+
+                                if (amountInput) {
+                                    amountInput.removeAttribute('readonly');
+                                    amountInput.placeholder = 'Enter amount';
+                                }
+                            } else {
+                                const searchPrefix = selectedBank + ' ';
+
+                                for (const key in currentPrices) {
+                                    if (key.startsWith(searchPrefix)) {
+                                        const term = key.substring(searchPrefix.length);
+                                        const option = document.createElement('option');
+                                        option.value = term;
+                                        const cleanTerm = term.replace(/<[^>]*>/g, '').trim();
+                                        option.textContent = cleanTerm;
+                                        option.setAttribute('data-full-key', key);
+                                        option.setAttribute('data-actual-bank', selectedBank);
+                                        termsDropdown.appendChild(option);
+                                    }
+                                }
+                                sortTermsDropdownDescending(termsDropdown);
+
+                                if (previousTerm) {
+                                    const options = Array.from(termsDropdown.options);
+                                    const matchingOption = options.find(opt => opt.value === previousTerm);
+                                    if (matchingOption) {
+                                        termsDropdown.value = previousTerm;
+                                        termsDropdown.dispatchEvent(new Event('change'));
+                                    }
+                                }
+                            }
+                        }
+                        recalcTotalPayment();
+                    });
+                }
+
+                if (termsDropdown && !termsDropdown._cardListenerAttached) {
+                    termsDropdown._cardListenerAttached = true;
+                    termsDropdown.addEventListener('change', function () {
+                        const selectedOption = this.options[this.selectedIndex];
+                        const isOtherBank = selectedOption ? selectedOption.getAttribute('data-is-other-bank') : null;
+                        const fullKey = selectedOption ? selectedOption.getAttribute('data-full-key') : null;
+
+                        const claimItemsTotal = claimItems.reduce((sum, item) => sum + item.total, 0);
+                        const remainingBalance = Math.max(0, claimItemsTotal - (totalBalancePaid || 0));
+
+                        const unitInfo = getSelectedUnitPrices(pair.sectionCode);
+                        const currentPrices = unitInfo.prices;
+
+                        if (isOtherBank) {
+                            if (amountInput) {
+                                amountInput.removeAttribute('readonly');
+                                amountInput.placeholder = 'Enter amount';
+                                if (remainingBalance > 0) {
+                                    amountInput.value = remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                    amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                                amountInput.focus();
+                            }
+                        } else if (fullKey && currentPrices[fullKey] !== undefined) {
+                            let termPrice = parseFloat(currentPrices[fullKey]) || 0;
+                            let calculatedAmount = termPrice > 0 ? Math.max(0, termPrice - (totalBalancePaid || 0)) : remainingBalance;
+                            if (calculatedAmount <= 0 && remainingBalance > 0) {
+                                calculatedAmount = remainingBalance;
+                            }
+                            if (amountInput) {
+                                amountInput.value = calculatedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                amountInput.removeAttribute('readonly');
+                                amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        }
+                        recalcTotalPayment();
+                    });
+                }
+            });
         }
 
         function recalcTotalPayment() {
-            const claimItemsTotal = claimItems.reduce((sum, item) => sum + item.total, 0);
-            const remainingBalance = Math.max(0, claimItemsTotal - (totalBalancePaid || 0));
-
             const allPaySections = [
                 { class: '.cash-section', name: 'Cash' },
                 { class: '.ewallet-section', name: 'E-Wallet' },
@@ -3735,6 +4399,9 @@ if (isset($_SESSION['user_branch'])) {
                 });
             });
 
+            const context = getClaimCartAndPaymentContext();
+            const targetDue = context.activeSelectedDue;
+
             const globalTotal = document.getElementById('globalTotalInput');
             if (globalTotal) {
                 globalTotal.value = totalPaid > 0
@@ -3742,58 +4409,50 @@ if (isset($_SESSION['user_branch'])) {
                     : '';
             }
 
-            const remaining = remainingBalance - totalPaid;
+            const remaining = Math.max(0, targetDue - totalPaid);
             const globalTotalDue = document.getElementById('globalTotalDueInput');
             if (globalTotalDue) {
                 globalTotalDue.value = remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
-            // Note: newInvoiceNumberSection is now always visible at the top of the page
-            // No need to show/hide it based on payment calculations
-
-            if (totalPaid > 0) renderPaymentBreakdown(totalPaid, remainingBalance);
+            if (totalPaid > 0) renderPaymentBreakdown(totalPaid, context);
             else {
                 const bkBanner = document.getElementById('paymentBreakdownBanner');
                 if (bkBanner) { bkBanner.style.display = 'none'; bkBanner.innerHTML = ''; }
             }
         }
 
-        function renderPaymentBreakdown(totalPaid, originalTotal) {
+        function renderPaymentBreakdown(totalPaid, context) {
             const banner = document.getElementById('paymentBreakdownBanner');
             if (!banner) return;
 
-            const neededDisp = originalTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (!context || context.activeSelectedDue === undefined) {
+                context = getClaimCartAndPaymentContext();
+            }
+
+            const targetDue = context.activeSelectedDue;
+            const neededDisp = targetDue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const enteredDisp = totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const overallDiff = originalTotal - totalPaid;
+            const overallDiff = targetDue - totalPaid;
+            const isExceeded = overallDiff < -0.01;
+            const cardExceedAllowed = isExceeded && hasCardPaymentAmount();
+            const diffLabel = isExceeded ? (cardExceedAllowed ? 'Card Excess:' : 'Exceeded Amount:') : 'Remaining Balance:';
             const remainingBal = overallDiff < 0 ? 0 : overallDiff;
-            const diffDisp = remainingBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const diffColor = overallDiff <= 0.01 ? '#16a34a' : '#ca8a04';
+            const diffDisp = (isExceeded ? Math.abs(overallDiff) : remainingBal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const diffColor = (overallDiff <= 0.01 || cardExceedAllowed) ? '#16a34a' : '#ca8a04';
 
             let unitRowsHtml = '';
-            const itemTbody = document.getElementById('claimItemsTable');
-            if (itemTbody) {
-                itemTbody.querySelectorAll('tr').forEach(row => {
-                    const tds = row.querySelectorAll('td');
-                    if (tds.length >= 4 && tds[0].textContent.trim()) {
-                        const descText = tds[0].textContent.trim();
-                        const qty = parseInt(tds[2].textContent) || 1;
-                        const priceText = tds[3].textContent.replace(/[^0-9.]/g, '');
-                        const pVal = parseFloat(priceText) || 0;
-                        unitRowsHtml += `
-                            <div style="display:flex; justify-content:space-between; padding-left:12px; font-size:13px; color:#000; margin-top:2px;">
-                                <span style="font-style:italic; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">- ${descText}</span>
-                                <span>₱${(pVal * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>`;
-                    }
+            const displayedItems = context.items.filter(item => item.isSelected);
+            if (displayedItems.length > 0) {
+                displayedItems.forEach(item => {
+                    const priceToShow = (item.effectivePrice !== undefined) ? item.effectivePrice : (item.pVal * item.qVal);
+                    unitRowsHtml += `
+                        <div style="display:flex; justify-content:space-between; padding-left:12px; font-size:13px; color:#000; margin-top:2px;">
+                            <span style="font-style:italic; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">- ${item.labelText}</span>
+                            <span>₱${priceToShow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>`;
                 });
-            }
-            if (unitRowsHtml) {
-                const _discountFieldEl = document.getElementById('discountField');
-                const _discountAmt = _discountFieldEl ? (parseFloat(_discountFieldEl.value.replace(/,/g, '')) || 0) : 0;
-                const _discountRow = _discountAmt > 0
-                    ? `<div style="display:flex; justify-content:space-between; padding-left:14px; font-size:12px; color:#dc2626; margin-top:2px;"><span style="font-weight:600;">↳ Less Discount:</span><span style="font-weight:600;">-₱${_discountAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>`
-                    : '';
-                unitRowsHtml = `<div style="margin-bottom:6px;"><div style="font-weight:600; color:#000; font-size:13px;">Unit(s) To Pay:</div>${unitRowsHtml}${_discountRow}</div>`;
+                unitRowsHtml = `<div style="margin-bottom:6px;"><div style="font-weight:600; color:#000; font-size:13px;">Unit(s) To Pay:</div>${unitRowsHtml}</div>`;
             }
 
             const paymentSections = [
@@ -3823,6 +4482,10 @@ if (isset($_SESSION['user_branch'])) {
                     if (inp.id === 'cash_down_payment_amount') { isAmount = true; labelText = 'Cash (DP)'; }
                     if (inp.id === 'gcash_down_payment_amount') { isAmount = true; labelText = 'G-Cash (DP)'; }
                     if (inp.id === 'maya_down_payment_amount') { isAmount = true; labelText = 'Maya (DP)'; }
+                    if (inp.id === 'creditCardAmount' || inp.id === 'debitCardAmount') {
+                        isAmount = true;
+                        labelText = formatCardTermsAmountLabel(inp.id);
+                    }
 
                     const fg = inp.closest('.hc-form-group');
                     if (fg) {
@@ -3874,12 +4537,10 @@ if (isset($_SESSION['user_branch'])) {
             if (totalBalancePaid > 0 && currentPreOrderData) {
                 const balancePaidDisp = totalBalancePaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                // Get payment methods from payment history (preferred) or items (fallback)
                 let paymentMethodsUsed = [];
                 let paymentDetails = [];
 
                 if (currentPreOrderData.payment_history && currentPreOrderData.payment_history.length > 0) {
-                    // Use payment history for more accurate payment method information
                     currentPreOrderData.payment_history.forEach(ph => {
                         if (ph.payment_method && !paymentMethodsUsed.includes(ph.payment_method)) {
                             paymentMethodsUsed.push(ph.payment_method);
@@ -3895,7 +4556,6 @@ if (isset($_SESSION['user_branch'])) {
                         }
                     });
                 } else if (currentPreOrderData.items) {
-                    // Fallback to items
                     currentPreOrderData.items.forEach(item => {
                         if (item.payment_method && !paymentMethodsUsed.includes(item.payment_method)) {
                             paymentMethodsUsed.push(item.payment_method);
@@ -3905,7 +4565,6 @@ if (isset($_SESSION['user_branch'])) {
 
                 const paymentMethodText = paymentMethodsUsed.length > 0 ? paymentMethodsUsed.join(', ') : 'N/A';
 
-                // Build payment details rows
                 let paymentDetailsHtml = '';
                 if (paymentDetails.length > 0) {
                     paymentDetails.forEach(pd => {
@@ -3959,7 +4618,7 @@ if (isset($_SESSION['user_branch'])) {
                                 <span>Total Entered:</span><span style="font-weight:600;">₱${enteredDisp}</span>
                             </div>
                             <div style="display:flex; justify-content:space-between; margin-top:2px; padding-top:4px; border-top:1.5px dashed #afafaf;">
-                                <span style="color:#000; font-weight:600;">Remaining Balance:</span><span style="color:${diffColor}; font-weight:600;">₱${diffDisp}</span>
+                                <span style="color:#000; font-weight:600;">${diffLabel}</span><span style="color:${diffColor}; font-weight:600;">₱${diffDisp}</span>
                             </div>
                         </div>
                     </div>
@@ -4173,9 +4832,26 @@ if (isset($_SESSION['user_branch'])) {
                 const ccAmtEl = getFieldByLabel(creditCardSection, 'amount');
                 const ccAmount = ccAmtEl ? ccAmtEl.value.trim() : '';
                 if (!ccAmount) { alert('Please enter Credit Card amount.'); return; }
+                const terminalIssuerEl = document.getElementById('ccTerminalIssuer');
+                const terminalIdEl = document.getElementById('ccTerminalId');
+                const bankEl = document.getElementById('creditCardBankDropdown');
+                const termsEl = document.getElementById('creditCardTermsDropdown');
+                const midEl = getFieldByLabel(creditCardSection, 'mid');
+                const cardNoEl = getFieldByLabel(creditCardSection, 'card no');
+                const approvalCodeEl = getFieldByLabel(creditCardSection, 'approval code');
+                const batchEl = getFieldByLabel(creditCardSection, 'batch');
+
                 payments.push({
                     payment_type: 'credit_card',
                     amount: ccAmount,
+                    terminal_issuer: terminalIssuerEl ? terminalIssuerEl.value : '',
+                    terminal_id: terminalIdEl ? terminalIdEl.value : '',
+                    bank: bankEl ? bankEl.value : '',
+                    terms: termsEl ? termsEl.value : '',
+                    mid: midEl ? midEl.value.trim() : '',
+                    card_no: cardNoEl ? cardNoEl.value.trim() : '',
+                    approval_code: approvalCodeEl ? approvalCodeEl.value.trim() : '',
+                    batch: batchEl ? batchEl.value.trim() : '',
                     units: Array.from(creditCardSection.querySelectorAll('input[name="Unit"]:checked')).map(cb => cb.value)
                 });
             }
@@ -4184,9 +4860,26 @@ if (isset($_SESSION['user_branch'])) {
                 const dcAmtEl = getFieldByLabel(debitCardSection, 'amount');
                 const dcAmount = dcAmtEl ? dcAmtEl.value.trim() : '';
                 if (!dcAmount) { alert('Please enter Debit Card amount.'); return; }
+                const terminalIssuerEl = document.getElementById('dcTerminalIssuer');
+                const terminalIdEl = document.getElementById('dcTerminalId');
+                const bankEl = document.getElementById('debitCardBankDropdown');
+                const termsEl = document.getElementById('debitCardTermsDropdown');
+                const midEl = getFieldByLabel(debitCardSection, 'mid');
+                const cardNoEl = getFieldByLabel(debitCardSection, 'card no');
+                const approvalCodeEl = getFieldByLabel(debitCardSection, 'approval code');
+                const batchEl = getFieldByLabel(debitCardSection, 'batch');
+
                 payments.push({
                     payment_type: 'debit_card',
                     amount: dcAmount,
+                    terminal_issuer: terminalIssuerEl ? terminalIssuerEl.value : '',
+                    terminal_id: terminalIdEl ? terminalIdEl.value : '',
+                    bank: bankEl ? bankEl.value : '',
+                    terms: termsEl ? termsEl.value : '',
+                    mid: midEl ? midEl.value.trim() : '',
+                    card_no: cardNoEl ? cardNoEl.value.trim() : '',
+                    approval_code: approvalCodeEl ? approvalCodeEl.value.trim() : '',
+                    batch: batchEl ? batchEl.value.trim() : '',
                     units: Array.from(debitCardSection.querySelectorAll('input[name="Unit"]:checked')).map(cb => cb.value)
                 });
             }

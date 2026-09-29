@@ -3329,6 +3329,15 @@ if (isset($_SESSION['user_branch'])) {
                 if (cells.length >= 2) {
                     const desc = cells[0].textContent.trim();
                     const serial = cells[1].textContent.trim();
+                    const priceInput = row.querySelector('.price-input-table');
+                    const qtyInput = row.querySelector('.qty-input');
+                    const priceTd = cells[3];
+                    const isFreeText = priceTd && priceTd.textContent.trim().toUpperCase() === 'FREE';
+                    const pVal = isFreeText ? 0 : (parseFloat(priceInput ? priceInput.value.replace(/,/g, '') : (row.getAttribute('data-base-price') || 0)) || 0);
+                    const qVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+                    const rowTotal = pVal * qVal;
+
+                    if (rowTotal <= 0.009) return;
                     if (desc) items.push({ desc, serial });
                 }
             });

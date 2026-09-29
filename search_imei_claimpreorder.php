@@ -46,24 +46,26 @@ if (isset($_GET['imei'])) {
         // Step 2: Get item details including family_code
         $srp = null;
         $family_code = null;
-        
+        $prices = [];
+        $others_bank_enabled = false;
+
         // Check if item exists and get family_code (branch filter only if item has branch restrictions)
         $sql_item = "SELECT srp, id, family_code, branch FROM items
                       WHERE item_code = '$item_code_escaped'
                         AND status = 'Active'
                       LIMIT 1";
         $res_item = @$conn->query($sql_item);
-        
+
         if ($res_item && $res_item->num_rows > 0) {
             $item_row = $res_item->fetch_assoc();
             $item_id = $item_row['id'];
             $family_code = $item_row['family_code'];
             $item_branch = $item_row['branch'];
-            
+
             // Check if branch restriction applies
             $branch_restricted = !empty($item_branch);
             $branch_allowed = false;
-            
+
             if ($branch_restricted) {
                 // Item has branch restrictions - check if user's branch is in the list
                 $item_branches = array_map('trim', explode(',', $item_branch));
@@ -83,27 +85,30 @@ if (isset($_GET['imei'])) {
                     $srp = 0;
                 }
             }
-            
-            if ($branch_allowed && $srp > 0 && !$is_super_admin && !empty($user_branch)) {
-                // Check for price overrides
+
+            if ($branch_allowed && !$is_super_admin && !empty($user_branch)) {
+                // Check for price overrides & fetch active installment prices for branch
                 $branch_escaped = $conn->real_escape_string($user_branch);
-                $sql_override = "SELECT price_type, price FROM item_prices WHERE item_id = '$item_id' AND branch = '$branch_escaped' AND is_active = 1 AND price_type IN ('__SRP__', 'BDO Straight')";
+                $sql_override = "SELECT price_type, price FROM item_prices WHERE item_id = '$item_id' AND branch = '$branch_escaped' AND is_active = 1";
                 $res_override = @$conn->query($sql_override);
                 if ($res_override && $res_override->num_rows > 0) {
                     $srp_price = 0;
                     $bdo_price = 0;
                     while ($override_row = $res_override->fetch_assoc()) {
+                        if ($override_row['price_type'] === 'Others Bank') {
+                            $others_bank_enabled = true;
+                        }
                         if ($override_row['price_type'] === '__SRP__' && is_numeric($override_row['price']) && $override_row['price'] > 0) {
                             $srp_price = $override_row['price'];
                         }
                         if ($override_row['price_type'] === 'BDO Straight' && is_numeric($override_row['price']) && $override_row['price'] > 0) {
                             $bdo_price = $override_row['price'];
                         }
+                        $prices[$override_row['price_type']] = $override_row['price'];
                     }
                     if ($srp_price > 0) {
                         $srp = $srp_price;
-                    }
-                    elseif ($bdo_price > 0) {
+                    } elseif ($bdo_price > 0) {
                         $srp = $bdo_price;
                     }
                 }
@@ -116,12 +121,13 @@ if (isset($_GET['imei'])) {
                 'item_code' => $item_code,
                 'description' => $description,
                 'family_code' => $family_code,
-                'price' => $srp !== null ? $srp : 0
+                'price' => $srp !== null ? $srp : 0,
+                'prices' => $prices,
+                'others_bank_enabled' => $others_bank_enabled
             ]
         ]);
 
-    }
-    else {
+    } else {
         // IMEI not in stock_on_hand — check receive_dd as fallback
         $sql_rd = "SELECT rd.item_description, i.item_code, i.family_code, i.srp
                    FROM receive_dd rd
@@ -136,6 +142,8 @@ if (isset($_GET['imei'])) {
             $family_code = $row_rd['family_code'] ?? '';
 
             $srp = null;
+            $prices = [];
+            $others_bank_enabled = false;
             if ($item_code !== '') {
                 $item_code_escaped = $conn->real_escape_string($item_code);
 
@@ -149,11 +157,11 @@ if (isset($_GET['imei'])) {
                     $item_id = $item_row['id'];
                     $family_code = $item_row['family_code'];
                     $item_branch = $item_row['branch'];
-                    
+
                     // Check if branch restriction applies
                     $branch_restricted = !empty($item_branch);
                     $branch_allowed = false;
-                    
+
                     if ($branch_restricted) {
                         // Item has branch restrictions - check if user's branch is in the list
                         $item_branches = array_map('trim', explode(',', $item_branch));
@@ -173,34 +181,36 @@ if (isset($_GET['imei'])) {
                             $srp = 0;
                         }
                     }
-                    
-                    if ($branch_allowed && $srp > 0 && !$is_super_admin && !empty($user_branch)) {
-                        // Check for price overrides
+
+                    if ($branch_allowed && !$is_super_admin && !empty($user_branch)) {
+                        // Check for price overrides & fetch active installment prices for branch
                         $branch_escaped = $conn->real_escape_string($user_branch);
-                        $sql_override = "SELECT price_type, price FROM item_prices WHERE item_id = '$item_id' AND branch = '$branch_escaped' AND is_active = 1 AND price_type IN ('__SRP__', 'BDO Straight')";
+                        $sql_override = "SELECT price_type, price FROM item_prices WHERE item_id = '$item_id' AND branch = '$branch_escaped' AND is_active = 1";
                         $res_override = @$conn->query($sql_override);
                         if ($res_override && $res_override->num_rows > 0) {
                             $srp_price = 0;
                             $bdo_price = 0;
                             while ($override_row = $res_override->fetch_assoc()) {
+                                if ($override_row['price_type'] === 'Others Bank') {
+                                    $others_bank_enabled = true;
+                                }
                                 if ($override_row['price_type'] === '__SRP__' && is_numeric($override_row['price']) && $override_row['price'] > 0) {
                                     $srp_price = $override_row['price'];
                                 }
                                 if ($override_row['price_type'] === 'BDO Straight' && is_numeric($override_row['price']) && $override_row['price'] > 0) {
                                     $bdo_price = $override_row['price'];
                                 }
+                                $prices[$override_row['price_type']] = $override_row['price'];
                             }
                             if ($srp_price > 0) {
                                 $srp = $srp_price;
-                            }
-                            elseif ($bdo_price > 0) {
+                            } elseif ($bdo_price > 0) {
                                 $srp = $bdo_price;
                             }
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 $srp = $row_rd['srp'];
             }
 
@@ -210,19 +220,19 @@ if (isset($_GET['imei'])) {
                     'item_code' => $item_code,
                     'description' => $row_rd['item_description'],
                     'family_code' => $family_code,
-                    'price' => $srp !== null ? $srp : 0
+                    'price' => $srp !== null ? $srp : 0,
+                    'prices' => $prices,
+                    'others_bank_enabled' => $others_bank_enabled
                 ]
             ]);
-        }
-        else {
+        } else {
             echo json_encode([
                 'status' => 'error',
                 'message' => 'IMEI not found'
             ]);
         }
     }
-}
-else {
+} else {
     echo json_encode([
         'status' => 'error',
         'message' => 'No IMEI provided'

@@ -3456,13 +3456,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
 
                     if (itemDue <= 0.009) {
                         // For freebies / 0-price items:
-                        // If already checked in another active section, hide it from this section.
-                        if (isCheckedInOther) {
-                            lbl.style.display = 'none';
-                            cb.checked = false;
-                        } else {
-                            lbl.style.display = 'flex';
-                        }
+                        // 0-price items do not require payment, hide from unit selector dropdown
+                        lbl.style.display = 'none';
+                        cb.checked = false;
                     } else {
                         // For priced items:
                         // If remaining balance is 0 or negative and not currently being paid in this section:
@@ -3771,6 +3767,17 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                     const serial = cells[1].textContent.trim();
                     const pricesStr = row.getAttribute('data-prices') || '{}';
                     const othersBankStr = row.getAttribute('data-others-bank-enabled') || '0';
+                    const priceInput = row.querySelector('.price-input-table');
+                    const qtyInput = row.querySelector('.qty-input');
+                    const priceTd = cells[3];
+                    const isFreeText = priceTd && priceTd.textContent.trim().toUpperCase() === 'FREE';
+                    const pVal = isFreeText ? 0 : (parseFloat(priceInput ? priceInput.value.replace(/,/g, '') : (row.getAttribute('data-base-price') || 0)) || 0);
+                    const qVal = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+                    const rowTotal = pVal * qVal;
+
+                    // If item price is 0.00 / FREE, it does not require payment, so do not include in unit dropdown
+                    if (rowTotal <= 0.009) return;
+
                     let prices = {};
                     try { prices = JSON.parse(pricesStr); } catch (e) { }
                     if (desc) items.push({
@@ -6107,7 +6114,8 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                         const tokenAmount = parseFloat(row.getAttribute('data-token-amount')) || 0;
                         const itemToken = (hasToken === 1) ? tokenAmount : 0;
 
-                        const isSelected = (!hasActiveUnitSelector) ? true : selectedUnitLabels.includes(labelText);
+                        const isZeroPrice = (rowTotal <= 0.009);
+                        const isSelected = (!hasActiveUnitSelector) ? true : (isZeroPrice || selectedUnitLabels.includes(labelText));
                         const itemNetDue = Math.max(0, rowTotal - itemVoucher - itemToken);
 
                         items.push({
@@ -6122,7 +6130,8 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
                             hasToken,
                             tokenAmount: itemToken,
                             isSelected,
-                            itemNetDue
+                            itemNetDue,
+                            isZeroPrice
                         });
 
                         overallSalesTotal += rowTotal;

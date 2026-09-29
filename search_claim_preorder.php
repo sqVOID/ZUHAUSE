@@ -7,17 +7,17 @@ header('Content-Type: application/json');
 if (isset($_GET['term'])) {
     $term = $conn->real_escape_string($_GET['term']);
     $user_branch = isset($_SESSION['user_branch']) ? trim($_SESSION['user_branch']) : '';
-    
+
     // Get family codes from pre-order if provided
     $family_codes = isset($_GET['family_codes']) ? $_GET['family_codes'] : '';
-    
+
     // Build WHERE clause
     $whereClause = "(i.description LIKE '%$term%' OR i.item_code LIKE '%$term%')";
-    
+
     // If family codes are provided, filter by them
     if (!empty($family_codes)) {
         $family_codes_array = array_map('trim', explode(',', $family_codes));
-        $family_codes_escaped = array_map(function($code) use ($conn) {
+        $family_codes_escaped = array_map(function ($code) use ($conn) {
             return "'" . $conn->real_escape_string($code) . "'";
         }, $family_codes_array);
         $family_codes_str = implode(',', $family_codes_escaped);
@@ -43,13 +43,11 @@ if (isset($_GET['term'])) {
                 if (empty($item_branches)) {
                     $is_branch_allowed = true;
                     $price_to_use = $row['srp'] ?? 0;
-                }
-                else {
+                } else {
                     if (!empty($user_branch) && in_array($user_branch, $item_branches)) {
                         $is_branch_allowed = true;
                         $price_to_use = $row['srp'] ?? 0;
-                    }
-                    else {
+                    } else {
                         $is_branch_allowed = false;
                         $price_to_use = 0;
                     }
@@ -57,12 +55,16 @@ if (isset($_GET['term'])) {
 
                 $itemId = $row['id'];
                 $prices = [];
+                $others_bank_enabled = false;
                 $branch_price_filter = !empty($user_branch) ? "AND branch = '" . $conn->real_escape_string($user_branch) . "'" : "";
                 $priceRes = $conn->query("SELECT price_type, price FROM item_prices WHERE item_id = '$itemId' AND is_active = 1 $branch_price_filter");
                 if ($priceRes) {
                     $srp_price = 0;
                     $bdo_price = 0;
                     while ($p = $priceRes->fetch_assoc()) {
+                        if ($p['price_type'] === 'Others Bank' && $is_branch_allowed) {
+                            $others_bank_enabled = true;
+                        }
                         if ($p['price_type'] === '__SRP__' && is_numeric($p['price']) && $p['price'] > 0 && $is_branch_allowed) {
                             $srp_price = $p['price'];
                         }
@@ -73,8 +75,7 @@ if (isset($_GET['term'])) {
                     }
                     if ($srp_price > 0) {
                         $price_to_use = $srp_price;
-                    }
-                    elseif ($bdo_price > 0) {
+                    } elseif ($bdo_price > 0) {
                         $price_to_use = $bdo_price;
                     }
                 }
@@ -90,20 +91,18 @@ if (isset($_GET['term'])) {
                     'points' => $is_branch_allowed ? ($row['points'] ?? 0) : 0,
                     'has_points' => $row['has_points'] ?? 0,
                     'prices' => $prices,
-                    'branch_allowed' => $is_branch_allowed
+                    'branch_allowed' => $is_branch_allowed,
+                    'others_bank_enabled' => $others_bank_enabled
                 ];
             }
             echo json_encode(['status' => 'success', 'data' => $items_data]);
-        }
-        else {
+        } else {
             echo json_encode(['status' => 'success', 'data' => []]);
         }
-    }
-    else {
+    } else {
         echo json_encode(['status' => 'error', 'message' => $conn->error]);
     }
-}
-else {
+} else {
     echo json_encode(['status' => 'error', 'message' => 'No search term provided']);
 }
 ?>
