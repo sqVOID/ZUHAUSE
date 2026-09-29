@@ -4041,9 +4041,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
             window._currentInvoiceNo = data.invoice_no || '';
             window._currentOriginalInvoiceNo = data.original_invoice_no || '';
             window._paymentHistory = Array.isArray(data.payment_history) ? data.payment_history : [];
-            window._isClaimPreorder = (String(data.page_type || '').toLowerCase() === 'claimpreorder')
-                || (window._paymentHistory.length > 0)
-                || !!(data.original_invoice_no && String(data.original_invoice_no).trim() !== '');
+            window._pageType = String(data.page_type || '').toLowerCase().trim();
+            // Pre-order staging (PRE-ORDER / PRE-ORDER 2 / CLAIM) only for real preorder flows
+            window._isPreorderFlow = isPreorderPageType(window._pageType);
+            window._isClaimPreorder = window._isPreorderFlow && (
+                window._pageType === 'claimpreorder' ||
+                window._paymentHistory.length > 0 ||
+                !!(data.original_invoice_no && String(data.original_invoice_no).trim() !== '')
+            );
 
             // Clear items edited flag
             window._itemsEdited = false;
@@ -4373,8 +4378,194 @@ if ($promos_result && $promos_result->num_rows > 0) {
         }
 
         // ── Unit Dropdown helpers (mirrors salesentry.php) ───────────────────
-        function populateInstallmentUnit() {
-            const unitRows = document.querySelectorAll('.unit-selector-row');
+        function extractImeiFromUnitLabel(label) {
+            const m = String(label || '').match(/\(([^)]+)\)\s*$/);
+            return m ? String(m[1]).trim().toUpperCase() : '';
+        }
+
+        function unitLabelsMatch(savedLabel, optionLabel) {
+            const a = String(savedLabel || '').trim().toUpperCase();
+            const b = String(optionLabel || '').trim().toUpperCase();
+            if (!a || !b) return false;
+            if (a === b) return true;
+            const ia = extractImeiFromUnitLabel(savedLabel);
+            const ib = extractImeiFromUnitLabel(optionLabel);
+            if (ia && ib && ia === ib) return true;
+            // Description-only match (no IMEI on one side)
+            const da = a.replace(/\s*\([^)]*\)\s*$/, '').trim();
+            const db = b.replace(/\s*\([^)]*\)\s*$/, '').trim();
+            if (da && db && da === db) return true;
+            return false;
+        }
+
+        function normalizePaymentMethodLabel(name) {
+            const n = String(name || '').toLowerCase().trim();
+            if (!n) return '';
+            if (n.includes('credit')) return 'credit card';
+            if (n.includes('debit')) return 'debit card';
+            if (n.includes('cash')) return 'cash';
+            if (n.includes('starpay')) return 'starpay qr';
+            if (n.includes('qr')) return 'qr ph';
+            if (n.includes('ewallet') || n.includes('e-wallet') || n.includes('gcash') || n.includes('maya')) return 'e-wallet';
+            if (n.includes('online') || n.includes('banking')) return 'online banking';
+            if (n.includes('home credit') || n.includes('partner') || n.includes('skyro') || n.includes('billease') || n.includes('payjoy') || n.includes('salmon') || n.includes('samsung') || n.includes('paymongo')) return 'payment partners';
+            return n;
+        }
+
+        function sectionClassForMethod(methodNorm) {
+            if (methodNorm === 'credit card') return '.credit-card-section';
+            if (methodNorm === 'debit card') return '.debit-card-section';
+            if (methodNorm === 'cash') return '.cash-section';
+            if (methodNorm === 'starpay qr') return '.starpay-qr-section';
+            if (methodNorm === 'qr ph') return '.qr-ph-section';
+            if (methodNorm === 'e-wallet') return '.ewallet-section';
+            if (methodNorm === 'online banking') return '.online-banking-section';
+            if (methodNorm === 'payment partners') return '.home-credit-section';
+            return null;
+        }
+
+        /** Collect saved unit labels per payment method from payment_data */
+        function buildSavedUnitsByMethod(paymentData) {
+            const byMethod = {};
+            const add = (method, label) => {
+                const m = normalizePaymentMethodLabel(method);
+                if (!m || !label) return;
+                if (!byMethod[m]) byMethod[m] = [];
+                const exists = byMethod[m].some(u => unitLabelsMatch(u, label));
+                if (!exists) byMethod[m].push(String(label).trim());
+            };
+
+            const consumeEntry = (p, fallbackMethod) => {
+                if (!p || typeof p !== 'object') return;
+                const method = p.payment_type || fallbackMethod || '';
+                if (p.unit_payment_map && typeof p.unit_payment_map === 'object') {
+                    Object.keys(p.unit_payment_map).forEach(unitLabel => {
+                        add(p.unit_payment_map[unitLabel] || method, unitLabel);
+                    });
+                }
+                if (Array.isArray(p.units)) {
+                    p.units.forEach(u => add(method, u));
+                }
+                if (typeof p.Unit === 'string' && p.Unit.trim()) {
+                    p.Unit.split(/,\s*/).forEach(part => {
+                        const cleaned = part.trim();
+                        // Skip junk like "on" from select-all checkbox value
+                        if (!cleaned || cleaned.toLowerCase() === 'on') return;
+                        add(method, cleaned);
+                    });
+                }
+            };
+
+            if (!paymentData) return byMethod;
+            if (paymentData.payment_type === 'multiple' && Array.isArray(paymentData.payments)) {
+                paymentData.payments.forEach(p => consumeEntry(p));
+                // Also honor top-level unit_payment_map if present
+                consumeEntry(paymentData, paymentData.payment_type);
+            } else if (Array.isArray(paymentData)) {
+                paymentData.forEach(p => consumeEntry(p));
+            } else {
+                // Expand splits so Credit Card units vs Cash units map correctly
+                const expanded = (typeof expandCombinedPaymentTypes === 'function')
+                    ? expandCombinedPaymentTypes([paymentData])
+                    : [paymentData];
+                expanded.forEach(p => consumeEntry(p));
+                // Top-level unit_payment_map (often on the combined object)
+                if (paymentData.unit_payment_map) {
+                    Object.keys(paymentData.unit_payment_map).forEach(unitLabel => {
+                        add(paymentData.unit_payment_map[unitLabel], unitLabel);
+                    });
+                }
+            }
+            return byMethod;
+        }
+
+        function updateUnitSelectorLabel(unitRow) {
+            if (!unitRow) return;
+            const container = unitRow.querySelector('.unit-checkboxes');
+            const textSpan = unitRow.querySelector('.selected-text');
+            if (!container || !textSpan) return;
+            const visibleCbs = Array.from(container.querySelectorAll('input[name="Unit"]'))
+                .filter(cb => {
+                    const lbl = cb.closest('label');
+                    return lbl && lbl.style.display !== 'none';
+                });
+            const checked = visibleCbs.filter(cb => cb.checked);
+            const selectAllCb = container.querySelector('.select-all-units-cb');
+            if (selectAllCb) selectAllCb.checked = (visibleCbs.length > 0 && checked.length === visibleCbs.length);
+            if (visibleCbs.length === 0) textSpan.textContent = '-- No Units Available --';
+            else if (checked.length === 0) textSpan.textContent = '-- Select Units --';
+            else if (checked.length === 1) textSpan.textContent = checked[0].value;
+            else if (checked.length === visibleCbs.length) textSpan.textContent = 'All Available Units (' + checked.length + ')';
+            else textSpan.textContent = checked.length + ' Units Selected';
+        }
+
+        /**
+         * After payment sections + unit dropdowns are built, check units from saved payment_data.
+         * Falls back to selecting all visible units when a single method fully paid the sale.
+         */
+        function restorePaymentUnitsFromSavedData(paymentData, rootEl) {
+            const root = rootEl || document;
+            const byMethod = buildSavedUnitsByMethod(paymentData);
+
+            const sectionDefs = [
+                { className: '.cash-section', method: 'cash' },
+                { className: '.credit-card-section', method: 'credit card' },
+                { className: '.debit-card-section', method: 'debit card' },
+                { className: '.qr-ph-section', method: 'qr ph' },
+                { className: '.starpay-qr-section', method: 'starpay qr' },
+                { className: '.ewallet-section', method: 'e-wallet' },
+                { className: '.online-banking-section', method: 'online banking' },
+                { className: '.home-credit-section', method: 'payment partners' }
+            ];
+
+            const activeSections = [];
+            root.querySelectorAll(
+                '.home-credit-section, .credit-card-section, .debit-card-section, .qr-ph-section, .starpay-qr-section, .ewallet-section, .online-banking-section, .cash-section'
+            ).forEach(sec => {
+                if (sec.style.display === 'block') activeSections.push(sec);
+            });
+
+            activeSections.forEach(sec => {
+                const def = sectionDefs.find(d => sec.classList.contains(d.className.replace('.', '')));
+                const methodNorm = def ? def.method : '';
+                const savedUnits = byMethod[methodNorm] || [];
+                const unitRow = sec.querySelector('.unit-selector-row');
+                if (!unitRow) return;
+                const cbs = Array.from(unitRow.querySelectorAll('input[name="Unit"]'));
+                if (cbs.length === 0) return;
+
+                // Uncheck first
+                cbs.forEach(cb => { cb.checked = false; });
+
+                if (savedUnits.length > 0) {
+                    cbs.forEach(cb => {
+                        if (savedUnits.some(su => unitLabelsMatch(su, cb.value))) {
+                            cb.checked = true;
+                        }
+                    });
+                }
+
+                // Fallback: single active method and no/partial saved match → select all (fully paid cash etc.)
+                const checkedCount = cbs.filter(cb => cb.checked).length;
+                if (checkedCount === 0 && activeSections.length === 1) {
+                    cbs.forEach(cb => { cb.checked = true; });
+                }
+
+                updateUnitSelectorLabel(unitRow);
+            });
+
+            if (typeof syncUnitSelectorsAcrossSections === 'function') {
+                syncUnitSelectorsAcrossSections();
+            }
+            // Re-apply labels after sync (sync may tweak visibility)
+            activeSections.forEach(sec => {
+                updateUnitSelectorLabel(sec.querySelector('.unit-selector-row'));
+            });
+        }
+
+        function populateInstallmentUnit(rootEl) {
+            const root = rootEl || document;
+            const unitRows = root.querySelectorAll('.unit-selector-row');
             if (unitRows.length === 0) return;
 
             // Build item list from itemsArray (skip 0-price items)
@@ -4389,13 +4580,19 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 items.push({ desc, serial });
             });
 
-            unitRows.forEach((unitRow, unitRowIdx) => {
+            unitRows.forEach((unitRow) => {
+                // Preserve checked units across rebuild (e.g. toggling another payment method)
+                const prevChecked = Array.from(unitRow.querySelectorAll('input[name="Unit"]:checked'))
+                    .map(cb => cb.value);
+
                 if (items.length === 0) {
                     unitRow.style.display = 'none';
                     unitRow.innerHTML = '';
                     return;
                 }
 
+                // Always build Unit UI for every payment section (like salesentry.php).
+                // Section show/hide controls visibility; syncUnitSelectorsAcrossSections filters options.
                 unitRow.style.display = '';
                 unitRow.innerHTML = `
                     <label style="min-width: 120px;">Unit:</label>
@@ -4410,7 +4607,6 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 `;
 
                 const container = unitRow.querySelector('.unit-checkboxes');
-                const textSpan  = unitRow.querySelector('.selected-text');
 
                 // "Select All" for multiple items
                 if (items.length > 1) {
@@ -4433,6 +4629,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                             .filter(cb => cb.closest('label').style.display !== 'none');
                         visibleCbs.forEach(cb => cb.checked = this.checked);
                         syncUnitSelectorsAcrossSections(unitRow);
+                        updateUnitSelectorLabel(unitRow);
                     });
                     selectAllLbl.appendChild(selectAllCb);
                     selectAllLbl.appendChild(document.createTextNode('Select All'));
@@ -4456,18 +4653,41 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     cb.name = 'Unit';
                     cb.value = labelText;
                     Object.assign(cb.style, { marginTop: '2px', width: '16px', height: '16px' });
-                    cb.checked = (unitRowIdx === 0); // first section pre-checks all by default
+                    cb.checked = prevChecked.some(v => unitLabelsMatch(v, labelText));
                     cb.addEventListener('change', function () {
                         syncUnitSelectorsAcrossSections(unitRow);
+                        updateUnitSelectorLabel(unitRow);
                     });
 
                     lbl.appendChild(cb);
                     lbl.appendChild(document.createTextNode(labelText));
                     container.appendChild(lbl);
                 });
+
+                updateUnitSelectorLabel(unitRow);
             });
 
             syncUnitSelectorsAcrossSections();
+        }
+
+        /** Rebuild/show Unit selectors after a payment method checkbox/dropdown change */
+        function refreshPaymentUnitSelectors(rootEl) {
+            const root = rootEl || document;
+            if (typeof populateInstallmentUnit === 'function') {
+                populateInstallmentUnit(root);
+            }
+            if (typeof syncUnitSelectorsAcrossSections === 'function') {
+                syncUnitSelectorsAcrossSections();
+            }
+            // Update labels on active sections
+            root.querySelectorAll(
+                '.home-credit-section, .credit-card-section, .debit-card-section, .qr-ph-section, .starpay-qr-section, .ewallet-section, .online-banking-section, .cash-section'
+            ).forEach(sec => {
+                if (sec.style.display === 'block') {
+                    updateUnitSelectorLabel(sec.querySelector('.unit-selector-row'));
+                }
+            });
+            if (typeof calculateGlobalTotal === 'function') calculateGlobalTotal();
         }
 
         function syncUnitSelectorsAcrossSections(triggeredUnitRow) {
@@ -4631,6 +4851,25 @@ if ($promos_result && $promos_result->num_rows > 0) {
             calculateTotals();
             updateBreakdownTable();
             populateInstallmentUnit();
+            // Re-apply saved unit selections after items rebuild (modification reload / item edits)
+            try {
+                const pdInput = document.getElementById('payment_data');
+                if (pdInput && pdInput.value && typeof restorePaymentUnitsFromSavedData === 'function') {
+                    const pd = JSON.parse(pdInput.value);
+                    const multiContainer = document.getElementById('multiplePaymentSectionsContainer');
+                    const singleSection = document.getElementById('singlePaymentSection');
+                    if (multiContainer && multiContainer.style.display === 'block') {
+                        multiContainer.querySelectorAll('.payment-block').forEach((block, idx) => {
+                            const payments = (pd.payment_type === 'multiple' && Array.isArray(pd.payments))
+                                ? pd.payments
+                                : [pd];
+                            restorePaymentUnitsFromSavedData(payments[idx] || pd, block);
+                        });
+                    } else if (singleSection && singleSection.style.display !== 'none') {
+                        restorePaymentUnitsFromSavedData(pd, singleSection);
+                    }
+                }
+            } catch (e) { /* ignore */ }
             if (typeof filterBanksByTerminalId === 'function') {
                 filterBanksByTerminalId('cc');
                 filterBanksByTerminalId('dc');
@@ -4673,10 +4912,17 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const isClaim = meta.isClaim;
                     const inv = effectiveInv || (isClaim ? curInvoice : ((idx === 0 ? origInvoice : '') || origInvoice));
                     const numLabel = paymentOrdinal(idx + 1);
-                    const stageName = meta.label || (isClaim ? 'CLAIM PRE-ORDER' : 'PRE-ORDER');
-                    const stageLabel = inv
-                        ? `${numLabel} Order Breakdown (${stageName} — Invoice #${inv})`
-                        : `${numLabel} Order Breakdown (${stageName})`;
+                    let stageLabel;
+                    if (isPreorderModificationFlow() && meta.label) {
+                        const stageName = meta.label;
+                        stageLabel = inv
+                            ? `${numLabel} Order Breakdown (${stageName} — Invoice #${inv})`
+                            : `${numLabel} Order Breakdown (${stageName})`;
+                    } else {
+                        stageLabel = inv
+                            ? `${numLabel} Order Breakdown (Invoice #${inv})`
+                            : `${numLabel} Order Breakdown`;
+                    }
 
                     // Add group header row in the table
                     const headerRow = document.createElement('tr');
@@ -6352,13 +6598,19 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
         // Initialize event listeners scoped inside a block
         function initBlockListeners(block) {
+            const refreshUnits = () => {
+                if (typeof refreshPaymentUnitSelectors === 'function') {
+                    refreshPaymentUnitSelectors(block);
+                }
+            };
+
             // Payment Partners checkbox
             const chkPartners = block.querySelector('#chkPaymentPartners');
             const homeCreditSection = block.querySelector('.home-credit-section');
             if (chkPartners && homeCreditSection) {
                 chkPartners.addEventListener('change', function () {
                     homeCreditSection.style.display = this.checked ? 'block' : 'none';
-                    calculateGlobalTotal();
+                    refreshUnits();
                 });
             }
 
@@ -6384,7 +6636,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (chkCash && cashSection) {
                 chkCash.addEventListener('change', function () {
                     cashSection.style.display = this.checked ? 'block' : 'none';
-                    calculateGlobalTotal();
+                    refreshUnits();
                 });
             }
 
@@ -6394,7 +6646,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (chkOnlineBanking && onlineBankingSection) {
                 chkOnlineBanking.addEventListener('change', function () {
                     onlineBankingSection.style.display = this.checked ? 'block' : 'none';
-                    calculateGlobalTotal();
+                    refreshUnits();
                 });
             }
 
@@ -6404,7 +6656,77 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (chkEwallet && ewalletSection) {
                 chkEwallet.addEventListener('change', function () {
                     ewalletSection.style.display = this.checked ? 'block' : 'none';
-                    calculateGlobalTotal();
+                    refreshUnits();
+                });
+            }
+
+            // Card payment checkbox + dropdown (Credit / Debit)
+            const chkCardPayment = block.querySelector('#chkCardPayment');
+            const cardPaymentDropdown = block.querySelector('#cardPaymentDropdown');
+            const creditCardSection = block.querySelector('.credit-card-section');
+            const debitCardSection = block.querySelector('.debit-card-section');
+            if (chkCardPayment) {
+                chkCardPayment.addEventListener('change', function () {
+                    if (this.checked) {
+                        let val = cardPaymentDropdown ? cardPaymentDropdown.value : '';
+                        if (!val && cardPaymentDropdown) {
+                            cardPaymentDropdown.value = 'credit_card';
+                            val = 'credit_card';
+                        }
+                        if (creditCardSection) creditCardSection.style.display = (val === 'credit_card') ? 'block' : 'none';
+                        if (debitCardSection) debitCardSection.style.display = (val === 'debit_card') ? 'block' : 'none';
+                    } else {
+                        if (creditCardSection) creditCardSection.style.display = 'none';
+                        if (debitCardSection) debitCardSection.style.display = 'none';
+                        if (cardPaymentDropdown) cardPaymentDropdown.value = '';
+                    }
+                    refreshUnits();
+                });
+            }
+            if (cardPaymentDropdown) {
+                cardPaymentDropdown.addEventListener('change', function () {
+                    if (chkCardPayment && chkCardPayment.checked) {
+                        if (creditCardSection) creditCardSection.style.display = 'none';
+                        if (debitCardSection) debitCardSection.style.display = 'none';
+                        if (this.value === 'credit_card' && creditCardSection) creditCardSection.style.display = 'block';
+                        else if (this.value === 'debit_card' && debitCardSection) debitCardSection.style.display = 'block';
+                        refreshUnits();
+                    }
+                });
+            }
+
+            // QR checkbox + dropdown
+            const chkQR = block.querySelector('#chkQR');
+            const qrDropdown = block.querySelector('#qrDropdown');
+            const qrPhSection = block.querySelector('.qr-ph-section');
+            const starpayQrSection = block.querySelector('.starpay-qr-section');
+            if (chkQR) {
+                chkQR.addEventListener('change', function () {
+                    if (this.checked) {
+                        let val = qrDropdown ? qrDropdown.value : '';
+                        if (!val && qrDropdown) {
+                            qrDropdown.value = 'qr_ph';
+                            val = 'qr_ph';
+                        }
+                        if (qrPhSection) qrPhSection.style.display = (val === 'qr_ph') ? 'block' : 'none';
+                        if (starpayQrSection) starpayQrSection.style.display = (val === 'starpay_qr') ? 'block' : 'none';
+                    } else {
+                        if (qrPhSection) qrPhSection.style.display = 'none';
+                        if (starpayQrSection) starpayQrSection.style.display = 'none';
+                        if (qrDropdown) qrDropdown.value = '';
+                    }
+                    refreshUnits();
+                });
+            }
+            if (qrDropdown) {
+                qrDropdown.addEventListener('change', function () {
+                    if (chkQR && chkQR.checked) {
+                        if (qrPhSection) qrPhSection.style.display = 'none';
+                        if (starpayQrSection) starpayQrSection.style.display = 'none';
+                        if (this.value === 'qr_ph' && qrPhSection) qrPhSection.style.display = 'block';
+                        else if (this.value === 'starpay_qr' && starpayQrSection) starpayQrSection.style.display = 'block';
+                        refreshUnits();
+                    }
                 });
             }
 
@@ -6874,6 +7196,17 @@ if ($promos_result && $promos_result->num_rows > 0) {
             btn.textContent = getPaymentBlockCount() > 0 ? 'Add More Payment' : 'Add Payment';
         }
 
+        /** True only for preorder / preorder2 / claimpreorder (not salesentry, salestrade-in, etc.) */
+        function isPreorderPageType(pageType) {
+            const pt = String(pageType != null ? pageType : (window._pageType || '')).toLowerCase().trim();
+            return pt === 'preorder' || pt === 'preorder2' || pt === 'claimpreorder' ||
+                pt === 'pre-order' || pt === 'pre_order' || pt.includes('preorder');
+        }
+
+        function isPreorderModificationFlow() {
+            return !!window._isPreorderFlow;
+        }
+
         function formatPaymentBlockDate(raw) {
             if (!raw) return '';
             const str = String(raw).trim();
@@ -6892,6 +7225,11 @@ if ($promos_result && $promos_result->num_rows > 0) {
         }
 
         function getPaymentStageMeta(p, idx, payments) {
+            // salesentry / salesentrylate / salestrade-in: no PRE-ORDER / CLAIM labels
+            if (!isPreorderModificationFlow()) {
+                return { label: '', isClaim: false };
+            }
+
             const list = Array.isArray(payments) ? payments : [];
             // Prefer backend stamp from payment history (accurate for preorder2 vs claim)
             if (p && typeof p === 'object') {
@@ -6921,13 +7259,14 @@ if ($promos_result && $promos_result->num_rows > 0) {
             const ordNum = paymentOrdinal(idx + 1);
             const meta = getPaymentStageMeta(paymentObj || {}, idx, paymentsList || []);
             let headerPrefix = `${ordNum} Payment Method`;
-            if (meta.label) {
+            // Only show PRE-ORDER / CLAIM tag for real preorder page types
+            if (isPreorderModificationFlow() && meta.label) {
                 headerPrefix = `${ordNum} Payment Method &nbsp;&nbsp; ${meta.label}`;
             }
             const dateVal = formatPaymentBlockDate(paymentDate);
             return `
                 <div class="payment-block-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #a8a8a8ff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;"
-                    data-stage-label="${meta.label || ''}" data-is-claim="${meta.isClaim ? '1' : '0'}">
+                    data-stage-label="${(isPreorderModificationFlow() && meta.label) ? meta.label : ''}" data-is-claim="${(isPreorderModificationFlow() && meta.isClaim) ? '1' : '0'}">
                     <h4 style="margin: 0; color: #333; font-size: 16px; font-weight: 600; white-space: nowrap;">${headerPrefix} -</h4>
                     <input type="text"
                         class="payment-block-invoice-input"
@@ -6995,17 +7334,22 @@ if ($promos_result && $promos_result->num_rows > 0) {
                 const currentInv = invInput ? invInput.value.trim() : '';
                 const currentDate = dateInput ? dateInput.value.trim() : '';
                 let fallbackInv = currentInv;
-                if (!fallbackInv && window._isClaimPreorder && total > 1) {
+                if (!fallbackInv && window._isClaimPreorder && isPreorderModificationFlow() && total > 1) {
                     fallbackInv = (idx < total - 1)
                         ? ((idx === 0 ? origInvoice : '') || origInvoice)
                         : curInvoice;
                 }
                 const pMeta = block._paymentStageMeta || paymentsList[idx] || {};
                 // Keep stage labels stable when relabeling (don't flip last to CLAIM)
-                if (!pMeta.stage_label) {
+                if (isPreorderModificationFlow() && !pMeta.stage_label) {
                     const meta = getPaymentStageMeta(pMeta, idx, paymentsList);
                     pMeta.stage_label = meta.label;
                     pMeta.is_claim_stage = meta.isClaim ? 1 : 0;
+                    block._paymentStageMeta = pMeta;
+                    paymentsList[idx] = pMeta;
+                } else if (!isPreorderModificationFlow()) {
+                    pMeta.stage_label = '';
+                    pMeta.is_claim_stage = 0;
                     block._paymentStageMeta = pMeta;
                     paymentsList[idx] = pMeta;
                 }
@@ -7036,7 +7380,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             if (payments.length === 0) {
                 const today = formatPaymentBlockDate(new Date().toISOString());
-                const emptyMeta = { stage_label: 'PRE-ORDER', is_claim_stage: 0 };
+                const emptyMeta = isPreorderModificationFlow()
+                    ? { stage_label: 'PRE-ORDER', is_claim_stage: 0 }
+                    : { stage_label: '', is_claim_stage: 0 };
                 const block = createEmptyPaymentBlock(0, 1, curInvoice || origInvoice || '', today, emptyMeta, [emptyMeta]);
                 multiContainer.appendChild(block);
                 initBlockListeners(block);
@@ -7045,7 +7391,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const blockInv = (p && p.block_invoice_no) ? String(p.block_invoice_no).trim() : '';
                     let inv = blockInv;
                     if (!inv) {
-                        if (window._isClaimPreorder && payments.length > 1) {
+                        if (window._isClaimPreorder && isPreorderModificationFlow() && payments.length > 1) {
                             inv = (idx < payments.length - 1)
                                 ? ((idx === 0 ? origInvoice : '') || origInvoice)
                                 : curInvoice;
@@ -7056,16 +7402,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     const payDate = formatPaymentBlockDate(
                         (p && (p.block_payment_date || p.payment_date || p.date)) || ''
                     );
-                    // Ensure stage_label from history (PRE-ORDER / PRE-ORDER 2 / CLAIM)
-                    if (p && !p.stage_label) {
+                    // Ensure stage_label from history only for preorder flows
+                    if (p && isPreorderModificationFlow() && !p.stage_label) {
                         const meta = getPaymentStageMeta(p, idx, payments);
                         p.stage_label = meta.label;
                         p.is_claim_stage = meta.isClaim ? 1 : 0;
+                    } else if (p && !isPreorderModificationFlow()) {
+                        // Strip accidental preorder tags on salesentry / trade-in / etc.
+                        delete p.stage_label;
+                        p.is_claim_stage = 0;
                     }
                     const block = createEmptyPaymentBlock(idx, payments.length, inv, payDate, p, payments);
                     multiContainer.appendChild(block);
                     initBlockListeners(block);
                     if (p) populatePaymentBlock(block, p);
+                    if (typeof populateInstallmentUnit === 'function') populateInstallmentUnit(block);
+                    if (p && typeof restorePaymentUnitsFromSavedData === 'function') {
+                        restorePaymentUnitsFromSavedData(p, block);
+                    }
                 });
             }
             relabelPaymentBlocks();
@@ -7118,10 +7472,12 @@ if ($promos_result && $promos_result->num_rows > 0) {
             const newIdx = blocks.length;
             const today = formatPaymentBlockDate(new Date().toISOString());
             const paymentsList = Array.from(blocks).map(b => b._paymentStageMeta || {});
-            const newMeta = {
-                stage_label: (newIdx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${newIdx + 1}`,
-                is_claim_stage: 0
-            };
+            const newMeta = isPreorderModificationFlow()
+                ? {
+                    stage_label: (newIdx === 0) ? 'PRE-ORDER' : `PRE-ORDER ${newIdx + 1}`,
+                    is_claim_stage: 0
+                }
+                : { stage_label: '', is_claim_stage: 0 };
             paymentsList.push(newMeta);
             const block = createEmptyPaymentBlock(newIdx, newIdx + 1, window._currentInvoiceNo || '', today, newMeta, paymentsList);
             multiContainer.appendChild(block);
@@ -7197,7 +7553,11 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     populatePaymentBlock(singleSectionEl, p, { reset: idx === 0 });
                 });
                 if (typeof calculateGlobalTotal === 'function') calculateGlobalTotal();
-                if (typeof populateInstallmentUnit === 'function') populateInstallmentUnit();
+                if (typeof populateInstallmentUnit === 'function') populateInstallmentUnit(singleSectionEl);
+                // Auto-select paid units from unit_payment_map / Unit / units
+                if (typeof restorePaymentUnitsFromSavedData === 'function') {
+                    restorePaymentUnitsFromSavedData(paymentData, singleSectionEl);
+                }
             }
             // Render Payment History Breakdown in paymentBreakdownBanner if it is a multiple payment
             let breakdownRowsHtml = '';
@@ -7226,18 +7586,22 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
                     const effectiveInv = (p && typeof p === 'object' && p.block_invoice_no) ? (p.block_invoice_no || '') : '';
                     const meta = getPaymentStageMeta(p, idx, paymentData.payments);
-                    const isClaim = meta.isClaim;
+                    const isClaim = isPreorderModificationFlow() && meta.isClaim;
                     const headerColor = isClaim ? '#2e7d32' : '#1565c0';
                     const headerBg = isClaim ? '#e8f5e9' : '#e3f0ff';
                     const borderCol = isClaim ? '#a5d6a7' : '#90caf9';
-                    const tag = meta.label || (isClaim ? 'CLAIM' : 'PRE-ORDER');
+                    const tag = isPreorderModificationFlow()
+                        ? (meta.label || (isClaim ? 'CLAIM' : 'PRE-ORDER'))
+                        : (numLabel.replace(' Payment', '') || 'PAYMENT');
                     const tagBg = isClaim ? '#2e7d32' : '#1565c0';
 
                     if (isClaim) {
                         const inv = effectiveInv || curInvoice;
                         invLabel = inv ? ` — Invoice #${inv}` : '';
                     } else {
-                        const inv = effectiveInv || (idx === 0 ? origInvoice : '') || origInvoice;
+                        const inv = effectiveInv || (isPreorderModificationFlow()
+                            ? ((idx === 0 ? origInvoice : '') || origInvoice || curInvoice)
+                            : curInvoice);
                         invLabel = inv ? ` — Invoice #${inv}` : '';
                     }
 
@@ -8107,16 +8471,24 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (dateInput) {
                 data.block_payment_date = dateInput.value.trim();
             }
-            // Preserve stage label (PRE-ORDER / PRE-ORDER 2 / CLAIM PRE-ORDER)
-            if (block._paymentStageMeta) {
-                if (block._paymentStageMeta.stage_label) data.stage_label = block._paymentStageMeta.stage_label;
-                if (block._paymentStageMeta.is_claim_stage != null) data.is_claim_stage = block._paymentStageMeta.is_claim_stage;
-                if (block._paymentStageMeta.payment_sequence != null) data.payment_sequence = block._paymentStageMeta.payment_sequence;
+            // Preserve stage label (PRE-ORDER / PRE-ORDER 2 / CLAIM) only for preorder flows
+            if (isPreorderModificationFlow()) {
+                if (block._paymentStageMeta) {
+                    if (block._paymentStageMeta.stage_label) data.stage_label = block._paymentStageMeta.stage_label;
+                    if (block._paymentStageMeta.is_claim_stage != null) data.is_claim_stage = block._paymentStageMeta.is_claim_stage;
+                    if (block._paymentStageMeta.payment_sequence != null) data.payment_sequence = block._paymentStageMeta.payment_sequence;
+                } else {
+                    const hdr = block.querySelector('.payment-block-header');
+                    if (hdr) {
+                        if (hdr.dataset.stageLabel) data.stage_label = hdr.dataset.stageLabel;
+                        data.is_claim_stage = hdr.dataset.isClaim === '1' ? 1 : 0;
+                    }
+                }
             } else {
-                const hdr = block.querySelector('.payment-block-header');
-                if (hdr) {
-                    if (hdr.dataset.stageLabel) data.stage_label = hdr.dataset.stageLabel;
-                    data.is_claim_stage = hdr.dataset.isClaim === '1' ? 1 : 0;
+                delete data.stage_label;
+                delete data.is_claim_stage;
+                if (block._paymentStageMeta && block._paymentStageMeta.payment_sequence != null) {
+                    data.payment_sequence = block._paymentStageMeta.payment_sequence;
                 }
             }
 
@@ -8695,6 +9067,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                     } else {
                         homeCreditSection.style.display = 'none';
                     }
+                    if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                 });
 
                 paymentPartnersDropdown.addEventListener('change', function () {
@@ -8735,6 +9108,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         if (debitCardSection) debitCardSection.style.display = 'none';
                         if (cardPaymentDropdown) cardPaymentDropdown.value = '';
                     }
+                    if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                 });
             }
 
@@ -8748,6 +9122,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         } else if (this.value === 'debit_card') {
                             if (debitCardSection) debitCardSection.style.display = 'block';
                         }
+                        if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                     }
                 });
             }
@@ -8774,6 +9149,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         if (starpayQrSection) starpayQrSection.style.display = 'none';
                         if (qrDropdown) qrDropdown.value = '';
                     }
+                    if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                 });
             }
 
@@ -8787,6 +9163,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
                         } else if (this.value === 'starpay_qr') {
                             if (starpayQrSection) starpayQrSection.style.display = 'block';
                         }
+                        if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                     }
                 });
             }
@@ -8797,6 +9174,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (chkCash && cashSection) {
                 chkCash.addEventListener('change', function () {
                     cashSection.style.display = this.checked ? 'block' : 'none';
+                    if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                 });
             }
 
@@ -8806,6 +9184,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (chkOnlineBanking && onlineBankingSection) {
                 chkOnlineBanking.addEventListener('change', function () {
                     onlineBankingSection.style.display = this.checked ? 'block' : 'none';
+                    if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                 });
             }
 
@@ -8815,6 +9194,7 @@ if ($promos_result && $promos_result->num_rows > 0) {
             if (chkEwallet && ewalletSection) {
                 chkEwallet.addEventListener('change', function () {
                     ewalletSection.style.display = this.checked ? 'block' : 'none';
+                    if (typeof refreshPaymentUnitSelectors === 'function') refreshPaymentUnitSelectors();
                 });
             }
 
