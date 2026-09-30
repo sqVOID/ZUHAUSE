@@ -89,6 +89,17 @@ if (isset($_GET['imei'])) {
         $row_soh = $result_soh->fetch_assoc();
         $item_code = $row_soh['item_code'];
         $description = $row_soh['description'];
+        $item_status = $row_soh['status'] ?? 'Good Stock';
+
+        // Check if item status is blocked for sales
+        $blocked_statuses = ['In Transit', 'On Process', 'Defective'];
+        if (in_array($item_status, $blocked_statuses)) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Cannot add this item. Current status: $item_status. Only items with 'Good Stock', 'Demo', or 'Serviced' status can be added."
+            ]);
+            exit;
+        }
 
         $item_code_escaped = $conn->real_escape_string($item_code);
         $branch_escaped = $conn->real_escape_string($user_branch);

@@ -346,7 +346,7 @@ try {
                             (item_code, description, group_name, department, brand, family_code,
                              imei, quantity, branch, dr_date, dr_number, system_entry_date, item_type, status)
                         VALUES
-                            (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'Good Stock')
+                            (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'On Process')
                     ");
                     $insert_stock->bind_param(
                         "ssssssssssss",
@@ -356,8 +356,8 @@ try {
                     $insert_stock->execute();
                     $insert_stock->close();
                 } else {
-                    // Ensure returned upgrade unit is marked Good Stock (not Active)
-                    $upd_status = $conn->prepare("UPDATE stock_on_hand SET status = 'Good Stock' WHERE imei = ? AND item_code = ? LIMIT 1");
+                    // Ensure returned old upgrade unit is marked On Process
+                    $upd_status = $conn->prepare("UPDATE stock_on_hand SET status = 'On Process' WHERE imei = ? AND item_code = ? LIMIT 1");
                     $upd_status->bind_param("ss", $imei, $item_code);
                     $upd_status->execute();
                     $upd_status->close();
@@ -366,17 +366,37 @@ try {
         }
     }
 
-    // 11b. Remove NEW unit from stock_on_hand
+    // 11b. Mark NEW unit as "On Process" in stock_on_hand
     foreach ($new_items as $item) {
         $new_imei      = trim($item['imei'] ?? '');
         $new_item_code = trim($item['item_code'] ?? '');
 
         if (!empty($new_imei) && !empty($new_item_code)) {
-            $del = $conn->prepare("DELETE FROM stock_on_hand WHERE UPPER(TRIM(imei)) = UPPER(?) AND UPPER(TRIM(item_code)) = UPPER(?) LIMIT 1");
-            $del->bind_param("ss", $new_imei, $new_item_code);
-            $del->execute();
-            $del->close();
+            // Check current status before updating
+            $check_status = $conn->prepare("SELECT status FROM stock_on_hand WHERE UPPER(TRIM(imei)) = UPPER(?) AND UPPER(TRIM(item_code)) = UPPER(?) LIMIT 1");
+            $check_status->bind_param("ss", $new_imei, $new_item_code);
+            $check_status->execute();
+            $status_result = $check_status->get_result();
+            
+            if ($status_result->num_rows > 0) {
+                $status_row = $status_result->fetch_assoc();
+                $current_status = $status_row['status'];
+                
+                // Block if status is In Transit, On Process, or Defective
+                $blocked_statuses = ['In Transit', 'On Process', 'Defective'];
+                if (in_array($current_status, $blocked_statuses)) {
+                    throw new Exception("Cannot process upgrade. Item with IMEI $new_imei has status: $current_status. Only items with 'Good Stock', 'Demo', or 'Serviced' status can be used.");
+                }
+            }
+            $check_status->close();
+            
+            // Update status to "On Process" for IMEI items
+            $upd = $conn->prepare("UPDATE stock_on_hand SET status = 'On Process' WHERE UPPER(TRIM(imei)) = UPPER(?) AND UPPER(TRIM(item_code)) = UPPER(?) LIMIT 1");
+            $upd->bind_param("ss", $new_imei, $new_item_code);
+            $upd->execute();
+            $upd->close();
         } elseif (empty($new_imei) && !empty($new_item_code)) {
+            // For accessories (non-IMEI items), decrement quantity as before
             $new_qty = intval($item['quantity'] ?? 1);
             $dec = $conn->prepare("UPDATE stock_on_hand SET quantity = quantity - ? WHERE UPPER(TRIM(item_code)) = UPPER(?) AND branch = ? AND quantity >= ? LIMIT 1");
             $dec->bind_param("issi", $new_qty, $new_item_code, $user_branch, $new_qty);

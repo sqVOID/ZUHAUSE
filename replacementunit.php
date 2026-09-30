@@ -397,12 +397,87 @@
             border-radius: 8px;
         }
 
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            background: white;
+            font-family: Arial, sans-serif;
+            width: 100%;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #999;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .form-group input[readonly] {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-search-item {
+            padding: 10px 50px;
+            background-color: var(--color-navy);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            height: 38px;
+        }
+
+        .btn-search-item:hover {
+            background-color: var(--color-navy-dark);
+        }
+
+        .btn-add-item {
+            padding: 10px 50px;
+            background-color: var(--color-gold);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            height: 38px;
+        }
+
+        .btn-add-item:hover {
+            background-color: var(--color-gold-light);
+        }
+
         .bottom-section {
             background: white;
             border: 1px solid #ccc;
             padding: 20px;
             border-radius: 8px;
         }
+
+        .input-field {
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -536,7 +611,10 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
-            min-width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
         }
 
         .total-row {
@@ -564,7 +642,7 @@
         }
 
         .btn-save {
-            padding: 10px 50px;
+            padding: 10px 40px;
             background-color: var(--color-gold);
             color: white;
             border: none;
@@ -572,12 +650,26 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 14px;
-            align-self: flex-end;
             text-transform: uppercase;
         }
 
         .btn-save:hover {
             background-color: var(--color-gold-light);
+        }
+
+        .footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 0px;
+            background: white;
+            padding: 20px;
+        }
+
+        .footer-right-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         @media (max-width: 1200px) {
@@ -664,26 +756,26 @@
         <div class="bottom-section">
             <!-- Input Fields -->
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                <div class="input-field">
+                <div class="form-group">
                     <label>Item Model</label>
                     <input type="text" id="item_model_input" placeholder="">
                 </div>
-                <div class="input-field">
+                <div class="form-group">
                     <label>IMEI</label>
                     <input type="text" id="imei_input" placeholder="" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 15px;">
                     <div style="display: flex; gap: 10px; align-items: flex-end;">
-                        <div class="input-field" style="flex: 1;">
+                        <div class="form-group" style="flex: 1;">
                             <label>Quantity</label>
                             <input type="number" id="quantity_input" value="0" min="0" style="text-align: center;">
                         </div>
-                        <div class="input-field" style="flex: 1;">
+                        <div class="form-group" style="flex: 1;">
                             <label>Price</label>
                             <input type="text" id="price_input" placeholder="" readonly style="background-color: #ffffff; color: #333;">
                         </div>
-                        <button type="button" class="btn-search-dark" id="search_item_btn" style="margin-bottom: 1px;">Search</button>
-                        <button type="button" class="btn-add" id="add_item_btn" style="margin-bottom: 1px;">Add</button>
+                        <button type="button" class="btn-search-item" id="search_item_btn" style="margin-bottom: 1px;">Search</button>
+                        <button type="button" class="btn-add-item" id="add_item_btn" style="margin-bottom: 1px;">Add</button>
                     </div>
                 </div>
             </div>
@@ -711,21 +803,32 @@
             </div>
 
             <!-- Bottom Row: Remarks and Totals -->
-            <div class="bottom-row">
-                <div class="remarks-section">
-                    <label>Remarks:</label>
-                    <textarea></textarea>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
+                <!-- Remarks Section (Left) -->
+                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ccc;">
+                    <div class="form-group">
+                        <label>Remarks</label>
+                        <textarea id="remarks_textarea" style="min-height: 150px; resize: vertical; font-family: Arial, sans-serif; font-size: 14px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
+                    </div>
                 </div>
-                <div class="totals-section">
+                
+                <!-- Totals Section (Right) -->
+                <div class="totals-section" style="width: 100%;">
                     <div class="total-row">
                         <label>Less:</label>
-                        <input type="text" readonly>
+                        <input type="text" readonly style="background-color: #f5f5f5;">
                     </div>
                     <div class="total-row">
                         <label>Total:</label>
-                        <input type="text" readonly>
+                        <input type="text" readonly style="background-color: #f5f5f5;">
                     </div>
-                    <button class="btn-save">Save</button>
+                </div>
+            </div>
+
+            <!-- Footer Actions Section (Below the grid) -->
+            <div class="footer-actions" style="width: 100%; justify-content: flex-end; padding: 20px; background: white; margin-top: 20px; border-radius: 8px; border: 1px solid #ccc;">
+                <div class="footer-right-group">
+                    <button class="btn-save">SAVE</button>
                 </div>
             </div>
         </div>

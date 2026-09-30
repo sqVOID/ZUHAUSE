@@ -250,6 +250,7 @@ if ($has_full_access) {
                         </option>
                         <option value="Demo" <?php echo $status_f === 'Demo' ? 'selected' : ''; ?>>Demo</option>
                         <option value="In Transit" <?php echo $status_f === 'In Transit' ? 'selected' : ''; ?>>In Transit</option>
+                        <option value="On Process" <?php echo $status_f === 'On Process' ? 'selected' : ''; ?>>On Process</option>
                     </select>  
                 </div>
 
@@ -384,6 +385,8 @@ if ($has_full_access) {
                                             $status_class = 'status-demo';
                                         } elseif ($status === 'In Transit') {
                                             $status_class = 'status-transit';
+                                        } elseif ($status === 'On Process') {
+                                            $status_class = 'status-onprocess';
                                         }
                                         ?>
                                         <span class="<?php echo $status_class; ?>"><?php echo htmlspecialchars($status); ?></span>
@@ -542,6 +545,15 @@ if ($has_full_access) {
             color: #f57f17;
             font-weight: 600;
             background-color: #fff9b8ff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-onprocess {
+            color: #00838f;
+            font-weight: 600;
+            background-color: #e0f7fa;
             padding: 4px 12px;
             border-radius: 4px;
             display: inline-block;

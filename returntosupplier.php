@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 
@@ -19,7 +19,7 @@ if (isset($_SESSION['user_branch'])) {
     <meta charset="UTF-8">
       <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Transfer</title>
+    <title>Return to Supplier</title>
     <style>
         * {
             margin: 0;
@@ -1032,23 +1032,27 @@ if (isset($_SESSION['user_branch'])) {
 
     <div class="main-content">
         <div class="content-header">
-            <h2>Stock Transfer</h2>
+            <h2>Return to Supplier</h2>
         </div>
 
         <!-- Top Form -->
         <div class="form-container">
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="st_number">ST Number</label>
-                    <input type="text" id="st_number" placeholder="System Generated" readonly>
+                    <label for="rts_number">RTS Number</label>
+                    <input type="text" id="rts_number" placeholder="System Generated" readonly>
                 </div>
                 <div class="form-group">
-                    <label for="st_date">Date</label>
-                    <input type="text" id="st_date" placeholder="System Generated" readonly>
+                    <label for="rts_date">Date</label>
+                    <input type="text" id="rts_date" placeholder="System Generated" readonly>
                 </div>
                 <div class="form-group">
-                    <label for="store_name">Store Name</label>
-                    <select id="store_name" class="searchable-select"
+                    <label for="reference_number">Reference Number</label>
+                    <input type="text" id="reference_number" placeholder="Enter Reference Number">
+                </div>
+                <div class="form-group">
+                    <label for="delivery_to">Delivery to</label>
+                    <select id="delivery_to" class="searchable-select"
                         style="padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; color: #333; background: white; width: 100%; outline: none;">
                         <option value="">Select Branch</option>
                     </select>
@@ -1077,6 +1081,10 @@ if (isset($_SESSION['user_branch'])) {
                     <label>Quantity</label>
                     <input type="number" id="input_item_qty" min="0" value="0">
                 </div>
+                <div class="form-group" style="flex:2;">
+                    <label>Reason</label>
+                    <input type="text" id="input_item_reason" placeholder="Enter reason">
+                </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" class="btn-search" onclick="openSearchModal()">Search</button>
                     <button type="button" class="btn-add-item" onclick="addItem()">Add</button>
@@ -1093,15 +1101,16 @@ if (isset($_SESSION['user_branch'])) {
                 <table class="items-table" id="transferTable">
                     <thead>
                         <tr>
-                            <th style="width: 40%">Item Description</th>
-                            <th style="width: 25%">IMEI</th>
-                            <th style="width: 15%">Quantity</th>
-                            <th style="width: 20%">Action</th>
+                            <th style="width: 30%">Item Description</th>
+                            <th style="width: 20%">IMEI</th>
+                            <th style="width: 10%">Quantity</th>
+                            <th style="width: 25%">Reason</th>
+                            <th style="width: 15%">Action</th>
                         </tr>
                     </thead>
                     <tbody id="transferTableBody">
                         <tr id="empty-row">
-                            <td colspan="4" style="height: 38px;">&nbsp;</td>
+                            <td colspan="5" style="height: 38px;">&nbsp;</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1157,17 +1166,21 @@ if (isset($_SESSION['user_branch'])) {
                 <input type="text" id="modalSerialInput" class="form-group"
                     style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"
                     placeholder="Enter IMEI..." onkeydown="handleSerialKeyPress(event)">
+                <input type="text" id="modalReasonInput" class="form-group"
+                    style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"
+                    placeholder="Enter Reason..." onkeydown="handleSerialKeyPress(event)">
                 <table class="items-table" style="margin-bottom:0;">
                     <thead>
                         <tr>
-                            <th style="width:25%;">Item Code</th>
-                            <th style="width:50%;">Item Description</th>
-                            <th style="width:25%;">Action</th>
+                            <th style="width:20%;">Item Code</th>
+                            <th style="width:40%;">Item Description</th>
+                            <th style="width:25%;">Reason</th>
+                            <th style="width:15%;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="modalSerialBody">
                         <tr>
-                            <td colspan="3" style="text-align:center; padding:20px;">Enter IMEI to search</td>
+                            <td colspan="4" style="text-align:center; padding:20px;">Enter IMEI to search</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1178,9 +1191,6 @@ if (isset($_SESSION['user_branch'])) {
             </div>
         </div>
     </div>
-
-    <!-- Transfer Modal -->
-    <!-- REMOVED - Transfer branch selection moved to Store Name field -->
 
     <script>
         function toggleSidebar() {
@@ -1265,11 +1275,11 @@ if (isset($_SESSION['user_branch'])) {
         // Set today's date
         document.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
-            document.getElementById('st_date').value = today.toLocaleDateString('en-US', {
+            document.getElementById('rts_date').value = today.toLocaleDateString('en-US', {
                 year: 'numeric', month: '2-digit', day: '2-digit'
             });
 
-            // Generate ST Number from booklet system
+            // Generate RTS Number from booklet system
             const branchCode = '<?php echo $branch_code; ?>';
             
             fetch('get_next_invoice_number.php', {
@@ -1277,30 +1287,30 @@ if (isset($_SESSION['user_branch'])) {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'action=get_invoice_number&branch_code=' + branchCode + '&page_type=stocktransfer'
+                body: 'action=get_invoice_number&branch_code=' + branchCode + '&page_type=returntosupplier'
             })
                 .then(response => response.json())
                 .then(result => {
                     if (result.success && result.invoice_number) {
-                        document.getElementById('st_number').value = result.invoice_number;
+                        document.getElementById('rts_number').value = result.invoice_number;
                     } else {
                         // Display fallback or message
-                        document.getElementById('st_number').value = result.invoice_number || 'System Generated';
+                        document.getElementById('rts_number').value = result.invoice_number || 'System Generated';
                         if (result.message) {
-                            console.log('ST Number info:', result.message);
+                            console.log('RTS Number info:', result.message);
                         }
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching ST number:', error);
+                    console.error('Error fetching RTS number:', error);
                     // Fallback: use date + 001
                     const year = today.getFullYear();
                     const month = String(today.getMonth() + 1).padStart(2, '0');
                     const day = String(today.getDate()).padStart(2, '0');
-                    document.getElementById('st_number').value = `ST-${year}${month}${day}-001`;
+                    document.getElementById('rts_number').value = `RTS-${year}${month}${day}-001`;
                 });
 
-            // Load branches for Store Name dropdown
+            // Load branches for Delivery to dropdown
             loadBranches();
 
             // Add Enter key listener to Item Code input
@@ -1320,15 +1330,15 @@ if (isset($_SESSION['user_branch'])) {
             fetch('get_branches.php')
                 .then(response => response.json())
                 .then(data => {
-                    const storeSelect = document.getElementById('store_name');
-                    storeSelect.innerHTML = '<option value="">Select Branch</option>';
+                    const deliverySelect = document.getElementById('delivery_to');
+                    deliverySelect.innerHTML = '<option value="">Select Branch</option>';
 
                     if (data.status === 'success' && data.data) {
                         data.data.forEach(branch => {
                             const option = document.createElement('option');
                             option.value = branch.branch_name;
                             option.textContent = branch.branch_name;
-                            storeSelect.appendChild(option);
+                            deliverySelect.appendChild(option);
                         });
 
                         // Initialize searchable-select after options are loaded
@@ -1431,13 +1441,20 @@ if (isset($_SESSION['user_branch'])) {
         let currentSearchResults = [];
 
         function addItem() {
-            // Validate Store Name and Remarks first
-            const storeName = document.getElementById('store_name').value.trim();
+            // Validate Delivery to and Remarks first
+            const deliveryTo = document.getElementById('delivery_to').value.trim();
             const remarks = document.getElementById('remarks').value.trim();
+            const referenceNumber = document.getElementById('reference_number').value.trim();
 
-            if (!storeName) {
-                alert('Please select Store Name first!');
-                document.getElementById('store_name').focus();
+            if (!referenceNumber) {
+                alert('Please enter Reference Number first!');
+                document.getElementById('reference_number').focus();
+                return;
+            }
+
+            if (!deliveryTo) {
+                alert('Please select Delivery to first!');
+                document.getElementById('delivery_to').focus();
                 return;
             }
 
@@ -1450,6 +1467,7 @@ if (isset($_SESSION['user_branch'])) {
             const code = document.getElementById('input_item_code').value.trim();
             const desc = document.getElementById('input_item_desc').value.trim();
             const qty = parseFloat(document.getElementById('input_item_qty').value) || 0;
+            const reason = document.getElementById('input_item_reason').value.trim();
 
             if (!code && !desc) {
                 alert('Please select an item or enter code/description.');
@@ -1458,6 +1476,12 @@ if (isset($_SESSION['user_branch'])) {
 
             if (qty <= 0) {
                 alert('Please enter a valid quantity.');
+                return;
+            }
+
+            if (!reason) {
+                alert('Please enter a reason for return.');
+                document.getElementById('input_item_reason').focus();
                 return;
             }
 
@@ -1472,24 +1496,25 @@ if (isset($_SESSION['user_branch'])) {
                             document.getElementById('input_item_code').value = '';
                             document.getElementById('input_item_desc').value = '';
                             document.getElementById('input_item_qty').value = '';
+                            document.getElementById('input_item_reason').value = '';
                             return;
                         }
 
                         // Item is not serialized - proceed with stock check
-                        proceedWithStockCheck(code, desc, qty);
+                        proceedWithStockCheck(code, desc, qty, reason);
                     })
                     .catch(error => {
                         console.error('Error checking serial status:', error);
                         // If check fails, proceed anyway
-                        proceedWithStockCheck(code, desc, qty);
+                        proceedWithStockCheck(code, desc, qty, reason);
                     });
             } else {
                 // No item code, just proceed
-                proceedWithStockCheck(code, desc, qty);
+                proceedWithStockCheck(code, desc, qty, reason);
             }
         }
 
-        function proceedWithStockCheck(code, desc, qty) {
+        function proceedWithStockCheck(code, desc, qty, reason) {
             // Check stock availability before adding
             const stockCheckUrl = `check_stock_availability.php?item_code=${encodeURIComponent(code)}&qty=${qty}&force_branch=true`;
 
@@ -1504,12 +1529,13 @@ if (isset($_SESSION['user_branch'])) {
                     }
 
                     // Stock is available, proceed with adding the item
-                    itemsList.push({ code, desc, IMEI: '', qty });
+                    itemsList.push({ code, desc, IMEI: '', qty, reason });
                     renderTable();
 
                     document.getElementById('input_item_code').value = '';
                     document.getElementById('input_item_desc').value = '';
                     document.getElementById('input_item_qty').value = '';
+                    document.getElementById('input_item_reason').value = '';
                 })
                 .catch(error => {
                     console.error('Error checking stock:', error);
@@ -1528,7 +1554,7 @@ if (isset($_SESSION['user_branch'])) {
             tbody.innerHTML = '';
 
             if (itemsList.length === 0) {
-                tbody.innerHTML = '<tr id="empty-row"><td colspan="4" style="height: 38px;">&nbsp;</td></tr>';
+                tbody.innerHTML = '<tr id="empty-row"><td colspan="5" style="height: 38px;">&nbsp;</td></tr>';
                 document.getElementById('total_quantity').value = '';
                 return;
             }
@@ -1541,6 +1567,7 @@ if (isset($_SESSION['user_branch'])) {
                 <td style="text-align: left;">${escHtml(item.desc)}</td>
                 <td style="text-align: center;">${escHtml(item.IMEI)}</td>
                 <td>${item.qty !== 0 ? item.qty : ''}</td>
+                <td style="text-align: left;">${escHtml(item.reason)}</td>
                 <td>
                     <button class="btn-remove" onclick="removeItem(${idx})">Remove</button>
                 </td>
@@ -1673,10 +1700,17 @@ if (isset($_SESSION['user_branch'])) {
         }
 
         function saveTransfer() {
-            // Check if Store Name (branch) is selected
-            const storeName = document.getElementById('store_name').value.trim();
-            if (!storeName) {
-                alert("Branch name is required");
+            // Check if Reference Number is filled
+            const referenceNumber = document.getElementById('reference_number').value.trim();
+            if (!referenceNumber) {
+                alert("Reference Number is required");
+                return;
+            }
+
+            // Check if Delivery to is selected
+            const deliveryTo = document.getElementById('delivery_to').value.trim();
+            if (!deliveryTo) {
+                alert("Delivery to is required");
                 return;
             }
 
@@ -1688,23 +1722,23 @@ if (isset($_SESSION['user_branch'])) {
             }
 
             if (itemsList.length === 0) {
-                alert("No items to transfer.");
+                alert("No items to return.");
                 return;
             }
 
             // Prepare data to save
-            const stNumber = document.getElementById('st_number').value;
-            const stDate = document.getElementById('st_date').value;
+            const rtsNumber = document.getElementById('rts_number').value;
+            const rtsDate = document.getElementById('rts_date').value;
             const branchFrom = '<?php echo $branch_code; ?>';
 
             // Validate data
-            if (!stNumber || !stDate || !storeName) {
-                alert("Missing required fields. Please check ST Number, Date, and Branch.");
+            if (!rtsNumber || !rtsDate || !deliveryTo) {
+                alert("Missing required fields. Please check RTS Number, Date, and Delivery to.");
                 return;
             }
 
             if (itemsList.length === 0) {
-                alert("No items to transfer. Please add items first.");
+                alert("No items to return. Please add items first.");
                 return;
             }
 
@@ -1713,34 +1747,36 @@ if (isset($_SESSION['user_branch'])) {
                 item_code: item.code || '',
                 item_description: item.desc || '',
                 imei: item.IMEI || '',
-                quantity: item.qty || 0
+                quantity: item.qty || 0,
+                reason: item.reason || ''
             }));
 
             // Send data to backend
             const formData = new FormData();
-            formData.append('st_number', stNumber);
-            formData.append('st_date', stDate);
+            formData.append('rts_number', rtsNumber);
+            formData.append('rts_date', rtsDate);
+            formData.append('reference_number', referenceNumber);
             formData.append('branch_from', branchFrom);
-            formData.append('branch_to', storeName);
+            formData.append('delivery_to', deliveryTo);
             formData.append('remarks', remarks);
             formData.append('items', JSON.stringify(items));
 
-            fetch('save_stock_transfer.php', {
+            fetch('save_return_to_supplier.php', {
                 method: 'POST',
                 body: formData
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message || 'Stock Transfer saved successfully and pending approval!');
+                        alert(data.message || 'Return to Supplier saved successfully and pending approval!');
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to save stock transfer'));
+                        alert('Error: ' + (data.message || 'Failed to save return to supplier'));
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error saving stock transfer. Please try again.');
+                    alert('Error saving return to supplier. Please try again.');
                 });
         }
 
@@ -1756,13 +1792,20 @@ if (isset($_SESSION['user_branch'])) {
         }
 
         function openSerialModal() {
-            // Validate Store Name and Remarks first
-            const storeName = document.getElementById('store_name').value.trim();
+            // Validate Reference Number, Delivery to and Remarks first
+            const referenceNumber = document.getElementById('reference_number').value.trim();
+            const deliveryTo = document.getElementById('delivery_to').value.trim();
             const remarks = document.getElementById('remarks').value.trim();
 
-            if (!storeName) {
-                alert('Please select Store Name first!');
-                document.getElementById('store_name').focus();
+            if (!referenceNumber) {
+                alert('Please enter Reference Number first!');
+                document.getElementById('reference_number').focus();
+                return;
+            }
+
+            if (!deliveryTo) {
+                alert('Please select Delivery to first!');
+                document.getElementById('delivery_to').focus();
                 return;
             }
 
@@ -1774,14 +1817,16 @@ if (isset($_SESSION['user_branch'])) {
 
             document.getElementById('serialModal').style.display = 'flex';
             const serialInput = document.getElementById('modalSerialInput');
+            const reasonInput = document.getElementById('modalReasonInput');
             serialInput.value = '';
+            reasonInput.value = '';
 
             // Reset temporary serial items
             tempSerialItems = [];
 
             // Keep table empty initially
             const tbody = document.getElementById('modalSerialBody');
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Enter IMEI to search</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Enter IMEI to search</td></tr>';
 
             // Focus on input
             serialInput.focus();
@@ -1794,9 +1839,15 @@ if (isset($_SESSION['user_branch'])) {
 
         function searchBySerialNumber() {
             const serialNumber = document.getElementById('modalSerialInput').value.trim();
+            const reason = document.getElementById('modalReasonInput').value.trim();
 
             if (!serialNumber) {
                 alert('Please enter an IMEI');
+                return;
+            }
+
+            if (!reason) {
+                alert('Please enter a reason');
                 return;
             }
 
@@ -1813,19 +1864,21 @@ if (isset($_SESSION['user_branch'])) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success' && data.data) {
-                        // Found the item - add to temporary list
+                        // Found the item - add to temporary list with reason
                         tempSerialItems.push({
                             code: data.data.item_code,
                             desc: data.data.description,
                             IMEI: serialNumber,
-                            qty: 1
+                            qty: 1,
+                            reason: reason
                         });
 
                         // Render the updated list
                         renderSerialItems();
 
-                        // Clear input for next entry
+                        // Clear both input fields for next entry
                         document.getElementById('modalSerialInput').value = '';
+                        document.getElementById('modalReasonInput').value = '';
                         document.getElementById('modalSerialInput').focus();
                     } else {
                         // Not found
@@ -1842,7 +1895,7 @@ if (isset($_SESSION['user_branch'])) {
             const tbody = document.getElementById('modalSerialBody');
 
             if (tempSerialItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;">Enter IMEI to search</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;">Enter IMEI to search</td></tr>';
                 return;
             }
 
@@ -1852,6 +1905,7 @@ if (isset($_SESSION['user_branch'])) {
                 tr.innerHTML = `
                 <td style="text-align:left;">${escHtml(item.code)}</td>
                 <td style="text-align:left;">${escHtml(item.desc)}</td>
+                <td style="text-align:left;">${escHtml(item.reason)}</td>
                 <td style="text-align:center;">
                     <button class="btn-remove" onclick="removeSerialItem(${index})">Remove</button>
                 </td>
@@ -1886,6 +1940,7 @@ if (isset($_SESSION['user_branch'])) {
             document.getElementById('input_item_code').value = '';
             document.getElementById('input_item_desc').value = '';
             document.getElementById('input_item_qty').value = '0';
+            document.getElementById('input_item_reason').value = '';
         }
 
         window.onclick = function (event) {

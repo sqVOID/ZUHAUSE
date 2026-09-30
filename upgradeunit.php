@@ -1711,7 +1711,7 @@ if (isset($_SESSION['user_branch'])) {
                     <button class="btn-search" onclick="searchInvoice()">Search</button>
                 </div>
                 <div class="customer-details-box" id="customer_details_box">
-                    Show Customer Details
+                    Enter an invoice number to view customer details
                 </div>
                 <div class="reason-dropdown">
                     <label>Reason:</label>
