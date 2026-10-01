@@ -3567,6 +3567,13 @@ require_once 'config.php';
                         if (ug.original_invoice_no && ug.original_invoice_no.trim() !== '') {
                             upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Target Invoice:</td><td style="padding:5px 0;">' + ug.original_invoice_no.trim() + '</td></tr>';
                         }
+                        // Add Status row
+                        const upgradeApprovalStatus = (data.sale.approval_status || 'Pending').trim();
+                        const upgStatColor = upgradeApprovalStatus === 'Approved' ? '#2e7d32' : upgradeApprovalStatus === 'Disapproved' ? '#c62828' : '#e65100';
+                        upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + upgStatColor + ';">' + upgradeApprovalStatus + '</span></td></tr>';
+                        if (upgradeApprovalStatus === 'Disapproved' && data.sale.disapproval_reason && data.sale.disapproval_reason.trim() !== '') {
+                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + data.sale.disapproval_reason.trim() + '</td></tr>';
+                        }
                     } else {
                         allUpgrades.forEach((ug, ugIdx) => {
                             const topPad = ugIdx === 0 ? '5px' : '15px';
@@ -3594,6 +3601,13 @@ require_once 'config.php';
                             if (ug.original_invoice_no && ug.original_invoice_no.trim() !== '') {
                                 upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Original Invoice:</td><td style="padding:5px 0;">' + ug.original_invoice_no.trim() + '</td></tr>';
                             }
+                            // Add Status row
+                            const upgradeApprovalStatus = (data.sale.approval_status || 'Pending').trim();
+                            const upgStatColor = upgradeApprovalStatus === 'Approved' ? '#2e7d32' : upgradeApprovalStatus === 'Disapproved' ? '#c62828' : '#e65100';
+                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + upgStatColor + ';">' + upgradeApprovalStatus + '</span></td></tr>';
+                            if (upgradeApprovalStatus === 'Disapproved' && data.sale.disapproval_reason && data.sale.disapproval_reason.trim() !== '') {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + data.sale.disapproval_reason.trim() + '</td></tr>';
+                            }
                         });
                     }
                     if (upgRows) {
@@ -3603,16 +3617,24 @@ require_once 'config.php';
                             '</div>';
                     }
                 } else if (isUpgradeInvoiceForCard) {
-                    // Fallback: no upgrades_data rows but we know it's an upgrade
+                    // Fallback: no upgrades_data rows but we know it's an upgrade — always show the card
+                    let fbRows = '';
                     const oldUnitAmt = parseFloat(data.sale.old_unit_amount || 0);
                     if (oldUnitAmt > 0) {
                         const origInv = (data.sale.original_invoice_no && data.sale.original_invoice_no.trim() !== '') ? ' (' + data.sale.original_invoice_no.trim() + ')' : '';
-                        upgradeCardHTML = '<div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">' +
-                            '<h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Upgrade Unit Information</h3>' +
-                            '<table style="width:100%; font-size:14px;">' +
-                            '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱' + oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 }) + origInv + '</td></tr>' +
-                            '</table></div>';
+                        fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱' + oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 }) + origInv + '</td></tr>';
                     }
+                    // Always show Status
+                    const fbStatus = (data.sale.approval_status || 'Pending').trim();
+                    const fbStatColor = fbStatus === 'Approved' ? '#2e7d32' : fbStatus === 'Disapproved' ? '#c62828' : '#e65100';
+                    fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + fbStatColor + ';">' + fbStatus + '</span></td></tr>';
+                    if (fbStatus === 'Disapproved' && data.sale.disapproval_reason && data.sale.disapproval_reason.trim() !== '') {
+                        fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + data.sale.disapproval_reason.trim() + '</td></tr>';
+                    }
+                    upgradeCardHTML = '<div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">' +
+                        '<h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Upgrade Unit Information</h3>' +
+                        '<table style="width:100%; font-size:14px;">' + fbRows + '</table>' +
+                        '</div>';
                 }
                 const hasUpgrade = upgradeCardHTML !== '';
 

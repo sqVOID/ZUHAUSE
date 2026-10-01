@@ -90,7 +90,18 @@ try {
                     LIMIT 1
                 )
                 ELSE NULL
-            END AS approval_status
+            END AS approval_status,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT ual.disapproval_reason
+                    FROM upgrade_approval_log ual
+                    WHERE ual.new_invoice_no = se.invoice_no
+                      AND ual.status = 'Disapproved'
+                    ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                ELSE NULL
+            END AS disapproval_reason
         FROM sales_entry se 
         WHERE se.invoice_no = ?
           AND (se.page_type != 'claimpreorder' OR se.page_type IS NULL)
