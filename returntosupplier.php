@@ -1054,7 +1054,7 @@ if (isset($_SESSION['user_branch'])) {
                     <label for="delivery_to">Delivery to</label>
                     <select id="delivery_to" class="searchable-select"
                         style="padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; color: #333; background: white; width: 100%; outline: none;">
-                        <option value="">Select Branch</option>
+                        <option value="">Select Supplier</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1166,9 +1166,22 @@ if (isset($_SESSION['user_branch'])) {
                 <input type="text" id="modalSerialInput" class="form-group"
                     style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"
                     placeholder="Enter IMEI..." onkeydown="handleSerialKeyPress(event)">
-                <input type="text" id="modalReasonInput" class="form-group"
-                    style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"
-                    placeholder="Enter Reason..." onkeydown="handleSerialKeyPress(event)">
+                
+                <!-- Reason input with checkbox next to it -->
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom:15px;">
+                    <input type="text" id="modalReasonInput" class="form-group"
+                        style="flex: 1; padding:10px; margin-bottom:0; border:1px solid #ccc; border-radius:4px;"
+                        placeholder="Enter Reason..." onkeydown="handleSerialKeyPress(event)">
+                    
+                    <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 8px 12px; background-color: #f8f8f8; border-radius: 4px; border: 1px solid #ddd;">
+                        <input type="checkbox" id="singleReasonCheckbox" onchange="toggleReasonMode()" 
+                            style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                        <label for="singleReasonCheckbox" style="font-size: 13px; font-weight: 500; color: #333; cursor: pointer; margin: 0;">
+                            Single reason for all
+                        </label>
+                    </div>
+                </div>
+                
                 <table class="items-table" style="margin-bottom:0;">
                     <thead>
                         <tr>
@@ -1325,19 +1338,19 @@ if (isset($_SESSION['user_branch'])) {
             }
         });
 
-        // Load branches from database
+        // Load suppliers from database
         function loadBranches() {
-            fetch('get_branches.php')
+            fetch('get_suppliers.php')
                 .then(response => response.json())
                 .then(data => {
                     const deliverySelect = document.getElementById('delivery_to');
-                    deliverySelect.innerHTML = '<option value="">Select Branch</option>';
+                    deliverySelect.innerHTML = '<option value="">Select Supplier</option>';
 
                     if (data.status === 'success' && data.data) {
-                        data.data.forEach(branch => {
+                        data.data.forEach(supplier => {
                             const option = document.createElement('option');
-                            option.value = branch.branch_name;
-                            option.textContent = branch.branch_name;
+                            option.value = supplier.store_name;
+                            option.textContent = supplier.store_name;
                             deliverySelect.appendChild(option);
                         });
 
@@ -1346,7 +1359,7 @@ if (isset($_SESSION['user_branch'])) {
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading branches:', error);
+                    console.error('Error loading suppliers:', error);
                 });
         }
 
@@ -1560,20 +1573,70 @@ if (isset($_SESSION['user_branch'])) {
             }
 
             let totalQty = 0;
-            itemsList.forEach((item, idx) => {
-                totalQty += item.qty;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                <td style="text-align: left;">${escHtml(item.desc)}</td>
-                <td style="text-align: center;">${escHtml(item.IMEI)}</td>
-                <td>${item.qty !== 0 ? item.qty : ''}</td>
-                <td style="text-align: left;">${escHtml(item.reason)}</td>
-                <td>
-                    <button class="btn-remove" onclick="removeItem(${idx})">Remove</button>
-                </td>
-            `;
-                tbody.appendChild(tr);
-            });
+            
+            // Group consecutive items with the same reason for rowspan
+            let i = 0;
+            while (i < itemsList.length) {
+                const currentReason = itemsList[i].reason;
+                let rowspanCount = 1;
+                
+                // Count consecutive items with same reason
+                while (i + rowspanCount < itemsList.length && 
+                       itemsList[i + rowspanCount].reason === currentReason) {
+                    rowspanCount++;
+                }
+                
+                // Render the group of items
+                for (let j = 0; j < rowspanCount; j++) {
+                    const item = itemsList[i + j];
+                    const idx = i + j;
+                    totalQty += item.qty;
+                    
+                    const tr = document.createElement('tr');
+                    
+                    // Add Item Description cell
+                    const tdDesc = document.createElement('td');
+                    tdDesc.style.textAlign = 'left';
+                    tdDesc.textContent = item.desc;
+                    tr.appendChild(tdDesc);
+                    
+                    // Add IMEI cell
+                    const tdIMEI = document.createElement('td');
+                    tdIMEI.style.textAlign = 'center';
+                    tdIMEI.textContent = item.IMEI;
+                    tr.appendChild(tdIMEI);
+                    
+                    // Add Quantity cell
+                    const tdQty = document.createElement('td');
+                    tdQty.textContent = item.qty !== 0 ? item.qty : '';
+                    tr.appendChild(tdQty);
+                    
+                    // Add Reason cell only for the first row of the group
+                    if (j === 0) {
+                        const tdReason = document.createElement('td');
+                        tdReason.style.textAlign = 'left';
+                        tdReason.style.verticalAlign = 'middle';
+                        tdReason.textContent = currentReason;
+                        if (rowspanCount > 1) {
+                            tdReason.rowSpan = rowspanCount;
+                        }
+                        tr.appendChild(tdReason);
+                    }
+                    
+                    // Add Action cell
+                    const tdAction = document.createElement('td');
+                    const btnRemove = document.createElement('button');
+                    btnRemove.className = 'btn-remove';
+                    btnRemove.textContent = 'Remove';
+                    btnRemove.onclick = function() { removeItem(idx); };
+                    tdAction.appendChild(btnRemove);
+                    tr.appendChild(tdAction);
+                    
+                    tbody.appendChild(tr);
+                }
+                
+                i += rowspanCount;
+            }
 
             document.getElementById('total_quantity').value = totalQty > 0 ? totalQty : '';
         }
@@ -1783,6 +1846,34 @@ if (isset($_SESSION['user_branch'])) {
         // Serial Modal logic
         let modalSerialCache = [];
         let tempSerialItems = []; // Temporary storage for serial items before submission
+        let singleReasonMode = false; // Track if single reason mode is enabled
+        let globalReason = ''; // Store the global reason when in single reason mode
+
+        function toggleReasonMode() {
+            const checkbox = document.getElementById('singleReasonCheckbox');
+            const reasonInput = document.getElementById('modalReasonInput');
+            singleReasonMode = checkbox.checked;
+
+            if (singleReasonMode) {
+                // Single reason mode - reason input will be used for all items
+                reasonInput.placeholder = 'Enter reason for all items...';
+                
+                // If there's already a value, store it as global reason
+                if (reasonInput.value.trim()) {
+                    globalReason = reasonInput.value.trim();
+                    
+                    // Update all existing items with this reason
+                    tempSerialItems.forEach(item => {
+                        item.reason = globalReason;
+                    });
+                    renderSerialItems();
+                }
+            } else {
+                // Per-item reason mode
+                reasonInput.placeholder = 'Enter Reason...';
+                globalReason = '';
+            }
+        }
 
         function handleSerialKeyPress(event) {
             if (event.key === 'Enter') {
@@ -1818,8 +1909,16 @@ if (isset($_SESSION['user_branch'])) {
             document.getElementById('serialModal').style.display = 'flex';
             const serialInput = document.getElementById('modalSerialInput');
             const reasonInput = document.getElementById('modalReasonInput');
+            const checkbox = document.getElementById('singleReasonCheckbox');
+            
             serialInput.value = '';
             reasonInput.value = '';
+            checkbox.checked = false;
+            singleReasonMode = false;
+            globalReason = '';
+            
+            // Reset placeholder
+            reasonInput.placeholder = 'Enter Reason...';
 
             // Reset temporary serial items
             tempSerialItems = [];
@@ -1835,20 +1934,42 @@ if (isset($_SESSION['user_branch'])) {
         function closeSerialModal() {
             document.getElementById('serialModal').style.display = 'none';
             tempSerialItems = []; // Clear temporary items when closing
+            singleReasonMode = false;
+            globalReason = '';
         }
 
         function searchBySerialNumber() {
             const serialNumber = document.getElementById('modalSerialInput').value.trim();
-            const reason = document.getElementById('modalReasonInput').value.trim();
+            const reasonInput = document.getElementById('modalReasonInput');
+            const reason = reasonInput.value.trim();
 
             if (!serialNumber) {
                 alert('Please enter an IMEI');
                 return;
             }
 
-            if (!reason) {
-                alert('Please enter a reason');
-                return;
+            // Validation based on mode
+            if (singleReasonMode) {
+                // In single reason mode
+                if (!reason) {
+                    alert('Please enter a reason that will apply to all items');
+                    reasonInput.focus();
+                    return;
+                }
+                // Update global reason
+                globalReason = reason;
+                
+                // Update all existing items with the new global reason
+                tempSerialItems.forEach(item => {
+                    item.reason = globalReason;
+                });
+            } else {
+                // In per-item mode
+                if (!reason) {
+                    alert('Please enter a reason for this item');
+                    reasonInput.focus();
+                    return;
+                }
             }
 
             // Check if IMEI already exists in temp list
@@ -1865,20 +1986,27 @@ if (isset($_SESSION['user_branch'])) {
                 .then(data => {
                     if (data.status === 'success' && data.data) {
                         // Found the item - add to temporary list with reason
+                        const itemReason = singleReasonMode ? globalReason : reason;
+                        
                         tempSerialItems.push({
                             code: data.data.item_code,
                             desc: data.data.description,
                             IMEI: serialNumber,
                             qty: 1,
-                            reason: reason
+                            reason: itemReason
                         });
 
                         // Render the updated list
                         renderSerialItems();
 
-                        // Clear both input fields for next entry
+                        // Clear IMEI input
                         document.getElementById('modalSerialInput').value = '';
-                        document.getElementById('modalReasonInput').value = '';
+                        
+                        // Clear reason input only if in per-item mode
+                        if (!singleReasonMode) {
+                            reasonInput.value = '';
+                        }
+                        
                         document.getElementById('modalSerialInput').focus();
                     } else {
                         // Not found
@@ -1900,18 +2028,64 @@ if (isset($_SESSION['user_branch'])) {
             }
 
             tbody.innerHTML = '';
-            tempSerialItems.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                <td style="text-align:left;">${escHtml(item.code)}</td>
-                <td style="text-align:left;">${escHtml(item.desc)}</td>
-                <td style="text-align:left;">${escHtml(item.reason)}</td>
-                <td style="text-align:center;">
-                    <button class="btn-remove" onclick="removeSerialItem(${index})">Remove</button>
-                </td>
-            `;
-                tbody.appendChild(tr);
-            });
+            
+            // Group consecutive items with the same reason for rowspan
+            let i = 0;
+            while (i < tempSerialItems.length) {
+                const currentReason = tempSerialItems[i].reason;
+                let rowspanCount = 1;
+                
+                // Count consecutive items with same reason
+                while (i + rowspanCount < tempSerialItems.length && 
+                       tempSerialItems[i + rowspanCount].reason === currentReason) {
+                    rowspanCount++;
+                }
+                
+                // Render the group of items
+                for (let j = 0; j < rowspanCount; j++) {
+                    const item = tempSerialItems[i + j];
+                    const index = i + j;
+                    const tr = document.createElement('tr');
+                    
+                    // Add Item Code cell
+                    const tdCode = document.createElement('td');
+                    tdCode.style.textAlign = 'left';
+                    tdCode.textContent = item.code;
+                    tr.appendChild(tdCode);
+                    
+                    // Add Item Description cell
+                    const tdDesc = document.createElement('td');
+                    tdDesc.style.textAlign = 'left';
+                    tdDesc.textContent = item.desc;
+                    tr.appendChild(tdDesc);
+                    
+                    // Add Reason cell only for the first row of the group
+                    if (j === 0) {
+                        const tdReason = document.createElement('td');
+                        tdReason.style.textAlign = 'left';
+                        tdReason.style.verticalAlign = 'middle';
+                        tdReason.textContent = currentReason;
+                        if (rowspanCount > 1) {
+                            tdReason.rowSpan = rowspanCount;
+                        }
+                        tr.appendChild(tdReason);
+                    }
+                    
+                    // Add Action cell
+                    const tdAction = document.createElement('td');
+                    tdAction.style.textAlign = 'center';
+                    const btnRemove = document.createElement('button');
+                    btnRemove.className = 'btn-remove';
+                    btnRemove.textContent = 'Remove';
+                    btnRemove.onclick = function() { removeSerialItem(index); };
+                    tdAction.appendChild(btnRemove);
+                    tr.appendChild(tdAction);
+                    
+                    tbody.appendChild(tr);
+                }
+                
+                i += rowspanCount;
+            }
         }
 
         function removeSerialItem(index) {

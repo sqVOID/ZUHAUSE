@@ -3658,64 +3658,9 @@ if ($promos_result && $promos_result->num_rows > 0) {
 
             function clearMainForm() {
                 if (!confirm('Are you sure you want to clear the entire form?')) return;
-
-                // 1. Reset Main Form Inputs
-                const form = document.querySelector('form'); // Assuming there's one main form
-                if (form) form.reset();
-
-                // 2. Reset Item Search Inputs
-                document.getElementById('item_code').value = '';
-                document.getElementById('item_desc').value = '';
-                document.getElementById('imei').value = '';
-                document.getElementById('qty').value = '1';
-                document.getElementById('price').value = '';
-
-                // 3. Clear Items Table
-                const tbody = document.getElementById('itemsTableBody');
-                tbody.innerHTML = '<tr id="no-sales-row"><td colspan="5" style="text-align:center; padding: 20px;">No Late Entry yet</td></tr>';
-
-                // 3b. Clear Unclaimed Freebies Table
-                const unclaimedFreebiesTableBody = document.getElementById('unclaimedFreebiesTableBody');
-                if (unclaimedFreebiesTableBody) {
-                    unclaimedFreebiesTableBody.innerHTML = '<tr id="no-unclaimed-freebies-row"><td colspan="4" style="text-align:center; padding: 20px;">Please click Add Unclaimed Freebies</td></tr>';
-                }
-
-                // 4. Reset Totals
-                document.getElementById('totalQty').value = '';
-                document.getElementById('totalAmount').value = '';
-
-                // 6. Reset Discount Field to locked state
-                const discountField = document.getElementById('discountField');
-                discountField.value = '0';
-                discountField.setAttribute('readonly', 'readonly');
-                discountField.style.backgroundColor = '#e0e0e0';
-                discountField.style.cursor = 'not-allowed';
-
-                // 6b. Reset IMEI Field to locked state
-                const imeiField = document.getElementById('imei');
-                imeiField.value = '';
-                imeiField.setAttribute('readonly', 'readonly');
-                imeiField.style.backgroundColor = '#f5f5f5';
-                imeiField.style.cursor = 'not-allowed';
-
-                // 7. Reset Footer Inputs
-                const footerInputs = document.querySelectorAll('.footer-input-group input');
-                footerInputs.forEach(i => i.value = '');
-
-                // Reset Payment Button and Payment Data
-                const btnPayment = document.querySelector('.btn-payment');
-                if (btnPayment) {
-                    btnPayment.innerText = 'Payment';
-                    btnPayment.style.backgroundColor = '#689f38';
-                    btnPayment.style.color = 'white';
-                }
-                const paymentDataInput = document.getElementById('payment_data');
-                if (paymentDataInput) {
-                    paymentDataInput.value = '';
-                }
-
-                // Re-initialize Date/Invoice if needed (Optional, usually desired to keep Invoice No)
-                initializeForm();
+                
+                // Reload the page to completely refresh everything
+                location.reload();
             }
 
             // Save Late Entry Function

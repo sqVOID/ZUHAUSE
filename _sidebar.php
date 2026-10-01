@@ -22,9 +22,9 @@ $receive_purchase_order_pages = ['purchaseorderreceive.php'];
 $preorder_pages = ['preorder.php', 'preorder2.php', 'claimpreorder.php'];
 $report_pages = ['report.php', 'salesreport.php', 'dailysalespaytype.php', 'voidsalesreport.php', 'upgradeunitreport.php', 'rddeliveryreport.php', 'stocktransferreport.php', 'refundreport.php', 'preorderreport.php', 'reporttrade-in.php'];
 $purchase_management_pages = ['purchaseorder.php', 'createpurchaseorder.php', 'viewpurchaseorder.php', 'purchaseorderreceive.php'];
-$sales_management_pages = ['salesentry.php', 'modification-motogam.php', 'voidsales.php', 'salesskipapproval.php', 'upgradeunit.php', 'refund.php', 'salestrade-in.php', 'salesentry-status.php'];
+$sales_management_pages = ['salesentry.php', 'modification-motogam.php', 'voidsales.php', 'salesskipapproval.php', 'upgradeunit.php', 'replacementunit.php', 'returntosupplier.php', 'refund.php', 'salestrade-in.php', 'salesentry-status.php'];
 $stock_transfer_pages = ['stocktransfer.php', 'transferapproval.php', 'receivestocktransfer.php'];
-$approval_pages = ['transferapproval.php', 'salesskipapproval.php', 'approval-itemstatus.php'];
+$approval_pages = ['transferapproval.php', 'salesskipapproval.php', 'approval-itemstatus.php', 'approval-upgradeunit.php', 'approval-replacementunit.php', 'approval-returntosupplier.php'];
 
 // Get current page name for active menu highlighting
 // Check if there's a custom sidebar page override (used by viewpurchaseorder.php)
@@ -41,7 +41,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
 ?>
 <div class="sidebar">
     <?php
-    $sales_mgmt_labels = ['Sales Entry', 'Modification Sales', 'Stock Transfer', 'Upgrade Unit', 'Refund', 'Claim Item', 'Trade-In', 'Item Status'];
+    $sales_mgmt_labels = ['Sales Entry', 'Modification Sales', 'Stock Transfer', 'Upgrade Unit', 'Replacement Unit', 'Return to Supplier', 'Refund', 'Claim Item', 'Trade-In', 'Item Status'];
     $sales_mgmt_visible = false;
     foreach ($sales_mgmt_labels as $label) {
         if (!in_array($label, $sidebar_hidden)) {
@@ -70,16 +70,30 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         style="text-decoration:none;">• Sales Entry</a>
                     <?php
                 endif; ?>
+                <?php if (!in_array('Upgrade Unit', $sidebar_hidden)): ?>
+                    <a href="upgradeunit.php"
+                        class="menu-item<?php echo ($current_page === 'upgradeunit.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Upgrade Unit</a>
+                    <?php
+                endif; ?>
+
                 <?php if (!in_array('Stock Transfer', $sidebar_hidden)): ?>
                     <a href="stocktransfer.php"
                         class="menu-item<?php echo ($current_page === 'stocktransfer.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">• Stock Transfer</a>
                     <?php
                 endif; ?>
-                <?php if (!in_array('Upgrade Unit', $sidebar_hidden)): ?>
-                    <a href="upgradeunit.php"
-                        class="menu-item<?php echo ($current_page === 'upgradeunit.php') ? ' active' : ''; ?>"
-                        style="text-decoration:none;">• Upgrade Unit</a>
+        
+                <?php if (!in_array('Replacement Unit', $sidebar_hidden)): ?>
+                    <a href="replacementunit.php"
+                        class="menu-item<?php echo ($current_page === 'replacementunit.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Replacement Unit</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Return to Supplier', $sidebar_hidden)): ?>
+                    <a href="returntosupplier.php"
+                        class="menu-item<?php echo ($current_page === 'returntosupplier.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Return to Supplier</a>
                     <?php
                 endif; ?>
                 <?php if (!in_array('Refund', $sidebar_hidden)): ?>
@@ -87,15 +101,16 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         style="text-decoration:none;">• Refund</a>
                     <?php
                 endif; ?>
-                <?php if (!in_array('Claim Item', $sidebar_hidden)): ?>
-                    <a href="claimitem.php" class="menu-item<?php echo ($current_page === 'claimitem.php') ? ' active' : ''; ?>"
-                        style="text-decoration:none;">• Claim Item</a>
-                    <?php
-                endif; ?>
+      
                 <?php if (!in_array('Trade-In', $sidebar_hidden)): ?>
                     <a href="salestrade-in.php"
                         class="menu-item<?php echo ($current_page === 'salestrade-in.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">• Trade-In</a>
+                    <?php
+                endif; ?>
+                          <?php if (!in_array('Claim Item', $sidebar_hidden)): ?>
+                    <a href="claimitem.php" class="menu-item<?php echo ($current_page === 'claimitem.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Claim Item</a>
                     <?php
                 endif; ?>
                 <?php if (!in_array('Item Status', $sidebar_hidden)): ?>
@@ -677,7 +692,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
     endif; ?>
 
     <?php
-    $stock_transfer_labels = ['Transfer Approval', 'Cancel Invoice Approval', 'Item Status Approval'];
+    $stock_transfer_labels = ['Transfer Approval', 'Cancel Invoice Approval', 'Item Status Approval', 'Upgrade Unit Approval', 'Replacement Unit Approval', 'Return To Supplier Approval'];
     $stock_transfer_visible = false;
     foreach ($stock_transfer_labels as $label) {
         if (!in_array($label, $sidebar_hidden)) {
@@ -702,16 +717,35 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         style="text-decoration:none;">• Transfer Approval</a>
                     <?php
                 endif; ?>
-                <?php if (!in_array('Cancel Invoice Approval', $sidebar_hidden)): ?>
+        
+                <?php if (!in_array('Item Status Approval', $sidebar_hidden)): ?>
+                    <a href="approval-itemstatus.php"
+                        class="menu-item<?php echo ($current_page === 'approval-itemstatus.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Item Status Approval</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Upgrade Unit Approval', $sidebar_hidden)): ?>
+                    <a href="approval-upgradeunit.php"
+                        class="menu-item<?php echo ($current_page === 'approval-upgradeunit.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Upgrade Unit Approval</a>
+                    <?php
+                endif; ?>
+                       <?php if (!in_array('Cancel Invoice Approval', $sidebar_hidden)): ?>
                     <a href="salesskipapproval.php"
                         class="menu-item<?php echo ($current_page === 'salesskipapproval.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">• Cancel Invoice Approval</a>
                     <?php
                 endif; ?>
-                <?php if (!in_array('Item Status Approval', $sidebar_hidden)): ?>
-                    <a href="approval-itemstatus.php"
-                        class="menu-item<?php echo ($current_page === 'approval-itemstatus.php') ? ' active' : ''; ?>"
-                        style="text-decoration:none;">• Item Status Approval</a>
+                <?php if (!in_array('Replacement Unit Approval', $sidebar_hidden)): ?>
+                    <a href="approval-replacementunit.php"
+                        class="menu-item<?php echo ($current_page === 'approval-replacementunit.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Replacement Unit Approval</a>
+                    <?php
+                endif; ?>
+                <?php if (!in_array('Return To Supplier Approval', $sidebar_hidden)): ?>
+                    <a href="approval-returntosupplier.php"
+                        class="menu-item<?php echo ($current_page === 'approval-returntosupplier.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Return To Supplier Approval</a>
                     <?php
                 endif; ?>
             </div>
@@ -739,18 +773,19 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                 </svg>
             </div>
             <div class="submenu">
-                <?php if (!in_array('Receive Purchase Order', $sidebar_hidden)): ?>
-                    <a href="purchaseorderreceive.php"
-                        class="menu-item<?php echo in_array($current_page, $receive_purchase_order_pages) ? ' active' : ''; ?>"
-                        style="text-decoration:none;">• Receive Purchase Order</a>
-                    <?php
-                endif; ?>
                 <?php if (!in_array('Receive Stock Transfer', $sidebar_hidden)): ?>
                     <a href="receivestocktransfer.php"
                         class="menu-item<?php echo ($current_page === 'receivestocktransfer.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">• Receive Stock Transfer</a>
                     <?php
                 endif; ?>
+                <?php if (!in_array('Receive Purchase Order', $sidebar_hidden)): ?>
+                    <a href="purchaseorderreceive.php"
+                        class="menu-item<?php echo in_array($current_page, $receive_purchase_order_pages) ? ' active' : ''; ?>"
+                        style="text-decoration:none;">• Receive Purchase Order</a>
+                    <?php
+                endif; ?>
+          
             </div>
         </div>
         <?php

@@ -218,7 +218,7 @@ include 'config.php';
             flex-direction: column;
             align-items: flex-start;
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .content-header h2 {

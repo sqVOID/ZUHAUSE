@@ -54128,3 +54128,571 @@ Adding serial to stock: TESTSUPERADMIN123 (imei2: ) with status: Good Stock
 Serial TESTSUPERADMIN123 already in stock or already used/sold, skipping stock insertion
 Updating purchase_order_allocations with received quantities and invoice number
 === TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-10-01 13:24:27 ===
+POST data: Array
+(
+    [po_id] => 251
+    [status] => Received
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TEST12312
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"B12412VC124124C"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"C124C124AS4CWQ4"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"AC4POJV215OJ125"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"VJ12PV5J1P25OJP"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"1V2PJO5J1P2O5P1"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5J1VPO25JPVOAJ5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"JV2P51J2PO1J2PO"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5VJP12O5J1P2OV5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"V5J1PO2JV POA5P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"ASJP5O1P5VJAP5J"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"AJSP5OVJPO1JV5P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"PAJEV5PO1V5N1PO"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5OPOAVNDP5J1PO5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5JOPVJSA5POVJ1P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"J12PO5VJ12PO5JP"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"P1JV5O1JP2O5J1P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"P634PO6JP34OVJ5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"BI23O5JB23O5J23"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"JPO1JPO5J12PO5J"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"PSDOJ5POJD5POJP"}]
+)
+
+PO ID: 251
+New Status: Received
+Invoice Number: TEST12312
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"B12412VC124124C"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"C124C124AS4CWQ4"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"AC4POJV215OJ125"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"VJ12PV5J1P25OJP"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"1V2PJO5J1P2O5P1"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5J1VPO25JPVOAJ5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"JV2P51J2PO1J2PO"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5VJP12O5J1P2OV5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"V5J1PO2JV POA5P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"ASJP5O1P5VJAP5J"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"AJSP5OVJPO1JV5P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"PAJEV5PO1V5N1PO"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5OPOAVNDP5J1PO5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"5JOPVJSA5POVJ1P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"J12PO5VJ12PO5JP"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"P1JV5O1JP2O5J1P"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"P634PO6JP34OVJ5"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"BI23O5JB23O5J23"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"JPO1JPO5J12PO5J"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"PSDOJ5POJD5POJP"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => B12412VC124124C
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => C124C124AS4CWQ4
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => AC4POJV215OJ125
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => VJ12PV5J1P25OJP
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 1V2PJO5J1P2O5P1
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5J1VPO25JPVOAJ5
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => JV2P51J2PO1J2PO
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5VJP12O5J1P2OV5
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => V5J1PO2JV POA5P
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => ASJP5O1P5VJAP5J
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => AJSP5OVJPO1JV5P
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => PAJEV5PO1V5N1PO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5OPOAVNDP5J1PO5
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5JOPVJSA5POVJ1P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => J12PO5VJ12PO5JP
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => P1JV5O1JP2O5J1P
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => P634PO6JP34OVJ5
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => BI23O5JB23O5J23
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => JPO1JPO5J12PO5J
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => PSDOJ5POJD5POJP
+        )
+
+)
+
+Serial Numbers Count: 20
+Serial Numbers 2 Raw: 
+Serial Numbers 2 Decoded: Array
+(
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+=== PROCESSING RECEIVED STATUS ===
+Setting received_by for first time: INFANTA
+Update PO SQL: UPDATE purchase_orders
+                SET status = 'Received',
+                    received_by = 'INFANTA',
+                    received_at = '2026-10-01 13:24:27',
+                    received_by_branch = 'ZUHINFA',
+                    invoice_number = 'TEST12312' WHERE id = 251
+PO status updated successfully
+Processing serial numbers for Received status
+Updating row IPHONE 15 128GB-1 (has_serial=1) with serials: 'B12412VC124124C\nC124C124AS4CWQ4\nAC4POJV215OJ125\nVJ12PV5J1P25OJP\n1V2PJO5J1P2O5P1\n5J1VPO25JPVOAJ5\nJV2P51J2PO1J2PO\n5VJP12O5J1P2OV5\nV5J1PO2JV POA5P\nASJP5O1P5VJAP5J\nAJSP5OVJPO1JV5P\nPAJEV5PO1V5N1PO\n5OPOAVNDP5J1PO5\n5JOPVJSA5POVJ1P\nJ12PO5VJ12PO5JP\nP1JV5O1JP2O5J1P\nP634PO6JP34OVJ5\nBI23O5JB23O5J23\nJPO1JPO5J12PO5J\nPSDOJ5POJD5POJP', imei2: NULL
+Adding items to stock
+Items query: SELECT poi.*,
+                               COALESCE(MAX(CASE
+                                   WHEN poi.item_model IS NOT NULL AND poi.item_model != '' AND poi.item_model != '-'
+                                        AND poi.item_model = i.item_code
+                                   THEN i.has_serial ELSE 0 END), 0) as has_serial
+                       FROM purchase_order_items poi
+                       LEFT JOIN items i ON poi.family_code = i.family_code AND i.status = 'Active'
+                       WHERE poi.po_id = 251 AND (
+        (COALESCE(poi.is_receive_added, 0) = 1 AND poi.receiving_branch = 'ZUHAUSE INFANTA')
+        OR EXISTS (
+            SELECT 1 FROM purchase_order_allocations poa
+            WHERE poa.po_id = poi.po_id
+            AND poa.branch_name = 'ZUHAUSE INFANTA'
+        )
+    )
+                       GROUP BY poi.id
+                       ORDER BY poi.item_no ASC
+Found 1 items to add to stock
+Processing item for stock: Array
+(
+    [id] => 741
+    [po_id] => 251
+    [po_number] => PO-2026-036
+    [item_no] => 1
+    [family_code] => IPHONE 15 128GB
+    [item_model] => IPHONE-15-128GB-BLUE
+    [item_description] => IPHONE 15 128GB BLUE
+    [serial_number] => 
+    [quantity] => 20
+    [allocated_quantity] => 20
+    [cost] => 0.00
+    [total] => 0.00
+    [created_at] => 2026-10-01 13:22:43
+    [received_qty] => 
+    [is_receive_added] => 0
+    [receiving_branch] => 
+    [item_type] => Unit
+    [imei_2] => 
+    [serial_number_field] => 
+    [has_serial] => 1
+)
+
+Item details - Model: IPHONE-15-128GB-BLUE, Desc: IPHONE 15 128GB BLUE, FC: IPHONE 15 128GB, ItemNo: 1, HasSerial: YES
+Filtered serials for stock insertion: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => B12412VC124124C
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => C124C124AS4CWQ4
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => AC4POJV215OJ125
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => VJ12PV5J1P25OJP
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 1V2PJO5J1P2O5P1
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5J1VPO25JPVOAJ5
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => JV2P51J2PO1J2PO
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5VJP12O5J1P2OV5
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => V5J1PO2JV POA5P
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => ASJP5O1P5VJAP5J
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => AJSP5OVJPO1JV5P
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => PAJEV5PO1V5N1PO
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5OPOAVNDP5J1PO5
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 5JOPVJSA5POVJ1P
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => J12PO5VJ12PO5JP
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => P1JV5O1JP2O5J1P
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => P634PO6JP34OVJ5
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => BI23O5JB23O5J23
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => JPO1JPO5J12PO5J
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => PSDOJ5POJD5POJP
+        )
+
+)
+
+Filtered serials 2 for stock insertion: Array
+(
+)
+
+Loaded serial types: Array
+(
+)
+
+Adding serial to stock: B12412VC124124C (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'B12412VC124124C', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: C124C124AS4CWQ4 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'C124C124AS4CWQ4', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: AC4POJV215OJ125 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'AC4POJV215OJ125', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: VJ12PV5J1P25OJP (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'VJ12PV5J1P25OJP', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 1V2PJO5J1P2O5P1 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       '1V2PJO5J1P2O5P1', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 5J1VPO25JPVOAJ5 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       '5J1VPO25JPVOAJ5', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: JV2P51J2PO1J2PO (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'JV2P51J2PO1J2PO', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 5VJP12O5J1P2OV5 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       '5VJP12O5J1P2OV5', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: V5J1PO2JV POA5P (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'V5J1PO2JV POA5P', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: ASJP5O1P5VJAP5J (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'ASJP5O1P5VJAP5J', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: AJSP5OVJPO1JV5P (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'AJSP5OVJPO1JV5P', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: PAJEV5PO1V5N1PO (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'PAJEV5PO1V5N1PO', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 5OPOAVNDP5J1PO5 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       '5OPOAVNDP5J1PO5', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: 5JOPVJSA5POVJ1P (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       '5JOPVJSA5POVJ1P', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: J12PO5VJ12PO5JP (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'J12PO5VJ12PO5JP', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: P1JV5O1JP2O5J1P (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'P1JV5O1JP2O5J1P', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: P634PO6JP34OVJ5 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'P634PO6JP34OVJ5', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: BI23O5JB23O5J23 (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'BI23O5JB23O5J23', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: JPO1JPO5J12PO5J (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'JPO1JPO5J12PO5J', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Adding serial to stock: PSDOJ5POJD5POJP (imei2: ) with status: Good Stock
+Stock SQL: INSERT INTO stock_on_hand 
+                                      (item_code, description, item_type, imei, imei2, dr_number, branch, 
+                                       dr_date, system_entry_date, status, quantity, family_code)
+                                      VALUES 
+                                      ('IPHONE-15-128GB-BLUE', 'IPHONE 15 128GB BLUE', 'IMEI', 
+                                       'PSDOJ5POJD5POJP', NULL, 'PO-2026-036', 'ZUHAUSE INFANTA', 
+                                       '2026-10-01 13:24:27', '2026-10-01 13:24:27', 'Good Stock', 1, 'IPHONE 15 128GB')
+Serial added to stock successfully with status: Good Stock
+Updating purchase_order_allocations with received quantities and invoice number
+=== TRANSACTION COMMITTED SUCCESSFULLY ===

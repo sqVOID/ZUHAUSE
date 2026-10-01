@@ -73,7 +73,24 @@ try {
                 WHERE (u.new_invoice_no = se.invoice_no OR u.original_invoice_no = se.invoice_no)
                 ORDER BY u.id DESC
                 LIMIT 1
-            ) AS upgrade_payment_data
+            ) AS upgrade_payment_data,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT COALESCE(ual.status, 'Pending')
+                    FROM upgrade_approval_log ual
+                    WHERE ual.new_invoice_no = se.invoice_no
+                    ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT COALESCE(ral.status, 'Pending')
+                    FROM replacement_approval_log ral
+                    WHERE ral.new_invoice_no = se.invoice_no
+                    ORDER BY ral.id DESC
+                    LIMIT 1
+                )
+                ELSE NULL
+            END AS approval_status
         FROM sales_entry se 
         WHERE se.invoice_no = ?
           AND (se.page_type != 'claimpreorder' OR se.page_type IS NULL)
@@ -276,12 +293,25 @@ try {
     $sale = $sales_result->fetch_assoc();
     $sales_query->close();
 
+    // Check if old_imei column exists and add it if not
+    $check_old_imei = $conn->query("SHOW COLUMNS FROM sales_entry_items LIKE 'old_imei'");
+    $has_old_imei = ($check_old_imei && $check_old_imei->num_rows > 0);
+    
+    if (!$has_old_imei) {
+        // Add the column if it doesn't exist
+        $conn->query("ALTER TABLE sales_entry_items ADD COLUMN old_imei VARCHAR(50) NULL AFTER imei");
+        $has_old_imei = true;
+    }
+
     // Get items for this sale
+    $old_imei_select = $has_old_imei ? "sei.old_imei," : "NULL AS old_imei,";
+    
     $items_query = $conn->prepare("
         SELECT 
             sei.item_description,
             sei.item_code,
             sei.imei,
+            $old_imei_select
             sei.quantity,
             COALESCE(NULLIF(sei.price, 0), i.srp, 0) AS price,
             COALESCE(i.srp, NULLIF(sei.price, 0), 0) AS srp,
@@ -394,6 +424,118 @@ try {
         }
     }
     $freebies_query->close();
+
+    // Fetch replacement records if any exist for this invoice (only Approved)
+    $replacements = [];
+    $rep_query = $conn->prepare("
+        SELECT 
+            r.id, 
+            r.replacement_no, 
+            r.invoice_no, 
+            r.new_invoice_no, 
+            r.reason, 
+            r.remarks, 
+            r.created_at, 
+            r.status, 
+            r.created_by
+        FROM replacements r
+        WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
+          AND (r.status = 'Approved' OR r.status IS NULL)
+        ORDER BY r.id ASC
+    ");
+    if ($rep_query) {
+        $rep_query->bind_param("ss", $invoice_no, $invoice_no);
+        $rep_query->execute();
+        $rep_res = $rep_query->get_result();
+        if ($rep_res && $rep_res->num_rows > 0) {
+            while ($r_row = $rep_res->fetch_assoc()) {
+                $r_id = $r_row['id'];
+                
+                // Old items
+                $old_q = $conn->prepare("SELECT item_description, imei, price FROM replacement_old_items WHERE replacement_id = ? ORDER BY id ASC");
+                $old_q->bind_param("i", $r_id);
+                $old_q->execute();
+                $old_res = $old_q->get_result();
+                $old_items = [];
+                if ($old_res && $old_res->num_rows > 0) {
+                    while ($oi = $old_res->fetch_assoc()) {
+                        $old_items[] = $oi;
+                    }
+                }
+                $old_q->close();
+                $r_row['old_items'] = $old_items;
+
+                // New items
+                $new_q = $conn->prepare("SELECT item_description, imei, quantity, price, item_code FROM replacement_new_items WHERE replacement_id = ? ORDER BY id ASC");
+                $new_q->bind_param("i", $r_id);
+                $new_q->execute();
+                $new_res = $new_q->get_result();
+                $new_items = [];
+                if ($new_res && $new_res->num_rows > 0) {
+                    while ($ni = $new_res->fetch_assoc()) {
+                        $new_items[] = $ni;
+                    }
+                }
+                $new_q->close();
+                $r_row['new_items'] = $new_items;
+
+                $replacements[] = $r_row;
+            }
+        }
+        $rep_query->close();
+    }
+    $sale['replacements'] = $replacements;
+
+    // Fetch upgrade records if this is an upgrade invoice
+    $upgrades_data = [];
+    $is_upgrade_invoice = ($sale['upgrade'] === 'UPGD' && !empty($sale['original_invoice_no'])) || $sale['page_type'] === 'upgradeunit';
+    if ($is_upgrade_invoice) {
+        $upg_query = $conn->prepare("
+            SELECT 
+                u.id,
+                u.upgrade_no,
+                u.original_invoice_no,
+                u.new_invoice_no,
+                u.reason,
+                u.remarks,
+                u.less_amount,
+                u.total_amount AS upgrade_total,
+                u.created_by,
+                u.branch,
+                u.created_at
+            FROM upgrades u
+            WHERE (u.new_invoice_no = ? OR u.original_invoice_no = ?)
+            ORDER BY u.id ASC
+        ");
+        if ($upg_query) {
+            $upg_query->bind_param("ss", $invoice_no, $invoice_no);
+            $upg_query->execute();
+            $upg_res = $upg_query->get_result();
+            if ($upg_res && $upg_res->num_rows > 0) {
+                while ($u_row = $upg_res->fetch_assoc()) {
+                    $u_id = $u_row['id'];
+
+                    // Fetch old items for this upgrade
+                    $uoi_q = $conn->prepare("SELECT item_description, imei, price FROM upgrade_old_items WHERE upgrade_id = ? ORDER BY id ASC");
+                    $uoi_q->bind_param("i", $u_id);
+                    $uoi_q->execute();
+                    $uoi_res = $uoi_q->get_result();
+                    $u_old_items = [];
+                    if ($uoi_res && $uoi_res->num_rows > 0) {
+                        while ($uoi = $uoi_res->fetch_assoc()) {
+                            $u_old_items[] = $uoi;
+                        }
+                    }
+                    $uoi_q->close();
+                    $u_row['old_items'] = $u_old_items;
+
+                    $upgrades_data[] = $u_row;
+                }
+            }
+            $upg_query->close();
+        }
+    }
+    $sale['upgrades_data'] = $upgrades_data;
 
     // Calculate actual_total_amount (same logic as fetch_sales_report.php)
     $payment_data = [];

@@ -4467,94 +4467,9 @@ if ($terminal_ids_result && $terminal_ids_result->num_rows > 0) {
             if (!confirm('Are you sure you want to clear all data?')) {
                 return;
             }
-
-            // Clear customer info
-            document.getElementById('first_name').value = '';
-            document.getElementById('last_name').value = '';
-            document.getElementById('address').value = '';
-            document.getElementById('contact_no').value = '';
-            document.getElementById('email').value = '';
-            document.getElementById('remarks').value = '';
-            document.getElementById('assisted_by').value = '';
-
-            // Clear trade-in inputs
-            document.getElementById('tradein_value').value = '0';
-            document.getElementById('tradein_imei').value = '';
-            document.getElementById('tradein_item_code').value = '';
-            document.getElementById('tradein_brand').value = '';
-
-            // Clear sales inputs
-            const salesItemCode = document.getElementById('sales_item_code');
-            salesItemCode.value = '';
-            salesItemCode.removeAttribute('data-commission');
-            salesItemCode.removeAttribute('data-has-commission');
-            salesItemCode.removeAttribute('data-points');
-            salesItemCode.removeAttribute('data-has-points');
-            salesItemCode.removeAttribute('data-has-voucher');
-            salesItemCode.removeAttribute('data-voucher-amount');
-            salesItemCode.removeAttribute('data-has-token');
-            salesItemCode.removeAttribute('data-token-amount');
-
-            document.getElementById('sales_item_desc').value = '';
-            const salesImei = document.getElementById('sales_imei');
-            salesImei.value = '';
-            salesImei.removeAttribute('readonly');
-            salesImei.style.backgroundColor = '#ffffff';
-            salesImei.style.cursor = 'text';
-
-            document.getElementById('sales_qty').value = '0';
-            document.getElementById('sales_price').value = '';
-
-            // Clear sales table
-            document.getElementById('salesTableBody').innerHTML = '<tr id="no-sales-row"><td colspan="5" style="text-align:center; padding: 20px;">No Sales Items Yet</td></tr>';
-
-            // Reset totals
-            document.getElementById('tradeInQty').value = '0';
-            document.getElementById('tradeInValue').value = '0.00';
-            const discountField = document.getElementById('discountField');
-            if (discountField) {
-                discountField.value = '0.00';
-                discountField.setAttribute('readonly', 'readonly');
-                discountField.style.backgroundColor = '#e0e0e0';
-                discountField.style.cursor = 'not-allowed';
-            }
-            const tokenField = document.getElementById('tokenField');
-            if (tokenField) {
-                tokenField.value = '0.00';
-                tokenField.style.backgroundColor = '#e0e0e0';
-            }
-            document.getElementById('tituVoucherAmount').value = '0.00';
-            document.getElementById('totalAmount').value = '0.00';
-            const pointsField = document.getElementById('pointsField');
-            if (pointsField) {
-                pointsField.value = '0.00';
-                pointsField.style.backgroundColor = '#e0e0e0';
-            }
-            const commissionField = document.getElementById('commissionField');
-            if (commissionField) {
-                commissionField.value = '0.00';
-                commissionField.style.backgroundColor = '#e0e0e0';
-            }
-
-            // Clear TITU Voucher modal fields
-            document.getElementById('tituControl').value = '';
-            document.getElementById('tituToken').value = '';
-            document.getElementById('crossSell').value = '0.00';
-            document.getElementById('tradeInVoucher').value = '0.00';
-            document.getElementById('tituVoucherTotal').value = '0.00';
-
-            // Clear payment data & reset payment button
-            const paymentDataInput = document.getElementById('payment_data');
-            if (paymentDataInput) paymentDataInput.value = '';
-            const btnPayment = document.querySelector('.btn-payment');
-            if (btnPayment) {
-                btnPayment.innerText = 'PAYMENT';
-                btnPayment.style.backgroundColor = '';
-                btnPayment.style.color = '';
-            }
-
-            // Clear unclaimed freebies table
-            document.getElementById('unclaimedFreebiesTableBody').innerHTML = '<tr id="no-unclaimed-freebies-row"><td colspan="4" style="text-align:center; padding: 20px;">Please click Add Unclaimed Freebies</td></tr>';
+            
+            // Reload the page to completely refresh everything
+            location.reload();
         }
 
         // Unclaimed Freebies Functions

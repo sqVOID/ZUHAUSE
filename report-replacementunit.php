@@ -28,8 +28,7 @@ if (!empty($user_branches)) {
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="Icon/ZUHAUSE-LOGO.png">
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
-    <title>Upgrade Unit Report</title>
+    <title>Replacement Unit Report</title>
     <style>
         :root {
             /* Brand Colors - Navy & Gold Theme */
@@ -257,8 +256,19 @@ if (!empty($user_branches)) {
         .search-bar-wrapper {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: space-between;
             margin-bottom: 14px;
+        }
+
+        .search-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        .date-filters {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
         }
 
         .search-bar-wrapper input {
@@ -289,6 +299,38 @@ if (!empty($user_branches)) {
 
         .search-bar-wrapper button:hover {
             background-color: var(--color-navy-dark);
+        }
+
+        .search-bar-wrapper select {
+            padding: 9px 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            font-family: Arial, sans-serif;
+            background: white;
+            margin-left: 10px;
+            min-width: 200px;
+        }
+
+        .search-bar-wrapper select:focus {
+            border-color: #2196F3;
+        }
+
+        .search-bar-wrapper input[type="date"] {
+            padding: 9px 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 150px;
+            outline: none;
+            font-family: Arial, sans-serif;
+            background: white;
+            margin-left: 5px;
+        }
+
+        .search-bar-wrapper input[type="date"]:focus {
+            border-color: #2196F3;
         }
 
         /* Table container */
@@ -405,86 +447,6 @@ if (!empty($user_branches)) {
             background-color: var(--color-navy-dark);
         }
 
-        .search-bar-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-        }
-
-        .search-controls {
-            display: flex;
-            align-items: center;
-        }
-
-        .date-filters {
-            display: flex;
-            align-items: center;
-            margin-left: auto;
-        }
-
-        .search-bar-wrapper input {
-            padding: 9px 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px 0 0 4px;
-            font-size: 14px;
-            width: 280px;
-            outline: none;
-            font-family: Arial, sans-serif;
-            background: white;
-        }
-
-        .search-bar-wrapper input:focus {
-            border-color: #2196F3;
-        }
-
-        .search-bar-wrapper button {
-            padding: 9px 16px;
-            background-color: var(--color-navy);
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-
-        .search-bar-wrapper button:hover {
-            background-color: var(--color-navy-dark);
-        }
-
-        .search-bar-wrapper select {
-            padding: 9px 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-            outline: none;
-            font-family: Arial, sans-serif;
-            background: white;
-            margin-left: 10px;
-            min-width: 200px;
-        }
-
-        .search-bar-wrapper select:focus {
-            border-color: #2196F3;
-        }
-
-        .search-bar-wrapper input[type="date"] {
-            padding: 9px 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-            width: 150px;
-            outline: none;
-            font-family: Arial, sans-serif;
-            background: white;
-            margin-left: 5px;
-        }
-
-        .search-bar-wrapper input[type="date"]:focus {
-            border-color: #2196F3;
-        }
-
         /* Pagination */
         .pagination-wrapper {
             display: flex;
@@ -530,7 +492,7 @@ if (!empty($user_branches)) {
             color: #333 !important;
         }
 
-        /* Stack search controls vertically below 1169px */
+        /* Responsive */
         @media (max-width: 1169px) {
             .search-bar-wrapper {
                 flex-direction: column;
@@ -549,14 +511,11 @@ if (!empty($user_branches)) {
             }
         }
 
-        /* Responsive: Show only icons below 930px */
         @media (max-width: 930px) {
-            /* Hide text inside buttons, keep only icons */
             .search-bar-wrapper button svg {
                 margin-right: 0 !important;
             }
 
-            /* Hide the "Search" text */
             .search-bar-wrapper button {
                 font-size: 0;
                 padding: 10px;
@@ -567,116 +526,18 @@ if (!empty($user_branches)) {
                 justify-content: center;
             }
 
-            /* Keep SVG icon visible */
             .search-bar-wrapper button svg {
                 font-size: 16px;
                 width: 18px;
                 height: 18px;
             }
 
-            /* Make input smaller */
             .search-bar-wrapper input {
                 width: 150px !important;
             }
 
-            /* Compact date inputs */
             .search-bar-wrapper input[type="date"] {
                 width: 140px;
-            }
-        }
-
-        /* Stack search controls vertically below 510px */
-        @media (max-width: 510px) {
-            .search-bar-wrapper {
-                flex-direction: column;
-                align-items: stretch !important;
-                gap: 10px;
-            }
-
-            .search-controls {
-                flex-direction: column;
-                align-items: stretch !important;
-                gap: 10px;
-                width: 100%;
-            }
-
-            /* Stack date filters vertically */
-            .date-filters {
-                flex-direction: column;
-                align-items: stretch !important;
-                gap: 10px;
-                width: 100%;
-                margin-left: 0 !important;
-            }
-
-            /* Hide date labels on small screens */
-            .date-filters label {
-                display: none;
-            }
-
-            .search-bar-wrapper input,
-            .search-bar-wrapper input[type="date"],
-            .search-bar-wrapper select {
-                width: 100% !important;
-                max-width: 100%;
-                margin-left: 0 !important;
-            }
-
-            /* Make search button icon-only */
-            .search-bar-wrapper button {
-                font-size: 0 !important;
-                padding: 10px !important;
-                width: 44px !important;
-                height: 44px !important;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* Keep search button icon visible */
-            .search-bar-wrapper button svg {
-                margin-right: 0 !important;
-                font-size: 16px;
-                width: 18px;
-                height: 18px;
-            }
-
-            /* Make FILTER button icon-only */
-            .btn-filter {
-                font-size: 0 !important;
-                padding: 10px !important;
-                width: 44px !important;
-                height: 44px !important;
-                margin-left: 0 !important;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* Keep FILTER SVG icon visible */
-            .btn-filter svg {
-                margin-right: 0 !important;
-                width: 18px;
-                height: 18px;
-            }
-
-            /* Make PREVIEW ALL button icon-only */
-            .btn-preview-all {
-                font-size: 0 !important;
-                padding: 10px !important;
-                width: 44px !important;
-                height: 44px !important;
-                margin-left: 0 !important;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* Keep PREVIEW ALL SVG icon visible */
-            .btn-preview-all svg {
-                margin-right: 0 !important;
-                width: 18px;
-                height: 18px;
             }
         }
 
@@ -706,7 +567,6 @@ if (!empty($user_branches)) {
                 font-size: 18px;
             }
 
-            /* Enable horizontal scrolling for tables on mobile */
             .table-container {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
@@ -717,7 +577,6 @@ if (!empty($user_branches)) {
                 display: table;
             }
 
-            /* Add scrollbar styling for better visibility */
             .table-container::-webkit-scrollbar {
                 height: 8px;
             }
@@ -772,7 +631,6 @@ if (!empty($user_branches)) {
         <div class="menu-btn active" onclick="toggleSidebar()">
             <span></span><span></span><span></span>
         </div>
-        <!-- <img src="Icon/motogam_logo.jpg" alt="IMS Logo" class="logo"> -->
         <?php include '_header_user.php'; ?>
     </div>
 
@@ -782,7 +640,7 @@ if (!empty($user_branches)) {
     <div class="main-content" id="mainContent">
         <!-- Page Header -->
         <div class="content-header">
-            <h2>Upgrade Unit Report</h2>
+            <h2>Replacement Unit Report</h2>
             <?php if (isset($user_branch)): ?>
                 <div
                     style="margin-left:auto; font-weight:bold; color:#1565c0; font-size:18px; text-transform:uppercase; display: none;">
@@ -795,14 +653,13 @@ if (!empty($user_branches)) {
                     }
                     ?>
                 </div>
-                <?php
-            endif; ?>
+            <?php endif; ?>
         </div>
 
         <!-- Search Bar and Filters -->
         <div class="search-bar-wrapper">
             <div class="search-controls">
-                <input type="text" id="searchInput" placeholder="Enter Upgrade No." oninput="filterTable(false)">
+                <input type="text" id="searchInput" placeholder="Enter Replacement No." oninput="filterTable(false)">
                 <button onclick="filterTable(false)">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="white" style="vertical-align:middle;">
                         <path
@@ -869,7 +726,7 @@ if (!empty($user_branches)) {
                     </svg>
                     FILTER
                 </button>
-                <button class="btn-preview-all" onclick="previewAllUpgrades()">
+                <button class="btn-preview-all" onclick="previewAllReplacements()">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="white"
                         style="vertical-align:middle; margin-right: 5px;">
                         <path
@@ -885,18 +742,16 @@ if (!empty($user_branches)) {
             <table class="report-table" id="reportTable">
                 <thead>
                     <tr>
-                        <th style="width:5%;">Date</th>
-                        <th style="width:7%;">Upgrade No.</th>
+                        <th style="width:5%;">REP Date</th>
+                        <th style="width:7%;">Replacement No.</th>
+                        <th style="width:5%;">Date Sold</th>
                         <th style="width:6%;">Invoice No.</th>
-                        <th style="width:6%;">New Invoice No.</th>
                         <th style="width:9%;">Old Unit</th>
                         <th style="width:7%;">Old Unit IMEI</th>
-                        <th style="width:5%;">Old Unit Amount</th>
                         <th style="width:9%;">New Unit</th>
                         <th style="width:7%;">New Unit IMEI</th>
-                        <th style="width:5%;">New Unit Amount</th>
-                        <th style="width:3%;">Qty</th>
-                        <th style="width:5%;">Total Paid</th>
+                        <th style="width:5%;">Less</th>
+                        <th style="width:5%;">Total</th>
                         <th style="width:5%;">Reason</th>
                         <th style="width:5%;">Remarks</th>
                         <th style="width:5%;">Branch</th>
@@ -906,18 +761,17 @@ if (!empty($user_branches)) {
                 </thead>
                 <tbody id="reportTableBody">
                     <tr class="select-filter-msg no-data">
-                        <td colspan="17">SELECT A FILTER TO DISPLAY THE DATA</td>
+                        <td colspan="15">SELECT A FILTER TO DISPLAY THE DATA</td>
                     </tr>
                     <tr class="no-data" style="display: none;">
-                        <td colspan="17">No records found.</td>
+                        <td colspan="15">No records found.</td>
                     </tr>
                 </tbody>
             </table>
 
             <!-- Pagination -->
             <div class="pagination-wrapper">
-                <span id="pageInfo">Showing 1–<?php echo $total_entries; ?> of <?php echo $total_entries; ?>
-                    entries</span>
+                <span id="pageInfo">Showing 1–0 of 0 entries</span>
                 <button class="page-btn active" id="prevBtn" onclick="changePage(-1)" disabled>&laquo; Prev</button>
                 <button class="page-btn active" id="nextBtn" onclick="changePage(1)" disabled>Next &raquo;</button>
             </div>
@@ -977,7 +831,7 @@ if (!empty($user_branches)) {
 
             // If this is a button click, load data from server
             if (isButtonClick) {
-                loadUpgradeData();
+                loadReplacementData();
                 return;
             }
 
@@ -1002,14 +856,14 @@ if (!empty($user_branches)) {
                 if (tr[i].classList.contains('no-data') || tr[i].classList.contains('select-filter-msg')) continue;
 
                 const tdDate = tr[i].getElementsByTagName('td')[0]; // Date column
-                const tdUpgradeNo = tr[i].getElementsByTagName('td')[1];
+                const tdReplacementNo = tr[i].getElementsByTagName('td')[1];
                 const tdInvoice = tr[i].getElementsByTagName('td')[2];
                 const tdOldUnit = tr[i].getElementsByTagName('td')[3];
-                const tdNewUnit = tr[i].getElementsByTagName('td')[6];
-                const tdBranch = tr[i].getElementsByTagName('td')[13]; // Branch column (index 13)
+                const tdNewUnit = tr[i].getElementsByTagName('td')[5];
+                const tdBranch = tr[i].getElementsByTagName('td')[12]; // Branch column
 
-                if (tdUpgradeNo || tdInvoice || tdOldUnit || tdNewUnit) {
-                    const upgradeNoValue = tdUpgradeNo ? tdUpgradeNo.textContent || tdUpgradeNo.innerText : '';
+                if (tdReplacementNo || tdInvoice || tdOldUnit || tdNewUnit) {
+                    const replacementNoValue = tdReplacementNo ? tdReplacementNo.textContent || tdReplacementNo.innerText : '';
                     const invoiceValue = tdInvoice ? tdInvoice.textContent || tdInvoice.innerText : '';
                     const oldUnitValue = tdOldUnit ? tdOldUnit.textContent || tdOldUnit.innerText : '';
                     const newUnitValue = tdNewUnit ? tdNewUnit.textContent || tdNewUnit.innerText : '';
@@ -1017,15 +871,14 @@ if (!empty($user_branches)) {
                     const dateText = tdDate ? tdDate.textContent || tdDate.innerText : '';
 
                     // Check if row matches search query
-                    const matchesSearch = upgradeNoValue.toUpperCase().indexOf(filter) > -1 ||
+                    const matchesSearch = replacementNoValue.toUpperCase().indexOf(filter) > -1 ||
                         invoiceValue.toUpperCase().indexOf(filter) > -1 ||
                         oldUnitValue.toUpperCase().indexOf(filter) > -1 ||
                         newUnitValue.toUpperCase().indexOf(filter) > -1;
 
-                    // Check if row matches branch filter (only if filter exists and is not "ALL")
+                    // Check if row matches branch filter
                     let matchesBranch = true;
                     if (branchFilter && branchFilter !== 'ALL' && branchText) {
-                        // Extract branch code from "Branch Name - CODE" format
                         const branchCodeMatch = branchText.match(/- ([A-Z0-9]+)$/);
                         const rowBranchCode = branchCodeMatch ? branchCodeMatch[1] : '';
                         matchesBranch = rowBranchCode === branchFilter;
@@ -1034,7 +887,6 @@ if (!empty($user_branches)) {
                     // Check if row matches date range filter
                     let matchesDateRange = true;
                     if ((dateFrom || dateTo) && dateText) {
-                        // Convert MM/DD/YYYY to YYYY-MM-DD for comparison
                         const dateParts = dateText.split('/');
                         if (dateParts.length === 3) {
                             const rowDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
@@ -1060,10 +912,8 @@ if (!empty($user_branches)) {
             // Show/hide the existing no-data row based on visible count
             const existingNoDataRows = document.querySelectorAll('#reportTableBody tr.no-data:not(.select-filter-msg)');
             if (visibleCount === 0) {
-                // Show existing no-data row if it exists
                 existingNoDataRows.forEach(row => row.style.display = '');
             } else {
-                // Hide all no-data rows when there are visible results
                 existingNoDataRows.forEach(row => row.style.display = 'none');
             }
 
@@ -1072,8 +922,8 @@ if (!empty($user_branches)) {
             updatePagination();
         }
 
-        // Load upgrade data from server via AJAX
-        function loadUpgradeData() {
+        // Load replacement data from server via AJAX
+        function loadReplacementData() {
             const branchFilterElement = document.getElementById('branchFilter');
             const branchFilter = branchFilterElement ? branchFilterElement.value : '';
             const statusFilter = document.getElementById('statusFilter').value;
@@ -1089,30 +939,30 @@ if (!empty($user_branches)) {
 
             // Show loading indicator
             const tbody = document.getElementById('reportTableBody');
-            tbody.innerHTML = '<tr class="no-data"><td colspan="17">Loading data...</td></tr>';
+            tbody.innerHTML = '<tr class="no-data"><td colspan="15">Loading data...</td></tr>';
 
             // Fetch data from server
-            fetch('fetch_upgrade_data.php?' + params.toString())
+            fetch('fetch_replacement_data.php?' + params.toString())
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        displayUpgradeData(data.data);
+                        displayReplacementData(data.data);
                     } else {
-                    tbody.innerHTML = '<tr class="no-data"><td colspan="17">Error loading data: ' + (data.error || 'Unknown error') + '</td></tr>';
+                        tbody.innerHTML = '<tr class="no-data"><td colspan="15">Error loading data: ' + (data.error || 'Unknown error') + '</td></tr>';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    tbody.innerHTML = '<tr class="no-data"><td colspan="17">Error loading data. Please try again.</td></tr>';
+                    tbody.innerHTML = '<tr class="no-data"><td colspan="15">Error loading data. Please try again.</td></tr>';
                 });
         }
 
-        // Display upgrade data in table
-        function displayUpgradeData(data) {
+        // Display replacement data in table
+        function displayReplacementData(data) {
             const tbody = document.getElementById('reportTableBody');
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr class="no-data"><td colspan="17">No records found.</td></tr>';
+                tbody.innerHTML = '<tr class="no-data"><td colspan="15">No records found.</td></tr>';
                 currentPage = 1;
                 updatePagination();
                 return;
@@ -1133,16 +983,14 @@ if (!empty($user_branches)) {
                 
                 html += '<tr>';
                 html += '  <td>' + row.date + '</td>';
-                html += '  <td>' + row.upgrade_no + '</td>';
+                html += '  <td>' + row.replacement_no + '</td>';
+                html += '  <td>' + (row.date_sold || '-') + '</td>';
                 html += '  <td>' + row.invoice_no + '</td>';
-                html += '  <td>' + (row.new_invoice_no || '') + '</td>';
                 html += '  <td style="text-align:left;">' + row.old_unit + '</td>';
                 html += '  <td>' + row.old_imei + '</td>';
-                html += '  <td style="text-align:right;">' + row.old_unit_total + '</td>';
                 html += '  <td style="text-align:left;">' + row.new_unit + '</td>';
                 html += '  <td>' + row.new_imei + '</td>';
-                html += '  <td style="text-align:right;">' + row.new_unit_total + '</td>';
-                html += '  <td style="text-align:center;">' + row.qty + '</td>';
+                html += '  <td style="text-align:right;">' + row.less_amount + '</td>';
                 html += '  <td style="text-align:right; font-weight:bold;">' + row.total_amount + '</td>';
                 html += '  <td>' + row.reason + '</td>';
                 html += '  <td style="text-align:left;">' + row.remarks + '</td>';
@@ -1150,7 +998,7 @@ if (!empty($user_branches)) {
                 html += '  <td>' + statusBadge + '</td>';
                 html += '  <td>';
                 html += '      <div class="action-btns">';
-                html += '          <button class="btn-preview" onclick="previewUpgrade(\'' + row.upgrade_no + '\')">Preview</button>';
+                html += '          <button class="btn-preview" onclick="previewReplacement(\'' + row.replacement_no + '\')">Preview</button>';
                 html += '      </div>';
                 html += '  </td>';
                 html += '</tr>';
@@ -1198,14 +1046,14 @@ if (!empty($user_branches)) {
             document.getElementById('nextBtn').disabled = currentPage >= totalPages;
         }
 
-        // Preview upgrade
-        function previewUpgrade(upgradeNo) {
+        // Preview replacement
+        function previewReplacement(replacementNo) {
             // Open preview in new window
-            window.open('preview_upgrade.php?upgrade_no=' + encodeURIComponent(upgradeNo), '_blank', 'width=900,height=700');
+            window.open('preview_replacement.php?replacement_no=' + encodeURIComponent(replacementNo), '_blank', 'width=900,height=700');
         }
 
-        // Preview all upgrades
-        function previewAllUpgrades() {
+        // Preview all replacements
+        function previewAllReplacements() {
             // Get date range from the form inputs
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
@@ -1241,7 +1089,7 @@ if (!empty($user_branches)) {
             }
 
             // Open preview all in new window
-            window.open('preview_all_upgrades.php?' + params.join('&'), '_blank', 'width=900,height=700');
+            window.open('preview_all_replacements.php?' + params.join('&'), '_blank', 'width=900,height=700');
         }
 
         // Don't auto-filter on page load - let user select filters first

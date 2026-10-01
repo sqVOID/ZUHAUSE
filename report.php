@@ -1756,6 +1756,13 @@ require_once 'config.php';
                 const isTradeIn = (sale.page_type === 'salestrade-in' && sale.upgrade !== 'UPGD');
                 const hasPromoItemInSale = (sale.items && sale.items.some(i => i.is_promo_item == 1));
                 const isPromoEntry = (sale.page_type === 'promosentry' || hasPromoItemInSale || (sale.promo_id && parseInt(sale.promo_id) > 0));
+
+                // Check if this is an approval-required transaction
+                const isUpgradeUnit = (sale.page_type === 'upgradeunit');
+                const isReplacementUnit = (sale.page_type === 'replacementunit');
+                const hasApprovalStatus = (isUpgradeUnit || isReplacementUnit);
+                const approvalStatus = hasApprovalStatus ? (sale.approval_status || 'Pending') : null;
+
                 let statCell = '<td></td>';
                 if (isVoided) {
                     statCell = '<td style="color:#d32f2f;font-weight:700;">VD</td>';
@@ -1778,6 +1785,7 @@ require_once 'config.php';
                         const itemIsUpgraded = (isNewUpgradeSale || item.is_upgrade_item == 1);
                         const itemIsOldUpgraded = (item.is_old_upgrade_item == 1);
                         const amtStyle = (itemVoided || itemRefunded) ? ' style="color:#d32f2f;"' : '';
+
                         let itemStatCell = '<td></td>';
                         if (itemVoided) {
                             itemStatCell = '<td style="color:#d32f2f;font-weight:700;">VD</td>';
@@ -2043,20 +2051,24 @@ require_once 'config.php';
                     };
                 }
 
-                // Include in encoder breakdown (exclude voided sales)
-                if (!isVoided) {
+                // Check if this is a disapproved upgrade/replacement
+                const isDisapprovedUpgrade = (sale.page_type === 'upgradeunit' || sale.page_type === 'replacementunit') &&
+                    (sale.approval_status === 'Disapproved');
+
+                // Include in encoder breakdown (exclude voided sales and disapproved upgrades/replacements)
+                if (!isVoided && !isDisapprovedUpgrade) {
                     groupedByEncoder[encoderName].quantity += saleQty;
                     groupedByEncoder[encoderName].totalAmount += saleDisplayedTotal;
                 }
 
-                // Include in totals (exclude voided sales)
-                if (!isVoided) {
+                // Include in totals (exclude voided sales and disapproved upgrades/replacements)
+                if (!isVoided && !isDisapprovedUpgrade) {
                     totalUnits += saleQty;
                     grandTotalAmount += saleDisplayedTotal;
                 }
 
-                // Parse payment data for cash calculation (include voided and refunded sales)
-                if (sale.payment_data) {
+                // Parse payment data for cash calculation (exclude voided and disapproved upgrades/replacements)
+                if (sale.payment_data && !isVoided && !isDisapprovedUpgrade) {
                     try {
                         const paymentData = JSON.parse(sale.payment_data);
                         const rawPaymentType = paymentData.payment_type || '';
@@ -2269,8 +2281,10 @@ require_once 'config.php';
                         totalCash += saleAmount;
                     }
                 } else {
-                    // If no payment data, assume cash
-                    totalCash += saleAmount;
+                    // If no payment data, assume cash (exclude voided and disapproved)
+                    if (!isVoided && !isDisapprovedUpgrade) {
+                        totalCash += saleAmount;
+                    }
                 }
 
                 // Track void and refund amounts separately
@@ -2283,9 +2297,13 @@ require_once 'config.php';
                 }
 
                 // Accumulate upgrade amount (balance paid) for UPGD sales
+                // Only count approved or pending upgrades, NOT disapproved ones
                 if (isNewUpgradeSale) {
-                    totalUpgrade += saleAmount;
-                    totalOldUnit += oldUnitAmount;
+                    const approvalStatus = sale.approval_status || 'Pending';
+                    if (approvalStatus !== 'Disapproved') {
+                        totalUpgrade += saleAmount;
+                        totalOldUnit += oldUnitAmount;
+                    }
                 }
 
                 // Calculate commission breakdown
@@ -2880,11 +2898,14 @@ require_once 'config.php';
                             }
                             overallAmount += itemTotal;
 
+                            // Prepare IMEI display - show item IMEI
+                            let imeiDisplay = item.imei || '';
+
                             itemsHTML += `
                                 <tr>
                                     <td style="padding:8px; border:1px solid #acacacff;">${item.item_code || ''}</td>
                                     <td style="padding:8px; border:1px solid #acacacff;">${item.item_description || ''}</td>
-                                    <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${item.imei || ''}</td>
+                                    <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${imeiDisplay}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:center;">${qty}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     <td style="padding:8px; border:1px solid #acacacff; text-align:right;">₱${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
@@ -3304,13 +3325,8 @@ require_once 'config.php';
                         paymentInfoHTML += res.html;
                         totalPayment += res.amount;
                     });
-                    if (data.sale.upgrade === 'UPGD' && data.sale.original_invoice_no && data.sale.original_invoice_no.trim() !== '') {
-                        const oldUnitAmt = parseFloat(data.sale.old_unit_amount || 0);
-                        if (oldUnitAmt > 0) {
-                            const origInv = ` (${data.sale.original_invoice_no.trim()})`;
-                            paymentInfoHTML += `<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱${oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}${origInv}</td></tr>`;
-                        }
-                    }
+
+                    // Old Unit Price is now shown in the Upgrade Unit Information card below
                 } else if (paymentMethodFilter) {
                     // Filtered view: find matching payment entry or use filteredItemsTotal
                     let matchedEntry = null;
@@ -3332,13 +3348,8 @@ require_once 'config.php';
                     }
                     const res = renderPaymentDetails(paymentMethodFilter, matchedEntry || paymentData, fallbackAmt, tokenAmount > 0, voucherAmount > 0, unitList);
                     paymentInfoHTML += res.html;
-                    if (data.sale.upgrade === 'UPGD' && data.sale.original_invoice_no && data.sale.original_invoice_no.trim() !== '') {
-                        const oldUnitAmt = parseFloat(data.sale.old_unit_amount || 0);
-                        if (oldUnitAmt > 0) {
-                            const origInv = ` (${data.sale.original_invoice_no.trim()})`;
-                            paymentInfoHTML += `<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱${oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}${origInv}</td></tr>`;
-                        }
-                    }
+
+                    // Old Unit Price is now shown in the Upgrade Unit Information card below
                     totalPayment = res.amount > 0 ? res.amount : fallbackAmt;
                 } else {
                     // Single payment method
@@ -3367,14 +3378,8 @@ require_once 'config.php';
                     }
                     const res = renderPaymentDetails(overallPaymentMethod, singleEntry, fallbackAmt, tokenAmount > 0, voucherAmount > 0, unitList);
                     paymentInfoHTML += res.html;
-                    // For upgrade invoices, add Old Unit Price row after payment details
-                    if (isUpgradeInvoice) {
-                        const oldUnitAmt = parseFloat(data.sale.old_unit_amount || 0);
-                        if (oldUnitAmt > 0) {
-                            const origInv = (data.sale.original_invoice_no && data.sale.original_invoice_no.trim() !== '') ? ` (${data.sale.original_invoice_no.trim()})` : '';
-                            paymentInfoHTML += `<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱${oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}${origInv}</td></tr>`;
-                        }
-                    }
+
+                    // Old Unit Price is now shown in the Upgrade Unit Information card below
                     totalPayment = res.amount > 0 ? res.amount : fallbackAmt;
                 }
 
@@ -3431,6 +3436,185 @@ require_once 'config.php';
                         </table>
                     </td></tr>`;
                 }
+
+                // Build replacement entries (Approved only, exclude Disapproved)
+                const replacementEntries = [];
+                if (Array.isArray(data.sale.replacements) && data.sale.replacements.length > 0) {
+                    data.sale.replacements.forEach(r => {
+                        const rStatus = (r.status || '').trim();
+                        if (rStatus.toLowerCase() === 'disapproved') {
+                            return; // Skip disapproved replacements
+                        }
+
+                        const rReason = (r.reason || '').trim();
+                        const rRemarks = (r.remarks || '').trim();
+                        const rDate = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+                        const rNo = r.replacement_no || '';
+
+                        if (Array.isArray(r.old_items) && r.old_items.length > 0) {
+                            r.old_items.forEach(oi => {
+                                const desc = (oi.item_description || '').trim();
+                                const imei = (oi.imei || '').trim();
+                                const unitStr = (desc && imei) ? `${desc} (${imei})` : (desc || imei || 'N/A');
+                                replacementEntries.push({
+                                    unit: unitStr,
+                                    description: desc,
+                                    imei: imei,
+                                    reason: rReason || rRemarks || 'N/A',
+                                    date: rDate,
+                                    replacement_no: rNo
+                                });
+                            });
+                        } else {
+                            replacementEntries.push({
+                                unit: 'N/A',
+                                reason: rReason || rRemarks || 'N/A',
+                                date: rDate,
+                                replacement_no: rNo
+                            });
+                        }
+                    });
+                }
+
+                // Fallback: Check items in data.items having old_imei if not already in replacementEntries
+                if (!data.sale.approval_status || data.sale.approval_status.toLowerCase() !== 'disapproved') {
+                    (data.items || []).forEach(it => {
+                        const oldImei = (it.old_imei || '').trim();
+                        if (oldImei) {
+                            const alreadyExists = replacementEntries.some(re => re.imei && re.imei.toUpperCase() === oldImei.toUpperCase());
+                            if (!alreadyExists) {
+                                const desc = (it.item_description || it.item_code || '').trim();
+                                const unitStr = desc ? `${desc} (${oldImei})` : oldImei;
+                                const dateStr = data.sale.created_at ? new Date(data.sale.created_at).toLocaleString() : '';
+                                replacementEntries.push({
+                                    unit: unitStr,
+                                    description: desc,
+                                    imei: oldImei,
+                                    reason: (data.sale.remarks || data.sale.reason || 'N/A'),
+                                    date: dateStr
+                                });
+                            }
+                        }
+                    });
+                }
+
+                const hasReplacement = replacementEntries.length > 0;
+
+                let replacementCardHTML = '';
+                if (hasReplacement) {
+                    let repRows = '';
+                    if (replacementEntries.length === 1) {
+                        const re = replacementEntries[0];
+                        repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Replacement Old Unit:</td><td style="padding:5px 0;">' + re.unit + '</td></tr>';
+                        repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + re.reason + '</td></tr>';
+                        if (re.date) {
+                            repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + re.date + '</td></tr>';
+                        }
+                    } else {
+                        replacementEntries.forEach((re, idx) => {
+                            const topPad = idx === 0 ? '5px' : '15px';
+                            const topBorder = idx > 0 ? 'border-top:1px solid #ddd;' : '';
+                            repRows += '<tr><td colspan="2" style="padding:' + topPad + ' 10px 5px 0; font-weight:700; color:#1E455D; font-size:15px; border-bottom:1px solid #ddd; ' + topBorder + '">#' + (idx + 1) + ' Replacement Unit:</td></tr>';
+                            repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Replacement Old Unit:</td><td style="padding:5px 0;">' + re.unit + '</td></tr>';
+                            repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + re.reason + '</td></tr>';
+                            if (re.date) {
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + re.date + '</td></tr>';
+                            }
+                        });
+                    }
+
+                    replacementCardHTML = '<div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">' +
+                        '<h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Replacement Information</h3>' +
+                        '<table style="width:100%; font-size:14px;">' + repRows + '</table>' +
+                        '</div>';
+                }
+
+                // Build Upgrade Unit Information card
+                let upgradeCardHTML = '';
+                const isUpgradeInvoiceForCard = (data.sale.upgrade === 'UPGD' && data.sale.original_invoice_no && data.sale.original_invoice_no.trim() !== '') || data.sale.page_type === 'upgradeunit';
+                if (isUpgradeInvoiceForCard && Array.isArray(data.sale.upgrades_data) && data.sale.upgrades_data.length > 0) {
+                    let upgRows = '';
+                    const allUpgrades = data.sale.upgrades_data;
+                    if (allUpgrades.length === 1) {
+                        const ug = allUpgrades[0];
+                        if (Array.isArray(ug.old_items) && ug.old_items.length > 0) {
+                            ug.old_items.forEach((oi, oiIdx) => {
+                                const desc = (oi.item_description || '').trim();
+                                const imei = (oi.imei || '').trim();
+                                const price = parseFloat(oi.price || 0);
+                                const unitStr = (desc && imei) ? `${desc} (${imei})` : (desc || imei || 'N/A');
+                                if (ug.old_items.length > 1) {
+                                    upgRows += '<tr><td colspan="2" style="padding:' + (oiIdx === 0 ? '5px' : '10px') + ' 10px 3px 0; font-weight:700; color:#1E455D; font-size:13px;">' + (oiIdx > 0 ? '<span style="border-top:1px solid #ddd;display:block;padding-top:8px;">' : '') + 'Old Unit ' + (oiIdx + 1) + ':' + (oiIdx > 0 ? '</span>' : '') + '</td></tr>';
+                                }
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit:</td><td style="padding:5px 0;">' + unitStr + '</td></tr>';
+                                if (price > 0) {
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Old Unit Price:</td><td style="padding:5px 0;">₱' + price.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td></tr>';
+                                }
+                            });
+                        } else {
+                            const oldUnitAmt = parseFloat(data.sale.old_unit_amount || 0);
+                            if (oldUnitAmt > 0) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱' + oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td></tr>';
+                            }
+                        }
+                        const ugReason = (ug.reason || ug.remarks || '').trim();
+                        if (ugReason) {
+                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + ugReason + '</td></tr>';
+                        }
+                        if (ug.created_at) {
+                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + new Date(ug.created_at).toLocaleString() + '</td></tr>';
+                        }
+                        if (ug.original_invoice_no && ug.original_invoice_no.trim() !== '') {
+                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Target Invoice:</td><td style="padding:5px 0;">' + ug.original_invoice_no.trim() + '</td></tr>';
+                        }
+                    } else {
+                        allUpgrades.forEach((ug, ugIdx) => {
+                            const topPad = ugIdx === 0 ? '5px' : '15px';
+                            const topBorder = ugIdx > 0 ? 'border-top:1px solid #ddd;' : '';
+                            upgRows += '<tr><td colspan="2" style="padding:' + topPad + ' 10px 5px 0; font-weight:700; color:#1E455D; font-size:15px; border-bottom:1px solid #ddd; ' + topBorder + '">#' + (ugIdx + 1) + ' Upgrade Unit:</td></tr>';
+                            if (Array.isArray(ug.old_items) && ug.old_items.length > 0) {
+                                ug.old_items.forEach((oi, oiIdx) => {
+                                    const desc = (oi.item_description || '').trim();
+                                    const imei = (oi.imei || '').trim();
+                                    const price = parseFloat(oi.price || 0);
+                                    const unitStr = (desc && imei) ? `${desc} (${imei})` : (desc || imei || 'N/A');
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit:</td><td style="padding:5px 0;">' + unitStr + '</td></tr>';
+                                    if (price > 0) {
+                                        upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Old Unit Price:</td><td style="padding:5px 0;">₱' + price.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td></tr>';
+                                    }
+                                });
+                            }
+                            const ugReason = (ug.reason || ug.remarks || '').trim();
+                            if (ugReason) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + ugReason + '</td></tr>';
+                            }
+                            if (ug.created_at) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + new Date(ug.created_at).toLocaleString() + '</td></tr>';
+                            }
+                            if (ug.original_invoice_no && ug.original_invoice_no.trim() !== '') {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Original Invoice:</td><td style="padding:5px 0;">' + ug.original_invoice_no.trim() + '</td></tr>';
+                            }
+                        });
+                    }
+                    if (upgRows) {
+                        upgradeCardHTML = '<div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">' +
+                            '<h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Upgrade Unit Information</h3>' +
+                            '<table style="width:100%; font-size:14px;">' + upgRows + '</table>' +
+                            '</div>';
+                    }
+                } else if (isUpgradeInvoiceForCard) {
+                    // Fallback: no upgrades_data rows but we know it's an upgrade
+                    const oldUnitAmt = parseFloat(data.sale.old_unit_amount || 0);
+                    if (oldUnitAmt > 0) {
+                        const origInv = (data.sale.original_invoice_no && data.sale.original_invoice_no.trim() !== '') ? ' (' + data.sale.original_invoice_no.trim() + ')' : '';
+                        upgradeCardHTML = '<div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">' +
+                            '<h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Upgrade Unit Information</h3>' +
+                            '<table style="width:100%; font-size:14px;">' +
+                            '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Old Unit Price:</td><td style="padding:5px 0;">₱' + oldUnitAmt.toLocaleString('en-US', { minimumFractionDigits: 2 }) + origInv + '</td></tr>' +
+                            '</table></div>';
+                    }
+                }
+                const hasUpgrade = upgradeCardHTML !== '';
 
                 const hasTradeIn = Boolean((data.sale.tradein_value && parseFloat(data.sale.tradein_value) > 0) || (data.sale.titu_voucher_total && parseFloat(data.sale.titu_voucher_total) > 0));
                 const hasPromoItemInSale = (data.items || []).some(item => item.is_promo_item == 1);
@@ -3556,33 +3740,31 @@ require_once 'config.php';
                     </div>
                 ` : '';
 
+                const sideCards = [];
+                if (hasReplacement) sideCards.push(replacementCardHTML);
+                if (hasUpgrade) sideCards.push(upgradeCardHTML);
+                if (hasTradeIn) sideCards.push(tradeInCardHTML);
+                if (showPromoDetails) sideCards.push(promoCardHTML);
+
                 let bottomSectionHTML = '';
-                if (hasTradeIn && showPromoDetails) {
+                if (sideCards.length === 0) {
+                    bottomSectionHTML = paymentCardHTML;
+                } else if (sideCards.length === 1) {
                     bottomSectionHTML = `
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                            ${tradeInCardHTML}
-                            ${promoCardHTML}
-                        </div>
-                        <div style="margin-top:20px;">
-                            ${paymentCardHTML}
-                        </div>
-                    `;
-                } else if (hasTradeIn) {
-                    bottomSectionHTML = `
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                            ${tradeInCardHTML}
-                            ${paymentCardHTML}
-                        </div>
-                    `;
-                } else if (showPromoDetails) {
-                    bottomSectionHTML = `
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                            ${promoCardHTML}
+                            ${sideCards[0]}
                             ${paymentCardHTML}
                         </div>
                     `;
                 } else {
-                    bottomSectionHTML = paymentCardHTML;
+                    bottomSectionHTML = `
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                            ${sideCards.join('')}
+                        </div>
+                        <div>
+                            ${paymentCardHTML}
+                        </div>
+                    `;
                 }
 
                 // Build modal content

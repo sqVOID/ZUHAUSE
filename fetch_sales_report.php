@@ -101,7 +101,20 @@ try {
             r.total_amount as refund_amount,
             se.status as display_status,
             se.page_type,
-            se.promo_id
+            se.promo_id,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT ual.status FROM upgrade_approval_log ual 
+                    WHERE ual.new_invoice_no = se.invoice_no 
+                    ORDER BY ual.id DESC LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT ral.status FROM replacement_approval_log ral 
+                    WHERE ral.new_invoice_no = se.invoice_no 
+                    ORDER BY ral.id DESC LIMIT 1
+                )
+                ELSE NULL
+            END AS approval_status
         FROM sales_entry se 
         LEFT JOIN refunds r ON r.invoice_no = se.invoice_no
         WHERE DATE(se.created_at) BETWEEN ? AND ?
