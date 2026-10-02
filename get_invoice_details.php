@@ -76,16 +76,84 @@ try {
             ) AS upgrade_payment_data,
             CASE
                 WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT ual.approver
+                    FROM upgrade_approval_log ual
+                    WHERE (ual.new_invoice_no = se.invoice_no OR (ual.original_invoice_no = se.invoice_no AND ual.original_invoice_no != ''))
+                    ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT ral.approver
+                    FROM replacement_approval_log ral
+                    WHERE (ral.new_invoice_no = se.invoice_no OR (ral.original_invoice_no = se.invoice_no AND ral.original_invoice_no != ''))
+                    ORDER BY ral.id DESC
+                    LIMIT 1
+                )
+                ELSE NULL
+            END AS approver,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT ual.approval_date
+                    FROM upgrade_approval_log ual
+                    WHERE (ual.new_invoice_no = se.invoice_no OR (ual.original_invoice_no = se.invoice_no AND ual.original_invoice_no != ''))
+                    ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT ral.approval_date
+                    FROM replacement_approval_log ral
+                    WHERE (ral.new_invoice_no = se.invoice_no OR (ral.original_invoice_no = se.invoice_no AND ral.original_invoice_no != ''))
+                    ORDER BY ral.id DESC
+                    LIMIT 1
+                )
+                ELSE NULL
+            END AS approval_date,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT ual.disapprover
+                    FROM upgrade_approval_log ual
+                    WHERE (ual.new_invoice_no = se.invoice_no OR (ual.original_invoice_no = se.invoice_no AND ual.original_invoice_no != ''))
+                    ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT ral.disapprover
+                    FROM replacement_approval_log ral
+                    WHERE (ral.new_invoice_no = se.invoice_no OR (ral.original_invoice_no = se.invoice_no AND ral.original_invoice_no != ''))
+                    ORDER BY ral.id DESC
+                    LIMIT 1
+                )
+                ELSE NULL
+            END AS disapprover,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
+                    SELECT ual.disapproval_date
+                    FROM upgrade_approval_log ual
+                    WHERE (ual.new_invoice_no = se.invoice_no OR (ual.original_invoice_no = se.invoice_no AND ual.original_invoice_no != ''))
+                    ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT ral.disapproval_date
+                    FROM replacement_approval_log ral
+                    WHERE (ral.new_invoice_no = se.invoice_no OR (ral.original_invoice_no = se.invoice_no AND ral.original_invoice_no != ''))
+                    ORDER BY ral.id DESC
+                    LIMIT 1
+                )
+                ELSE NULL
+            END AS disapproval_date,
+            CASE
+                WHEN se.page_type = 'upgradeunit' THEN (
                     SELECT COALESCE(ual.status, 'Pending')
                     FROM upgrade_approval_log ual
-                    WHERE ual.new_invoice_no = se.invoice_no
+                    WHERE (ual.new_invoice_no = se.invoice_no OR (ual.original_invoice_no = se.invoice_no AND ual.original_invoice_no != ''))
                     ORDER BY ual.id DESC
                     LIMIT 1
                 )
                 WHEN se.page_type = 'replacementunit' THEN (
                     SELECT COALESCE(ral.status, 'Pending')
                     FROM replacement_approval_log ral
-                    WHERE ral.new_invoice_no = se.invoice_no
+                    WHERE (ral.new_invoice_no = se.invoice_no OR (ral.original_invoice_no = se.invoice_no AND ral.original_invoice_no != ''))
                     ORDER BY ral.id DESC
                     LIMIT 1
                 )
@@ -95,9 +163,17 @@ try {
                 WHEN se.page_type = 'upgradeunit' THEN (
                     SELECT ual.disapproval_reason
                     FROM upgrade_approval_log ual
-                    WHERE ual.new_invoice_no = se.invoice_no
+                    WHERE (ual.new_invoice_no = se.invoice_no OR (ual.original_invoice_no = se.invoice_no AND ual.original_invoice_no != ''))
                       AND ual.status = 'Disapproved'
                     ORDER BY ual.id DESC
+                    LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT ral.disapproval_reason
+                    FROM replacement_approval_log ral
+                    WHERE (ral.new_invoice_no = se.invoice_no OR (ral.original_invoice_no = se.invoice_no AND ral.original_invoice_no != ''))
+                      AND ral.status = 'Disapproved'
+                    ORDER BY ral.id DESC
                     LIMIT 1
                 )
                 ELSE NULL
@@ -447,11 +523,26 @@ try {
             r.reason, 
             r.remarks, 
             r.created_at, 
-            r.status, 
-            r.created_by
+            COALESCE(ral.status, r.status, 'Approved') AS status, 
+            r.created_by,
+            COALESCE(NULLIF(TRIM(r.approved_by), ''), ral.approver) AS approver,
+            COALESCE(NULLIF(TRIM(r.approved_at), ''), ral.approval_date) AS approval_date,
+            COALESCE(NULLIF(TRIM(r.disapproved_by), ''), ral.disapprover) AS disapprover,
+            COALESCE(NULLIF(TRIM(r.disapproved_at), ''), ral.disapproval_date) AS disapproval_date,
+            COALESCE(NULLIF(TRIM(r.disapproval_reason), ''), ral.disapproval_reason) AS disapproval_reason
         FROM replacements r
-        WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
-          AND (r.status = 'Approved' OR r.status IS NULL)
+        LEFT JOIN (
+            SELECT ral1.*
+            FROM replacement_approval_log ral1
+            INNER JOIN (
+                SELECT MAX(id) AS max_id
+                FROM replacement_approval_log
+                GROUP BY replacement_id
+            ) ral2 ON ral1.id = ral2.max_id
+        ) ral ON (ral.replacement_id = r.id OR (r.replacement_no IS NOT NULL AND r.replacement_no != '' AND ral.replacement_no = r.replacement_no))
+        WHERE (r.invoice_no = ? OR (r.new_invoice_no IS NOT NULL AND r.new_invoice_no != '' AND r.new_invoice_no = ?))
+          AND (r.status = 'Approved' OR (r.status IS NULL AND ral.status = 'Approved'))
+        GROUP BY r.id
         ORDER BY r.id ASC
     ");
     if ($rep_query) {
@@ -513,9 +604,24 @@ try {
                 u.total_amount AS upgrade_total,
                 u.created_by,
                 u.branch,
-                u.created_at
+                u.created_at,
+                COALESCE(ual.status, 'Pending') AS approval_status,
+                ual.approver,
+                ual.approval_date,
+                ual.disapprover,
+                ual.disapproval_date,
+                ual.disapproval_reason
             FROM upgrades u
-            WHERE (u.new_invoice_no = ? OR u.original_invoice_no = ?)
+            LEFT JOIN (
+                SELECT ual1.*
+                FROM upgrade_approval_log ual1
+                INNER JOIN (
+                    SELECT MAX(id) AS max_id
+                    FROM upgrade_approval_log
+                    GROUP BY upgrade_id
+                ) ual2 ON ual1.id = ual2.max_id
+            ) ual ON (ual.upgrade_id = u.id OR (u.upgrade_no IS NOT NULL AND u.upgrade_no != '' AND ual.upgrade_no = u.upgrade_no))
+            WHERE ((u.original_invoice_no IS NOT NULL AND u.original_invoice_no != '' AND u.original_invoice_no = ?) OR (u.new_invoice_no IS NOT NULL AND u.new_invoice_no != '' AND u.new_invoice_no = ?))
             ORDER BY u.id ASC
         ");
         if ($upg_query) {
@@ -547,6 +653,68 @@ try {
         }
     }
     $sale['upgrades_data'] = $upgrades_data;
+
+    // If this invoice is the TARGET of an upgrade (e.g. 0186 upgraded via 0187),
+    // resolve the upgrade invoice number(s) so the modal can show
+    // "Status: Upgrade (Invoice No: 0187)" under Sale Information.
+    $upgraded_to_invoice_nos = [];
+    $is_target_of_upgrade = ($sale['upgrade'] === 'UPGD' && empty($sale['original_invoice_no']) && $sale['page_type'] !== 'upgradeunit');
+    if ($is_target_of_upgrade || $sale['upgrade'] === 'UPGD') {
+        // Prefer upgrades.new_invoice_no linked to this original invoice
+        $ug_to_q = $conn->prepare("
+            SELECT DISTINCT new_invoice_no
+            FROM upgrades
+            WHERE original_invoice_no = ?
+              AND original_invoice_no != ''
+              AND new_invoice_no IS NOT NULL
+              AND new_invoice_no != ''
+              AND new_invoice_no != ?
+            ORDER BY id ASC
+        ");
+        if ($ug_to_q) {
+            $ug_to_q->bind_param("ss", $invoice_no, $invoice_no);
+            $ug_to_q->execute();
+            $ug_to_res = $ug_to_q->get_result();
+            if ($ug_to_res) {
+                while ($row = $ug_to_res->fetch_assoc()) {
+                    $inv = trim($row['new_invoice_no'] ?? '');
+                    if ($inv !== '' && !in_array($inv, $upgraded_to_invoice_nos, true)) {
+                        $upgraded_to_invoice_nos[] = $inv;
+                    }
+                }
+            }
+            $ug_to_q->close();
+        }
+
+        // Fallback: sales_entry rows that reference this invoice as original
+        if (empty($upgraded_to_invoice_nos)) {
+            $se_to_q = $conn->prepare("
+                SELECT invoice_no
+                FROM sales_entry
+                WHERE original_invoice_no = ?
+                  AND original_invoice_no != ''
+                  AND invoice_no != ?
+                  AND (upgrade = 'UPGD' OR page_type = 'upgradeunit')
+                ORDER BY id ASC
+            ");
+            if ($se_to_q) {
+                $se_to_q->bind_param("ss", $invoice_no, $invoice_no);
+                $se_to_q->execute();
+                $se_to_res = $se_to_q->get_result();
+                if ($se_to_res) {
+                    while ($row = $se_to_res->fetch_assoc()) {
+                        $inv = trim($row['invoice_no'] ?? '');
+                        if ($inv !== '' && !in_array($inv, $upgraded_to_invoice_nos, true)) {
+                            $upgraded_to_invoice_nos[] = $inv;
+                        }
+                    }
+                }
+                $se_to_q->close();
+            }
+        }
+    }
+    $sale['upgraded_to_invoice_nos'] = $upgraded_to_invoice_nos;
+    $sale['upgraded_to_invoice_no'] = !empty($upgraded_to_invoice_nos) ? $upgraded_to_invoice_nos[0] : null;
 
     // Calculate actual_total_amount (same logic as fetch_sales_report.php)
     $payment_data = [];

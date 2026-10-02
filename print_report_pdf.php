@@ -105,7 +105,7 @@ $has_old_imei = ($check_old_imei && $check_old_imei->num_rows > 0);
 $old_imei_select = $has_old_imei ? "sei.old_imei," : "NULL AS old_imei,";
 
 while ($row = $result->fetch_assoc()) {
-    $row['is_replacement'] = ($row['page_type'] === 'replacementunit' || (int)($row['replacement_count'] ?? 0) > 0);
+    $row['is_replacement'] = (($row['page_type'] === 'replacementunit' || (int)($row['replacement_count'] ?? 0) > 0) && ($row['approval_status'] === 'Approved'));
     $sales[] = $row;
 
     // Match fetch_sales_report.php: last invoice is MAX invoice_no from sales_entry only
@@ -753,12 +753,20 @@ if (count($sales) === 0) {
         $isRefunded = ($sale['display_status'] === 'refunded');
         $isTradeIn = (isset($sale['page_type']) && $sale['page_type'] === 'salestrade-in' && ($sale['upgrade'] ?? '') !== 'UPGD');
 
-        // Skip disapproved upgrades/replacements — match report.php JS behaviour
-        $isDisapprovedSale = (
-            (($sale['page_type'] ?? '') === 'upgradeunit' || ($sale['page_type'] ?? '') === 'replacementunit' || ($sale['upgrade'] ?? '') === 'UPGD')
-            && (($sale['approval_status'] ?? '') === 'Disapproved')
+        $isUpgradeUnit = (
+            ($sale['page_type'] ?? '') === 'upgradeunit' || 
+            (!empty($sale['original_invoice_no']) && ($sale['upgrade'] ?? '') === 'UPGD')
         );
-        if ($isDisapprovedSale) continue;
+        $upgradeApprovalStatus = $isUpgradeUnit ? ($sale['approval_status'] ?? 'Pending') : null;
+        $isDisapprovedUpgrade = ($isUpgradeUnit && $upgradeApprovalStatus === 'Disapproved');
+
+        // Skip pending upgrades — only show Approved or Disapproved (matches report.php)
+        if ($isUpgradeUnit && $upgradeApprovalStatus !== 'Approved' && $upgradeApprovalStatus !== 'Disapproved') {
+            continue;
+        }
+
+        $isReplacementApproved = (($sale['approval_status'] ?? '') === 'Approved') && (!empty($sale['is_replacement']) || ($sale['page_type'] ?? '') === 'replacementunit' || ((int)($sale['replacement_count'] ?? 0) > 0));
+        $isReplacement = $isReplacementApproved;
 
         // Parse payment data
         $paymentMethod = '';
@@ -835,7 +843,7 @@ if (count($sales) === 0) {
             $pdf->Rect($invoiceStartX, $invoiceStartY, $wInvoice, $totalSpanH);
             // Print invoice text centered vertically inside the merged cell
             $pdf->SetFont('Courier', '', $invoiceFontSize);
-            if ($isVoided || $isRefunded) {
+            if ($isVoided || $isRefunded || $isDisapprovedUpgrade) {
                 $pdf->SetTextColor(211, 47, 47);
             } else {
                 $pdf->SetTextColor(0, 0, 0);
@@ -869,7 +877,7 @@ if (count($sales) === 0) {
                         break;
                     }
                 }
-                $itemIsReplacement = !empty($item['is_replacement_item']) || !empty($item['is_old_replacement_item']) || (!empty($item['old_imei']) && trim($item['old_imei']) !== '') || ($itemsCount === 1 && $isReplacement) || (($sale['page_type'] ?? '') === 'replacementunit') || ($isReplacement && !$hasExplicitReplacedItem);
+                $itemIsReplacement = $isReplacementApproved && (!empty($item['is_replacement_item']) || !empty($item['is_old_replacement_item']) || (!empty($item['old_imei']) && trim($item['old_imei']) !== '') || ($itemsCount === 1 && $isReplacement) || (($sale['page_type'] ?? '') === 'replacementunit') || ($isReplacement && !$hasExplicitReplacedItem));
                 $stat = $itemVoided ? 'VD' : ($itemRefunded ? 'RF' : ($itemIsUpgraded || $itemIsOldUpgraded || ($itemsCount === 1 && ($sale['upgrade'] ?? '') === 'UPGD') ? 'UPGD' : ($itemIsReplacement ? 'RP' : ($isTradeIn ? 'TRD' : ($itemIsPromo ? 'PROMO' : '')))));
 
                 // Column display values (match report.php)
@@ -940,7 +948,7 @@ if (count($sales) === 0) {
                 }
 
                 // Restore text color per-row
-                if ($isVoided || $isRefunded || $itemRefunded) {
+                if ($isVoided || $isRefunded || $itemRefunded || $isDisapprovedUpgrade) {
                     $pdf->SetTextColor(211, 47, 47);
                 } else {
                     $pdf->SetTextColor(0, 0, 0);
@@ -1102,6 +1110,17 @@ $totalVoid = 0;
 $totalRefund = 0;
 
 foreach ($sales as $sale) {
+    $hasApprovalStatus = (
+        ($sale['page_type'] ?? '') === 'upgradeunit' || 
+        ($sale['page_type'] ?? '') === 'replacementunit' || 
+        (!empty($sale['original_invoice_no']) && ($sale['upgrade'] ?? '') === 'UPGD') ||
+        !empty($sale['is_replacement'])
+    );
+    $approvalStatus = $hasApprovalStatus ? ($sale['approval_status'] ?? 'Pending') : null;
+    if ($hasApprovalStatus && $approvalStatus !== 'Approved' && $approvalStatus !== 'Disapproved') {
+        continue;
+    }
+
     $encoderName = $sale['encoder'] ? $sale['encoder'] : 'Unknown';
     $isVoided = ($sale['status'] === 'voided');
     $isRefunded = ($sale['display_status'] === 'refunded');
@@ -1458,7 +1477,7 @@ foreach ($sales as $sale) {
     }
 
     // Accumulate upgrade amount (balance paid) for UPGD sales
-    if ($isNewUpgradeSale && ($sale['approval_status'] ?? 'Pending') !== 'Disapproved') {
+    if ($isNewUpgradeSale && ($sale['approval_status'] ?? 'Pending') === 'Approved') {
         $totalUpgrade += $saleAmount;
         $totalOldUnit += $oldUnitAmount;
     }

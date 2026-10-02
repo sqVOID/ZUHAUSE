@@ -211,7 +211,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
     endif; ?>
 
     <?php
-    $report_labels = ['Daily Sales Report', 'Monthly Sales Report', 'Payment Details Report', 'Void Sales Report', 'Upgrade Unit Report', 'Receive Direct Delivery', 'Stock Transfer Report', 'Refund Report', 'Stock on Hand', 'Pre Order Report', 'Trade-In Report', 'Item Status Report'];
+    $report_labels = ['Daily Sales Report', 'Monthly Sales Report', 'Payment Details Report', 'Void Sales Report', 'Upgrade Unit Report', 'Replacement Unit Report', 'Receive Direct Delivery', 'Stock Transfer Report', 'Refund Report', 'Stock on Hand', 'Pre Order Report', 'Trade-In Report', 'Item Status Report'];
     $report_visible = false;
     foreach ($report_labels as $label) {
         if (!in_array($label, $sidebar_hidden)) {
@@ -299,6 +299,15 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         class="menu-item<?php echo ($current_page === 'upgradeunitreport.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">
                         • Upgrade Unit Report
+                    </a>
+                    <?php
+                endif; ?>
+
+                <?php if (!in_array('Replacement Unit Report', $sidebar_hidden)): ?>
+                    <a href="report-replacementunit.php"
+                        class="menu-item<?php echo ($current_page === 'report-replacementunit.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">
+                        • Replacement Unit Report
                     </a>
                     <?php
                 endif; ?>

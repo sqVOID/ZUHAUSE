@@ -873,7 +873,8 @@
                 </div>
                 <div class="reason-dropdown">
                     <label>Reason:</label>
-                    <select>
+                    <select id="reason_select">
+                        <option value="">Select Reason</option>
                         <option>Defective</option>
                         <option>Customer Request</option>
                         <option>Replacement</option>
@@ -957,7 +958,7 @@
                 <!-- Remarks Section (Left) -->
                 <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ccc;">
                     <div class="form-group">
-                        <label>Remarks</label>
+                        <label>Remarks (Optional)</label>
                         <textarea id="remarks_textarea"
                             style="min-height: 150px; resize: vertical; font-family: Arial, sans-serif; font-size: 14px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
                     </div>
@@ -1013,7 +1014,8 @@
     </div>
 
     <script>
-        // Version: 2024-10-01-v4 - Added save functionality
+        // Version: 2024-10-02-v5 - Fixed sequential numbering and duplicate variable declaration
+        
         function toggleSidebar() {
             const menuBtn = document.querySelector('.menu-btn');
             const sidebar = document.querySelector('.sidebar');
@@ -1296,6 +1298,29 @@
 
         // Add Item Function
         function addItemToTable() {
+            // VALIDATION: Check if invoice number is entered
+            const invoiceNo = document.getElementById('invoiceNoInput').value.trim();
+            if (!invoiceNo) {
+                alert('Please enter an Invoice Number first.');
+                document.getElementById('invoiceNoInput').focus();
+                return;
+            }
+
+            // VALIDATION: Check if reason is selected
+            const reason = document.getElementById('reason_select').value.trim();
+            if (!reason || reason === 'Select Reason') {
+                alert('Please select a Reason first.');
+                document.getElementById('reason_select').focus();
+                return;
+            }
+
+            // VALIDATION: Check if at least one item from invoice is selected
+            const selectedCheckboxes = document.querySelectorAll('input[name="item_select"]:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one item from the invoice before adding replacement items.');
+                return;
+            }
+
             const itemModel = document.getElementById('item_model_input').value.trim();
             const imei = document.getElementById('imei_input').value.trim();
             const quantity = parseInt(document.getElementById('quantity_input').value) || 0;
@@ -1322,30 +1347,21 @@
                 return;
             }
 
-            // VALIDATION: Check if there are selected items to replace
-            const selectedCheckboxes = document.querySelectorAll('input[name="item_select"]:checked');
-            if (selectedCheckboxes.length === 0) {
-                alert('Please select at least one item from the invoice to replace.');
-                return;
-            }
-
-            // Normalize new item description for comparison
-            const normalizedNewDesc = description.trim().toLowerCase();
-
-            // Find all selected items that match this replacement description
+            // Find all selected items that match this replacement price
+            // (selectedCheckboxes already declared and validated above)
             let matchingSelectedItems = [];
             for (let checkbox of selectedCheckboxes) {
-                const oldItemDescription = checkbox.dataset.description;
-                const normalizedOldDesc = oldItemDescription.trim().toLowerCase();
+                const oldItemPrice = parseFloat(checkbox.dataset.price) || 0;
 
-                if (normalizedOldDesc === normalizedNewDesc) {
+                // Match by price (must be exactly the same price)
+                if (oldItemPrice === price) {
                     matchingSelectedItems.push(checkbox);
                 }
             }
 
-            // VALIDATION: Check if replacement item matches at least one selected old item
+            // VALIDATION: Check if replacement item price matches at least one selected old item price
             if (matchingSelectedItems.length === 0) {
-                alert(`Replacement item must match one of the selected items!\n\nReplacement item: ${description}\n\nPlease select the exact same item model from the invoice items above.`);
+                alert(`Replacement item price must match the selected item price!\n\nReplacement item price: ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nPlease select an item from the invoice with the same price, or select a replacement item with matching price.`);
                 return;
             }
 
@@ -1715,10 +1731,11 @@
             }
 
             // Get reason dropdown
-            const reasonSelect = document.querySelector('.reason-dropdown select');
+            const reasonSelect = document.getElementById('reason_select');
             const reason = reasonSelect ? reasonSelect.value : '';
-            if (!reason) {
+            if (!reason || reason === 'Select Reason') {
                 alert('Please select a reason for replacement.');
+                if (reasonSelect) reasonSelect.focus();
                 return;
             }
 
@@ -1761,59 +1778,72 @@
             const lessAmount = parseFloat(document.getElementById('lessAmount').value.replace(/,/g, '')) || 0;
             const totalAmount = parseFloat(document.getElementById('totalAmount').value.replace(/,/g, '')) || 0;
 
-            // Generate replacement number (format: REP-YYYYMMDD-####)
-            const today = new Date();
-            const dateStr = today.getFullYear() +
-                String(today.getMonth() + 1).padStart(2, '0') +
-                String(today.getDate()).padStart(2, '0');
-            const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-            const replacementNo = 'REP-' + dateStr + '-' + randomNum;
-
-            // Prepare data to send
-            const data = {
-                replacement_no: replacementNo,
-                invoice_no: invoiceNo,
-                reason: reason,
-                remarks: remarks,
-                old_items: oldItems,
-                new_items: newItems,
-                less_amount: lessAmount,
-                total_amount: totalAmount
-            };
-
-            // Show confirmation
-            if (!confirm(`Are you sure you want to save this replacement?\n\nReplacement No: ${replacementNo}\nInvoice No: ${invoiceNo}\nTotal: ${formatCurrency(totalAmount)}`)) {
-                return;
-            }
-
             // Disable save button to prevent double submission
             const saveBtn = event.target;
             saveBtn.disabled = true;
-            saveBtn.textContent = 'SAVING...';
+            saveBtn.textContent = 'GENERATING NUMBER...';
 
-            // Send data to server
-            fetch('save_replacement.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
+            // Get sequential replacement number from server
+            fetch('get_next_replacement_number.php')
                 .then(response => response.json())
                 .then(result => {
                     if (result.status === 'success') {
-                        alert('Replacement saved successfully!\n\nReplacement No: ' + result.replacement_no);
-                        // Redirect or reset form
-                        window.location.href = 'replacementunit.php';
+                        const replacementNo = result.replacement_no;
+
+                        // Prepare data to send
+                        const data = {
+                            replacement_no: replacementNo,
+                            invoice_no: invoiceNo,
+                            reason: reason,
+                            remarks: remarks,
+                            old_items: oldItems,
+                            new_items: newItems,
+                            less_amount: lessAmount,
+                            total_amount: totalAmount
+                        };
+
+                        // Show confirmation
+                        if (!confirm(`Are you sure you want to save this replacement?\n\nReplacement No: ${replacementNo}\nInvoice No: ${invoiceNo}\nTotal: ${formatCurrency(totalAmount)}`)) {
+                            saveBtn.disabled = false;
+                            saveBtn.textContent = 'SAVE';
+                            return;
+                        }
+
+                        saveBtn.textContent = 'SAVING...';
+
+                        // Send data to server
+                        fetch('save_replacement.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        })
+                            .then(response => response.json())
+                            .then(result => {
+                                if (result.status === 'success') {
+                                    alert('Replacement saved successfully!\n\nReplacement No: ' + result.replacement_no);
+                                    // Redirect or reset form
+                                    window.location.href = 'replacementunit.php';
+                                } else {
+                                    alert('Error saving replacement: ' + (result.message || 'Unknown error'));
+                                    saveBtn.disabled = false;
+                                    saveBtn.textContent = 'SAVE';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('An error occurred while saving. Please try again.');
+                                saveBtn.disabled = false;
+                                saveBtn.textContent = 'SAVE';
+                            });
                     } else {
-                        alert('Error saving replacement: ' + (result.message || 'Unknown error'));
-                        saveBtn.disabled = false;
-                        saveBtn.textContent = 'SAVE';
+                        throw new Error('Failed to generate replacement number: ' + (result.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred while saving. Please try again.');
+                    alert('An error occurred while generating replacement number. Please try again.');
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'SAVE';
                 });

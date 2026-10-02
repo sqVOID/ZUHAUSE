@@ -1716,6 +1716,7 @@ if (isset($_SESSION['user_branch'])) {
                 <div class="reason-dropdown">
                     <label>Reason:</label>
                     <select id="reason_select">
+                        <option value="">Select Reason</option>
                         <option>Defective Unit</option>
                         <option>Customer Request</option>
                         <option>Upgrade</option>
@@ -1809,7 +1810,7 @@ if (isset($_SESSION['user_branch'])) {
                 <!-- Remarks Section (Left) -->
                 <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ccc;">
                     <div class="form-group full-height">
-                        <label>Remarks</label>
+                        <label>Remarks (Optional)</label>
                         <textarea id="remarks_textarea"
                             style="min-height: 150px; resize: vertical; font-family: Arial, sans-serif; font-size: 14px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
                     </div>
@@ -2944,6 +2945,29 @@ if (isset($_SESSION['user_branch'])) {
 
         // Add Item Function
         function addItemToTable() {
+            // VALIDATION: Check if invoice number is entered
+            const invoiceNo = document.getElementById('invoice_no_input').value.trim();
+            if (!invoiceNo) {
+                alert('Please enter an Invoice Number first.');
+                document.getElementById('invoice_no_input').focus();
+                return;
+            }
+
+            // VALIDATION: Check if reason is selected
+            const reason = document.getElementById('reason_select').value.trim();
+            if (!reason || reason === 'Select Reason') {
+                alert('Please select a Reason first.');
+                document.getElementById('reason_select').focus();
+                return;
+            }
+
+            // VALIDATION: Check if at least one item from invoice is selected
+            const selectedCheckboxes = document.querySelectorAll('input[name="item_select"]:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one item from the invoice before adding upgrade items.');
+                return;
+            }
+
             const itemModel = document.getElementById('item_model_input').value.trim();
             const imei = document.getElementById('imei_input').value.trim();
             const quantity = parseInt(document.getElementById('quantity_input').value) || 0;
@@ -4632,7 +4656,7 @@ if (isset($_SESSION['user_branch'])) {
 
             // 3. Check if reason is selected
             const reason = document.getElementById('reason_select').value.trim();
-            if (!reason) {
+            if (!reason || reason === 'Select Reason') {
                 alert('Please select a reason for the upgrade.');
                 document.getElementById('reason_select').focus();
                 return false;
@@ -4659,14 +4683,7 @@ if (isset($_SESSION['user_branch'])) {
                 return false;
             }
 
-            // 6. Check if remarks is filled
-            const remarksInput = document.getElementById('remarks_textarea') || document.querySelector('.remarks-section textarea');
-            const remarks = remarksInput ? remarksInput.value.trim() : '';
-            if (!remarks) {
-                alert('Please enter remarks.');
-                if (remarksInput) remarksInput.focus();
-                return false;
-            }
+            // 6. Remarks is optional - no validation needed
 
             // All validations passed, proceed with save
             saveUpgrade();

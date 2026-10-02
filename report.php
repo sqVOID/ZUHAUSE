@@ -1613,7 +1613,21 @@ require_once 'config.php';
             document.getElementById('displayLastInvoice').textContent = lastInvoice || '? (no data)';
 
             // Main table + money breakdown: only payment/sale dates inside the filter
-            const visibleSales = (salesData || []).filter(sale => !sale.for_breakdown_only);
+            // Exclude pending upgrades and replacements (only displayed if Approved or Disapproved)
+            const visibleSales = (salesData || []).filter(sale => {
+                if (sale.for_breakdown_only) return false;
+
+                const isUpgradeUnit = (sale.page_type === 'upgradeunit' || (sale.upgrade === 'UPGD' && sale.original_invoice_no && sale.original_invoice_no.trim() !== ''));
+                const isReplacementUnit = (sale.page_type === 'replacementunit' || sale.is_replacement || parseInt(sale.replacement_count || 0) > 0);
+
+                if (isUpgradeUnit || isReplacementUnit) {
+                    const approvalStatus = (sale.approval_status || 'Pending').trim();
+                    if (approvalStatus !== 'Approved' && approvalStatus !== 'Disapproved') {
+                        return false;
+                    }
+                }
+                return true;
+            });
 
             if (!visibleSales || visibleSales.length === 0) {
                 tbody.innerHTML = '<tr><td class="td-no-data" colspan="13">NO DATA</td></tr>';
@@ -1751,16 +1765,18 @@ require_once 'config.php';
                 const assistedByAbbr = abbreviateName(sale.assisted_by);
                 const encoderAbbr = abbreviateName(sale.encoder);
 
-                const rowStyle = (isVoided || isRefunded) ? ' style="color:#d32f2f;"' : '';
+                // Check if this is an approval-required transaction
+                const isUpgradeUnit = (sale.page_type === 'upgradeunit' || (sale.upgrade === 'UPGD' && sale.original_invoice_no && sale.original_invoice_no.trim() !== ''));
+                const isDisapprovedUpgrade = isUpgradeUnit && ((sale.approval_status || 'Pending').trim() === 'Disapproved');
+
+                // Replacement only applies and displays RP when it is Approved
+                const isReplacementApproved = ((sale.approval_status || '').trim() === 'Approved') && (sale.page_type === 'replacementunit' || sale.is_replacement || parseInt(sale.replacement_count || 0) > 0);
+                const isReplacementUnit = isReplacementApproved;
+
+                const rowStyle = (isVoided || isRefunded || isDisapprovedUpgrade) ? ' style="color:#d32f2f;"' : '';
                 const isTradeIn = (sale.page_type === 'salestrade-in' && sale.upgrade !== 'UPGD');
                 const hasPromoItemInSale = (sale.items && sale.items.some(i => i.is_promo_item == 1));
                 const isPromoEntry = (sale.page_type === 'promosentry' || hasPromoItemInSale || (sale.promo_id && parseInt(sale.promo_id) > 0));
-
-                // Check if this is an approval-required transaction
-                const isUpgradeUnit = (sale.page_type === 'upgradeunit');
-                const isReplacementUnit = (sale.page_type === 'replacementunit' || sale.is_replacement || parseInt(sale.replacement_count || 0) > 0);
-                const hasApprovalStatus = (isUpgradeUnit || isReplacementUnit);
-                const approvalStatus = hasApprovalStatus ? (sale.approval_status || 'Pending') : null;
 
                 let statCell = '<td></td>';
                 if (isVoided) {
@@ -1768,7 +1784,7 @@ require_once 'config.php';
                 } else if (isRefunded) {
                     statCell = '<td style="color:#d32f2f;font-weight:700;">RF</td>';
                 } else if (sale.upgrade === 'UPGD') {
-                    statCell = '<td style="font-weight:700;">UPGD</td>';
+                    statCell = isDisapprovedUpgrade ? '<td style="color:#d32f2f;font-weight:700;">UPGD</td>' : '<td style="font-weight:700;">UPGD</td>';
                 } else if (isReplacementUnit) {
                     statCell = '<td style="font-weight:700;">RP</td>';
                 } else if (isTradeIn) {
@@ -1787,8 +1803,8 @@ require_once 'config.php';
                         const isNewUpgradeSale = sale.upgrade === 'UPGD' && sale.original_invoice_no && sale.original_invoice_no.trim() !== '';
                         const itemIsUpgraded = (isNewUpgradeSale || item.is_upgrade_item == 1);
                         const itemIsOldUpgraded = (item.is_old_upgrade_item == 1);
-                        const itemIsReplacement = (item.is_replacement_item == 1 || item.is_old_replacement_item == 1 || (item.old_imei && item.old_imei.trim() !== '') || (sale.items.length === 1 && isReplacementUnit) || (sale.page_type === 'replacementunit') || (isReplacementUnit && !sale.items.some(i => i.is_replacement_item == 1 || i.is_old_replacement_item == 1 || (i.old_imei && i.old_imei.trim() !== ''))));
-                        const amtStyle = (itemVoided || itemRefunded) ? ' style="color:#d32f2f;"' : '';
+                        const itemIsReplacement = isReplacementApproved && (item.is_replacement_item == 1 || item.is_old_replacement_item == 1 || (item.old_imei && item.old_imei.trim() !== '') || (sale.items.length === 1 && isReplacementUnit) || (sale.page_type === 'replacementunit') || (isReplacementUnit && !sale.items.some(i => i.is_replacement_item == 1 || i.is_old_replacement_item == 1 || (i.old_imei && i.old_imei.trim() !== ''))));
+                        const amtStyle = (itemVoided || itemRefunded || isDisapprovedUpgrade) ? ' style="color:#d32f2f;"' : '';
 
                         let itemStatCell = '<td></td>';
                         if (itemVoided) {
@@ -1796,7 +1812,7 @@ require_once 'config.php';
                         } else if (itemRefunded) {
                             itemStatCell = '<td style="color:#d32f2f;font-weight:700;">RF</td>';
                         } else if (itemIsUpgraded || itemIsOldUpgraded || (sale.items.length === 1 && sale.upgrade === 'UPGD')) {
-                            itemStatCell = '<td style="font-weight:700;">UPGD</td>';
+                            itemStatCell = isDisapprovedUpgrade ? '<td style="color:#d32f2f;font-weight:700;">UPGD</td>' : '<td style="font-weight:700;">UPGD</td>';
                         } else if (itemIsReplacement) {
                             itemStatCell = '<td style="font-weight:700;">RP</td>';
                         } else if (isTradeIn) {
@@ -1805,7 +1821,7 @@ require_once 'config.php';
                             itemStatCell = '<td style="color:#1a7f1a;font-weight:700;">PROMO</td>';
                         }
 
-                        const itemRowStyle = (itemVoided || itemRefunded) ? ' style="color:#d32f2f;"' : '';
+                        const itemRowStyle = (itemVoided || itemRefunded || isDisapprovedUpgrade) ? ' style="color:#d32f2f;"' : '';
                         let itemAmtDisplay;
                         let totalAmtDisplay;
                         let oldUnitDisplay = '0.00';
@@ -2053,7 +2069,7 @@ require_once 'config.php';
                 }
 
                 // Check if this is a disapproved upgrade/replacement
-                const isDisapprovedUpgrade = (sale.page_type === 'upgradeunit' || sale.page_type === 'replacementunit') &&
+                const isDisapprovedUpgrade = (sale.page_type === 'upgradeunit' || sale.page_type === 'replacementunit' || (sale.upgrade === 'UPGD' && sale.original_invoice_no && sale.original_invoice_no.trim() !== '')) &&
                     (sale.approval_status === 'Disapproved');
 
                 // Include in encoder breakdown (exclude voided sales and disapproved upgrades/replacements)
@@ -2298,10 +2314,10 @@ require_once 'config.php';
                 }
 
                 // Accumulate upgrade amount (balance paid) for UPGD sales
-                // Only count approved or pending upgrades, NOT disapproved ones
+                // Only count approved upgrades, NOT disapproved or pending ones
                 if (isNewUpgradeSale) {
-                    const approvalStatus = sale.approval_status || 'Pending';
-                    if (approvalStatus !== 'Disapproved') {
+                    const approvalStatus = (sale.approval_status || 'Pending').trim();
+                    if (approvalStatus === 'Approved') {
                         totalUpgrade += saleAmount;
                         totalOldUnit += oldUnitAmount;
                     }
@@ -3438,61 +3454,96 @@ require_once 'config.php';
                     </td></tr>`;
                 }
 
-                // Build replacement entries (Approved only, exclude Disapproved)
+                // Build replacement entries (Approved only, exclude Pending and Disapproved)
                 const replacementEntries = [];
+                const seenReplacementKeys = new Set();
+
                 if (Array.isArray(data.sale.replacements) && data.sale.replacements.length > 0) {
                     data.sale.replacements.forEach(r => {
-                        const rStatus = (r.status || '').trim();
-                        if (rStatus.toLowerCase() === 'disapproved') {
-                            return; // Skip disapproved replacements
+                        const rStatus = (r.status || 'Approved').trim();
+                        // Only show Approved, skip Pending and Disapproved
+                        if (rStatus.toLowerCase() !== 'approved') {
+                            return;
                         }
 
                         const rReason = (r.reason || '').trim();
                         const rRemarks = (r.remarks || '').trim();
-                        const rDate = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+                        const rDate = r.created_at ? formatAuditDate(r.created_at) : '';
                         const rNo = r.replacement_no || '';
+
+                        const repDataObj = {
+                            status: rStatus,
+                            approver: (r.approver || data.sale.approver || '').trim(),
+                            approval_date: (r.approval_date || data.sale.approval_date || '').trim(),
+                            disapprover: (r.disapprover || data.sale.disapprover || '').trim(),
+                            disapproval_date: (r.disapproval_date || data.sale.disapproval_date || '').trim(),
+                            disapproval_reason: (r.disapproval_reason || data.sale.disapproval_reason || '').trim()
+                        };
 
                         if (Array.isArray(r.old_items) && r.old_items.length > 0) {
                             r.old_items.forEach(oi => {
                                 const desc = (oi.item_description || '').trim();
                                 const imei = (oi.imei || '').trim();
-                                const unitStr = (desc && imei) ? `${desc} (${imei})` : (desc || imei || 'N/A');
-                                replacementEntries.push({
-                                    unit: unitStr,
-                                    description: desc,
-                                    imei: imei,
+                                const key = imei ? `imei:${imei.toLowerCase()}` : `desc:${desc.toLowerCase()}`;
+                                if (key && !seenReplacementKeys.has(key)) {
+                                    seenReplacementKeys.add(key);
+                                    const unitStr = (desc && imei) ? `${desc} (${imei})` : (desc || imei || 'N/A');
+                                    replacementEntries.push(Object.assign({
+                                        unit: unitStr,
+                                        description: desc,
+                                        imei: imei,
+                                        reason: rReason || rRemarks || 'N/A',
+                                        date: rDate,
+                                        replacement_no: rNo
+                                    }, repDataObj));
+                                }
+                            });
+                        } else {
+                            const key = `no:${rNo || rReason}`;
+                            if (!seenReplacementKeys.has(key)) {
+                                seenReplacementKeys.add(key);
+                                replacementEntries.push(Object.assign({
+                                    unit: 'N/A',
                                     reason: rReason || rRemarks || 'N/A',
                                     date: rDate,
                                     replacement_no: rNo
-                                });
-                            });
-                        } else {
-                            replacementEntries.push({
-                                unit: 'N/A',
-                                reason: rReason || rRemarks || 'N/A',
-                                date: rDate,
-                                replacement_no: rNo
-                            });
+                                }, repDataObj));
+                            }
                         }
                     });
                 }
 
+                // Helper to format approval/disapproval dates
+                function formatAuditDate(dtStr) {
+                    if (!dtStr) return '';
+                    const dt = new Date(dtStr);
+                    if (isNaN(dt.getTime())) return dtStr;
+                    return dt.toLocaleString('en-US', { year: 'numeric', month: 'long', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                }
+
                 // Fallback: Check items in data.items having old_imei if not already in replacementEntries
-                if (!data.sale.approval_status || data.sale.approval_status.toLowerCase() !== 'disapproved') {
+                if (!data.sale.approval_status || data.sale.approval_status.toLowerCase() === 'approved') {
                     (data.items || []).forEach(it => {
                         const oldImei = (it.old_imei || '').trim();
                         if (oldImei) {
-                            const alreadyExists = replacementEntries.some(re => re.imei && re.imei.toUpperCase() === oldImei.toUpperCase());
-                            if (!alreadyExists) {
+                            const key = `imei:${oldImei.toLowerCase()}`;
+                            if (!seenReplacementKeys.has(key)) {
+                                seenReplacementKeys.add(key);
                                 const desc = (it.item_description || it.item_code || '').trim();
                                 const unitStr = desc ? `${desc} (${oldImei})` : oldImei;
-                                const dateStr = data.sale.created_at ? new Date(data.sale.created_at).toLocaleString() : '';
+                                const dateStr = data.sale.created_at ? formatAuditDate(data.sale.created_at) : '';
                                 replacementEntries.push({
                                     unit: unitStr,
                                     description: desc,
                                     imei: oldImei,
                                     reason: (data.sale.remarks || data.sale.reason || 'N/A'),
-                                    date: dateStr
+                                    date: dateStr,
+                                    status: 'Approved',
+                                    approver: (data.sale.approver || '').trim(),
+                                    approval_date: (data.sale.approval_date || '').trim(),
+                                    disapprover: (data.sale.disapprover || '').trim(),
+                                    disapproval_date: (data.sale.disapproval_date || '').trim(),
+                                    disapproval_reason: (data.sale.disapproval_reason || '').trim()
                                 });
                             }
                         }
@@ -3509,7 +3560,29 @@ require_once 'config.php';
                         repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Replacement Old Unit:</td><td style="padding:5px 0;">' + re.unit + '</td></tr>';
                         repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + re.reason + '</td></tr>';
                         if (re.date) {
-                            repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + re.date + '</td></tr>';
+                            repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Requested Date:</td><td style="padding:5px 0;">' + re.date + '</td></tr>';
+                        }
+                        const repStatus = (re.status || 'Approved').trim();
+                        const repStatColor = repStatus === 'Approved' ? '#2e7d32' : repStatus === 'Disapproved' ? '#c62828' : '#e65100';
+                        repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + repStatColor + ';">' + repStatus + '</span></td></tr>';
+                        if (repStatus === 'Approved' || re.approver) {
+                            if (re.approver) {
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved By:</td><td style="padding:5px 0;">' + re.approver + '</td></tr>';
+                            }
+                            if (re.approval_date) {
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved by Date:</td><td style="padding:5px 0;">' + formatAuditDate(re.approval_date) + '</td></tr>';
+                            }
+                        }
+                        if (repStatus === 'Disapproved') {
+                            if (re.disapprover) {
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved By:</td><td style="padding:5px 0; color:#c62828;">' + re.disapprover + '</td></tr>';
+                            }
+                            if (re.disapproval_date) {
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved by Date:</td><td style="padding:5px 0; color:#c62828;">' + formatAuditDate(re.disapproval_date) + '</td></tr>';
+                            }
+                            if (re.disapproval_reason) {
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + re.disapproval_reason + '</td></tr>';
+                            }
                         }
                     } else {
                         replacementEntries.forEach((re, idx) => {
@@ -3519,7 +3592,29 @@ require_once 'config.php';
                             repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; width:180px;">Replacement Old Unit:</td><td style="padding:5px 0;">' + re.unit + '</td></tr>';
                             repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + re.reason + '</td></tr>';
                             if (re.date) {
-                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + re.date + '</td></tr>';
+                                repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Requested Date:</td><td style="padding:5px 0;">' + re.date + '</td></tr>';
+                            }
+                            const repStatus = (re.status || 'Approved').trim();
+                            const repStatColor = repStatus === 'Approved' ? '#2e7d32' : repStatus === 'Disapproved' ? '#c62828' : '#e65100';
+                            repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + repStatColor + ';">' + repStatus + '</span></td></tr>';
+                            if (repStatus === 'Approved' || re.approver) {
+                                if (re.approver) {
+                                    repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved By:</td><td style="padding:5px 0;">' + re.approver + '</td></tr>';
+                                }
+                                if (re.approval_date) {
+                                    repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved by Date:</td><td style="padding:5px 0;">' + formatAuditDate(re.approval_date) + '</td></tr>';
+                                }
+                            }
+                            if (repStatus === 'Disapproved') {
+                                if (re.disapprover) {
+                                    repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved By:</td><td style="padding:5px 0; color:#c62828;">' + re.disapprover + '</td></tr>';
+                                }
+                                if (re.disapproval_date) {
+                                    repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved by Date:</td><td style="padding:5px 0; color:#c62828;">' + formatAuditDate(re.disapproval_date) + '</td></tr>';
+                                }
+                                if (re.disapproval_reason) {
+                                    repRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + re.disapproval_reason + '</td></tr>';
+                                }
                             }
                         });
                     }
@@ -3563,17 +3658,38 @@ require_once 'config.php';
                             upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Reason:</td><td style="padding:5px 0;">' + ugReason + '</td></tr>';
                         }
                         if (ug.created_at) {
-                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date:</td><td style="padding:5px 0;">' + new Date(ug.created_at).toLocaleString() + '</td></tr>';
+                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Requested Date:</td><td style="padding:5px 0;">' + new Date(ug.created_at).toLocaleString() + '</td></tr>';
                         }
                         if (ug.original_invoice_no && ug.original_invoice_no.trim() !== '') {
                             upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Target Invoice:</td><td style="padding:5px 0;">' + ug.original_invoice_no.trim() + '</td></tr>';
                         }
                         // Add Status row
-                        const upgradeApprovalStatus = (data.sale.approval_status || 'Pending').trim();
+                        const upgradeApprovalStatus = (ug.approval_status || data.sale.approval_status || 'Pending').trim();
                         const upgStatColor = upgradeApprovalStatus === 'Approved' ? '#2e7d32' : upgradeApprovalStatus === 'Disapproved' ? '#c62828' : '#e65100';
                         upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + upgStatColor + ';">' + upgradeApprovalStatus + '</span></td></tr>';
-                        if (upgradeApprovalStatus === 'Disapproved' && data.sale.disapproval_reason && data.sale.disapproval_reason.trim() !== '') {
-                            upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + data.sale.disapproval_reason.trim() + '</td></tr>';
+                        const ugApprover = (ug.approver || data.sale.approver || '').trim();
+                        const ugApprovalDate = (ug.approval_date || data.sale.approval_date || '').trim();
+                        if (upgradeApprovalStatus === 'Approved' || ugApprover) {
+                            if (ugApprover) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved By:</td><td style="padding:5px 0;">' + ugApprover + '</td></tr>';
+                            }
+                            if (ugApprovalDate) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved by Date:</td><td style="padding:5px 0;">' + formatAuditDate(ugApprovalDate) + '</td></tr>';
+                            }
+                        }
+                        if (upgradeApprovalStatus === 'Disapproved') {
+                            const ugDisapprover = (ug.disapprover || data.sale.disapprover || '').trim();
+                            const ugDisapprovalDate = (ug.disapproval_date || data.sale.disapproval_date || '').trim();
+                            const ugDisapprovalReason = (ug.disapproval_reason || data.sale.disapproval_reason || '').trim();
+                            if (ugDisapprover) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved By:</td><td style="padding:5px 0; color:#c62828;">' + ugDisapprover + '</td></tr>';
+                            }
+                            if (ugDisapprovalDate) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved by Date:</td><td style="padding:5px 0; color:#c62828;">' + formatAuditDate(ugDisapprovalDate) + '</td></tr>';
+                            }
+                            if (ugDisapprovalReason) {
+                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + ugDisapprovalReason + '</td></tr>';
+                            }
                         }
                     } else {
                         allUpgrades.forEach((ug, ugIdx) => {
@@ -3603,11 +3719,32 @@ require_once 'config.php';
                                 upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Original Invoice:</td><td style="padding:5px 0;">' + ug.original_invoice_no.trim() + '</td></tr>';
                             }
                             // Add Status row
-                            const upgradeApprovalStatus = (data.sale.approval_status || 'Pending').trim();
+                            const upgradeApprovalStatus = (ug.approval_status || data.sale.approval_status || 'Pending').trim();
                             const upgStatColor = upgradeApprovalStatus === 'Approved' ? '#2e7d32' : upgradeApprovalStatus === 'Disapproved' ? '#c62828' : '#e65100';
                             upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + upgStatColor + ';">' + upgradeApprovalStatus + '</span></td></tr>';
-                            if (upgradeApprovalStatus === 'Disapproved' && data.sale.disapproval_reason && data.sale.disapproval_reason.trim() !== '') {
-                                upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + data.sale.disapproval_reason.trim() + '</td></tr>';
+                            const ugApprover = (ug.approver || data.sale.approver || '').trim();
+                            const ugApprovalDate = (ug.approval_date || data.sale.approval_date || '').trim();
+                            if (upgradeApprovalStatus === 'Approved' || ugApprover) {
+                                if (ugApprover) {
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved By:</td><td style="padding:5px 0;">' + ugApprover + '</td></tr>';
+                                }
+                                if (ugApprovalDate) {
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved by Date:</td><td style="padding:5px 0;">' + formatAuditDate(ugApprovalDate) + '</td></tr>';
+                                }
+                            }
+                            if (upgradeApprovalStatus === 'Disapproved') {
+                                const ugDisapprover = (ug.disapprover || data.sale.disapprover || '').trim();
+                                const ugDisapprovalDate = (ug.disapproval_date || data.sale.disapproval_date || '').trim();
+                                const ugDisapprovalReason = (ug.disapproval_reason || data.sale.disapproval_reason || '').trim();
+                                if (ugDisapprover) {
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved By:</td><td style="padding:5px 0; color:#c62828;">' + ugDisapprover + '</td></tr>';
+                                }
+                                if (ugDisapprovalDate) {
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved by Date:</td><td style="padding:5px 0; color:#c62828;">' + formatAuditDate(ugDisapprovalDate) + '</td></tr>';
+                                }
+                                if (ugDisapprovalReason) {
+                                    upgRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + ugDisapprovalReason + '</td></tr>';
+                                }
                             }
                         });
                     }
@@ -3629,8 +3766,29 @@ require_once 'config.php';
                     const fbStatus = (data.sale.approval_status || 'Pending').trim();
                     const fbStatColor = fbStatus === 'Approved' ? '#2e7d32' : fbStatus === 'Disapproved' ? '#c62828' : '#e65100';
                     fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0;"><span style="font-weight:700;color:' + fbStatColor + ';">' + fbStatus + '</span></td></tr>';
-                    if (fbStatus === 'Disapproved' && data.sale.disapproval_reason && data.sale.disapproval_reason.trim() !== '') {
-                        fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + data.sale.disapproval_reason.trim() + '</td></tr>';
+                    const fbApprover = (data.sale.approver || '').trim();
+                    const fbApprovalDate = (data.sale.approval_date || '').trim();
+                    if (fbStatus === 'Approved' || fbApprover) {
+                        if (fbApprover) {
+                            fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved By:</td><td style="padding:5px 0;">' + fbApprover + '</td></tr>';
+                        }
+                        if (fbApprovalDate) {
+                            fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Approved by Date:</td><td style="padding:5px 0;">' + formatAuditDate(fbApprovalDate) + '</td></tr>';
+                        }
+                    }
+                    if (fbStatus === 'Disapproved') {
+                        const fbDisapprover = (data.sale.disapprover || '').trim();
+                        const fbDisapprovalDate = (data.sale.disapproval_date || '').trim();
+                        const fbDisapprovalReason = (data.sale.disapproval_reason || '').trim();
+                        if (fbDisapprover) {
+                            fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved By:</td><td style="padding:5px 0; color:#c62828;">' + fbDisapprover + '</td></tr>';
+                        }
+                        if (fbDisapprovalDate) {
+                            fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved by Date:</td><td style="padding:5px 0; color:#c62828;">' + formatAuditDate(fbDisapprovalDate) + '</td></tr>';
+                        }
+                        if (fbDisapprovalReason) {
+                            fbRows += '<tr><td style="padding:5px 10px 5px 0; font-weight:600; color:#c62828;">Disapproved Reason:</td><td style="padding:5px 0; color:#c62828;">' + fbDisapprovalReason + '</td></tr>';
+                        }
                     }
                     upgradeCardHTML = '<div style="border:2px solid #acacacff; border-radius:8px; padding:15px; background:#f9f9f9;">' +
                         '<h3 style="margin:0 0 12px 0; color:#1E455D; font-size:16px;">Upgrade Unit Information</h3>' +
@@ -3815,6 +3973,20 @@ require_once 'config.php';
                                     <tr><td style="padding:5px 10px 5px 0; font-weight:600; width:140px;">Assisted By:</td><td style="padding:5px 0;">${data.sale.assisted_by_brand ? data.sale.assisted_by_brand + ' - ' + (data.sale.assisted_by || 'N/A') : (data.sale.assisted_by || 'N/A')}</td></tr>
                                     <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Date Sold:</td><td style="padding:5px 0;">${new Date(data.sale.created_at).toLocaleString()}</td></tr>
                                     <tr><td style="padding:5px 10px 5px 0; font-weight:600;">Branch:</td><td style="padding:5px 0;">${data.sale.branch_code || 'N/A'}</td></tr>
+                                    ${(() => {
+                                        // Show which upgrade invoice was used when viewing the original (target) invoice
+                                        const ugInvNos = Array.isArray(data.sale.upgraded_to_invoice_nos) && data.sale.upgraded_to_invoice_nos.length
+                                            ? data.sale.upgraded_to_invoice_nos
+                                            : (data.sale.upgraded_to_invoice_no ? [data.sale.upgraded_to_invoice_no] : []);
+                                        const isOriginalUpgraded = ugInvNos.length > 0 &&
+                                            !(data.sale.original_invoice_no && String(data.sale.original_invoice_no).trim() !== '') &&
+                                            data.sale.page_type !== 'upgradeunit';
+                                        if (!isOriginalUpgraded) return '';
+                                        const invLabel = ugInvNos.length === 1
+                                            ? ugInvNos[0]
+                                            : ugInvNos.join(', ');
+                                        return `<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Status:</td><td style="padding:5px 0; font-weight:700;">Upgrade (Invoice No: ${invLabel})</td></tr>`;
+                                    })()}
                                     ${parseFloat(data.sale.points || 0) > 0 ? `<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Points:</td><td style="padding:5px 0;">${parseFloat(data.sale.points).toLocaleString('en-US', { minimumFractionDigits: 0 })}</td></tr>` : ''}
                                     ${parseFloat(data.sale.commission || 0) > 0 ? `<tr><td style="padding:5px 10px 5px 0; font-weight:600;">Commission:</td><td style="padding:5px 0;">₱${parseFloat(data.sale.commission).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>` : ''}
                                 </table>

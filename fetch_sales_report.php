@@ -106,29 +106,32 @@ try {
                 SELECT COUNT(*) 
                 FROM replacements r 
                 WHERE (r.invoice_no = se.invoice_no OR r.new_invoice_no = se.invoice_no)
-                  AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+                  AND r.status = 'Approved'
             ) AS replacement_count,
-            CASE
-                WHEN se.page_type = 'upgradeunit' THEN (
-                    SELECT ual.status FROM upgrade_approval_log ual 
-                    WHERE ual.new_invoice_no = se.invoice_no 
-                    ORDER BY ual.id DESC LIMIT 1
-                )
-                WHEN se.page_type = 'replacementunit' THEN (
-                    SELECT COALESCE(ral.status, r.status, 'Pending') 
-                    FROM replacements r
-                    LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r.id OR ral.new_invoice_no = se.invoice_no OR ral.original_invoice_no = se.invoice_no)
-                    WHERE (r.new_invoice_no = se.invoice_no OR r.invoice_no = se.invoice_no)
-                    ORDER BY COALESCE(ral.id, r.id) DESC LIMIT 1
-                )
-                ELSE (
-                    SELECT COALESCE(ral.status, r.status)
-                    FROM replacements r
-                    LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r.id OR ral.new_invoice_no = se.invoice_no OR ral.original_invoice_no = se.invoice_no)
-                    WHERE (r.new_invoice_no = se.invoice_no OR r.invoice_no = se.invoice_no)
-                    ORDER BY COALESCE(ral.id, r.id) DESC LIMIT 1
-                )
-            END AS approval_status
+            COALESCE(
+                CASE
+                    WHEN se.page_type = 'upgradeunit' OR se.upgrade = 'UPGD' THEN (
+                        SELECT ual.status FROM upgrade_approval_log ual 
+                        WHERE (ual.new_invoice_no = se.invoice_no OR ual.original_invoice_no = se.invoice_no)
+                        ORDER BY ual.id DESC LIMIT 1
+                    )
+                    WHEN se.page_type = 'replacementunit' THEN (
+                        SELECT COALESCE(ral.status, r.status, 'Pending') 
+                        FROM replacements r
+                        LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r.id OR ral.new_invoice_no = se.invoice_no OR ral.original_invoice_no = se.invoice_no)
+                        WHERE (r.new_invoice_no = se.invoice_no OR r.invoice_no = se.invoice_no)
+                        ORDER BY COALESCE(ral.id, r.id) DESC LIMIT 1
+                    )
+                    ELSE (
+                        SELECT COALESCE(ral.status, r.status)
+                        FROM replacements r
+                        LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r.id OR ral.new_invoice_no = se.invoice_no OR ral.original_invoice_no = se.invoice_no)
+                        WHERE (r.new_invoice_no = se.invoice_no OR r.invoice_no = se.invoice_no)
+                        ORDER BY COALESCE(ral.id, r.id) DESC LIMIT 1
+                    )
+                END,
+                CASE WHEN se.page_type = 'upgradeunit' OR se.upgrade = 'UPGD' OR se.page_type = 'replacementunit' THEN 'Pending' ELSE NULL END
+            ) AS approval_status
         FROM sales_entry se 
         LEFT JOIN refunds r ON r.invoice_no = se.invoice_no
         WHERE DATE(se.created_at) BETWEEN ? AND ?
@@ -199,7 +202,7 @@ try {
                     (SELECT COUNT(*) FROM replacement_new_items rni
                      JOIN replacements r ON r.id = rni.replacement_id
                      WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
-                       AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+                       AND r.status = 'Approved'
                        AND (
                            (IFNULL(TRIM(rni.imei), '') != '' AND UPPER(TRIM(rni.imei)) = UPPER(TRIM(sei.imei)))
                            OR (IFNULL(TRIM(rni.imei), '') = '' AND UPPER(TRIM(rni.item_code)) = UPPER(TRIM(sei.item_code)))
@@ -208,7 +211,7 @@ try {
                     (SELECT COUNT(*) FROM replacement_old_items roi
                      JOIN replacements r ON r.id = roi.replacement_id
                      WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
-                       AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+                       AND r.status = 'Approved'
                        AND (
                            (IFNULL(TRIM(roi.imei), '') != '' AND (UPPER(TRIM(roi.imei)) = UPPER(TRIM(sei.imei)) OR (IFNULL(TRIM(sei.old_imei),'') != '' AND UPPER(TRIM(roi.imei)) = UPPER(TRIM(sei.old_imei)))))
                            OR (IFNULL(TRIM(roi.imei), '') = '' AND UPPER(TRIM(roi.item_description)) = UPPER(TRIM(sei.item_description)))

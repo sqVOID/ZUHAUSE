@@ -258,6 +258,52 @@ try {
     }
     $stmt_new->close();
 
+    // 10b. Insert record into upgrade_approval_log with Pending status
+    $conn->query("CREATE TABLE IF NOT EXISTS upgrade_approval_log (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        upgrade_id INT(11) NOT NULL,
+        upgrade_no VARCHAR(50) NOT NULL,
+        original_invoice_no VARCHAR(50),
+        new_invoice_no VARCHAR(50),
+        branch VARCHAR(255),
+        branch_code VARCHAR(10),
+        reason TEXT,
+        remarks TEXT,
+        total_amount DECIMAL(10,2) DEFAULT 0,
+        created_by VARCHAR(100),
+        created_at DATETIME,
+        approver VARCHAR(100),
+        approval_date DATETIME,
+        disapprover VARCHAR(100),
+        disapproval_date DATETIME,
+        disapproval_reason TEXT,
+        status VARCHAR(20) DEFAULT 'Pending',
+        INDEX idx_upgrade_id (upgrade_id),
+        INDEX idx_upgrade_no (upgrade_no),
+        INDEX idx_status (status),
+        INDEX idx_created_at (created_at),
+        INDEX idx_branch (branch)
+    )");
+
+    $stmt_log = $conn->prepare("INSERT INTO upgrade_approval_log 
+        (upgrade_id, upgrade_no, original_invoice_no, new_invoice_no, branch, branch_code, reason, remarks, total_amount, created_by, created_at, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'Pending')");
+    $stmt_log->bind_param(
+        "isssssssdss",
+        $upgrade_id,
+        $upgrade_no,
+        $original_invoice_no,
+        $new_invoice_no,
+        $user_branch,
+        $sale_branch_code,
+        $reason,
+        $remarks,
+        $total_amount,
+        $user_name
+    );
+    $stmt_log->execute();
+    $stmt_log->close();
+
     // 11. Stock updates
     $today = date('Y-m-d');
 
