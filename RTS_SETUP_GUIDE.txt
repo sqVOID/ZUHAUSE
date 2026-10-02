@@ -1,0 +1,122 @@
+================================================================================
+RETURN TO SUPPLIER (RTS) - SETUP & USAGE GUIDE
+================================================================================
+
+ISSUE RESOLVED:
+---------------
+1. Fixed database table creation issue
+2. Fixed po_items error (changed to use purchase_order_items and items.srp)
+3. Created all necessary database tables
+
+TABLES NEEDED:
+--------------
+The RTS system requires 3 database tables:
+1. return_to_supplier          - Main RTS records
+2. return_to_supplier_items    - Items being returned  
+3. rts_approval_log           - Approval workflow tracking
+
+SETUP OPTIONS:
+--------------
+
+OPTION 1: Automatic Setup (RECOMMENDED)
+----------------------------------------
+1. Open your browser
+2. Navigate to: http://localhost/ZUHAUSE/setup_rts_tables.php
+3. The script will:
+   - Create all 3 required tables
+   - Verify they were created successfully
+   - Show you a summary
+4. Done! The system is ready to use
+
+OPTION 2: Manual Setup via phpMyAdmin
+--------------------------------------
+1. Open phpMyAdmin
+2. Select your database (zuhause_management)
+3. Go to SQL tab
+4. Copy and paste contents from: create_rts_tables.sql
+5. Click "Go" to execute
+6. Done!
+
+OPTION 3: Automatic on First Use
+---------------------------------
+The tables will be created automatically when you first click the SAVE button
+in returntosupplier.php. No manual setup needed!
+
+HOW TO USE THE SYSTEM:
+----------------------
+
+1. CREATE RETURN TO SUPPLIER:
+   - Go to: returntosupplier.php
+   - Fill in:
+     * Reference Number (required)
+     * Delivery to (select supplier)
+     * Remarks (required)
+   - Add items using:
+     * Search button for regular items
+     * ADD UNIT button for serialized items (IMEI)
+   - Click SAVE button
+   - Entry will be saved with "Pending" status
+
+2. APPROVE/DISAPPROVE RTS:
+   - Go to: approval-returntosupplier.php
+   - Select date range and status filter
+   - Click SEARCH
+   - For each entry, you can:
+     * Preview - View PDF of the RTS
+     * Approve - Approve the return
+     * Disapprove - Reject the return
+   - Status will be updated immediately
+
+FILES CREATED/MODIFIED:
+-----------------------
+✓ save_return_to_supplier.php   - Backend for saving RTS (FIXED)
+✓ preview_rts.php               - PDF preview generator
+✓ create_rts_tables.sql         - SQL file to create tables
+✓ setup_rts_tables.php          - Web-based setup script
+✓ returntosupplier.php          - Frontend (already existed, now connected)
+✓ approval-returntosupplier.php - Approval page (already existed)
+✓ get_rts_approvals.php         - Already existed
+✓ update_rts_approval.php       - Already existed
+
+WHAT WAS FIXED:
+---------------
+1. Changed: FROM po_items 
+   To: FROM purchase_order_items (with fallback to items.srp)
+   
+2. Tables will now auto-create on first use
+
+3. Added proper error handling for missing tables
+
+TESTING:
+--------
+1. Run setup_rts_tables.php to verify setup
+2. Try creating an RTS entry in returntosupplier.php
+3. Verify it appears in approval-returntosupplier.php
+4. Test Preview, Approve, and Disapprove buttons
+
+TROUBLESHOOTING:
+----------------
+If you still get errors:
+
+1. "Table doesn't exist" error:
+   → Run setup_rts_tables.php
+
+2. "po_items doesn't exist" error:
+   → This is now fixed in save_return_to_supplier.php
+   → The system now uses purchase_order_items or items.srp
+
+3. No data showing in approval page:
+   → Check if status filter is selected
+   → Try "All Status" filter first
+
+4. Save button not working:
+   → Check browser console (F12) for JavaScript errors
+   → Verify save_return_to_supplier.php exists
+   → Check file permissions
+
+SUPPORT:
+--------
+All files are in: c:\xampp\htdocs\ZUHAUSE\
+Database: zuhause_management
+
+================================================================================

@@ -637,7 +637,7 @@ if (!empty($user_branches)) {
                 </button>
                 
                 <?php if (strcasecmp($system_level, 'Super-Admin') === 0 || strcasecmp($system_level, 'Sub-admin') === 0): ?>
-                    <select id="branchFilter" onchange="filterTable()">
+                    <select id="branchFilter" onchange="loadReports()">
                         <option value="ALL">All Branches</option>
                         <?php
                         $branch_query = $conn->query("SELECT branch_name FROM branches ORDER BY branch_name");
@@ -652,9 +652,9 @@ if (!empty($user_branches)) {
             </div>
             
             <div class="date-filters">
-                <input type="date" id="dateFrom" value="<?php echo date('Y-m-d'); ?>" onchange="filterTable()">
-                <input type="date" id="dateTo" value="<?php echo date('Y-m-d'); ?>" onchange="filterTable()">
-                <button class="btn-filter" onclick="filterTable()">Filter</button>
+                <input type="date" id="dateFrom" value="<?php echo date('Y-m-d'); ?>" onchange="loadReports()">
+                <input type="date" id="dateTo" value="<?php echo date('Y-m-d'); ?>" onchange="loadReports()">
+                <button class="btn-filter" onclick="loadReports()">Filter</button>
             </div>
         </div>
 
@@ -728,8 +728,13 @@ if (!empty($user_branches)) {
             })
             .then(response => response.json())
             .then(data => {
-                allReports = data;
-                filteredReports = data;
+                if (data && data.error) {
+                    document.getElementById('reportTableBody').innerHTML =
+                        `<tr class="no-data"><td colspan="9">Error: ${data.error}</td></tr>`;
+                    return;
+                }
+                allReports = Array.isArray(data) ? data : [];
+                filteredReports = allReports;
                 currentPage = 1;
                 renderTable();
             })

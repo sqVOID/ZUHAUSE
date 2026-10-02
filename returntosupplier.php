@@ -1824,12 +1824,13 @@ if (isset($_SESSION['user_branch'])) {
                 return;
             }
 
-            // Prepare items data
+            // Prepare items data (include cost shown on screen)
             const items = itemsList.map(item => ({
                 item_code: item.code || '',
                 item_description: item.desc || '',
                 imei: item.IMEI || '',
                 quantity: item.qty || 0,
+                cost: parseFloat(item.cost) || 0,
                 reason: item.reason || ''
             }));
 

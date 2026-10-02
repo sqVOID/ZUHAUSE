@@ -1,0 +1,149 @@
+================================================================================
+RETURN TO SUPPLIER (RTS) - ALL ISSUES FIXED ✓
+================================================================================
+
+LATEST FIX (Error: Unknown column 'invoice_number' in 'where clause'):
+------------------------------------------------------------------------
+❌ PROBLEM: 
+   - Code was trying to update booklet_numbers with columns that don't exist
+   - Columns attempted: invoice_number, used_at, used_by, status = 'used'
+   - Error: "Unknown column 'invoice_number' in 'where clause'"
+
+✅ SOLUTION:
+   - Removed the incorrect booklet update query
+   - Booklet tracking is already handled by get_next_invoice_number.php
+   - No additional update needed in save_return_to_supplier.php
+
+PREVIOUS FIXES:
+---------------
+1. ✓ Fixed missing database tables (3 tables created)
+2. ✓ Fixed po_items error (changed to purchase_order_items + items.srp)
+3. ✓ Fixed invoice_number column error (removed incorrect query)
+
+ALL FILES CREATED/UPDATED:
+--------------------------
+✓ save_return_to_supplier.php   - Backend save (ALL ERRORS FIXED)
+✓ preview_rts.php               - PDF preview
+✓ setup_rts_tables.php          - Web setup interface
+✓ create_rts_tables.sql         - SQL setup file
+✓ test_rts_save.php             - Diagnostic test (NEW)
+✓ RTS_SETUP_GUIDE.txt           - Setup instructions
+✓ RTS_FIXED.txt                 - This file
+
+HOW TO TEST THE SYSTEM:
+-----------------------
+
+STEP 1: Run Diagnostic Test
+   → Go to: http://localhost/ZUHAUSE/test_rts_save.php
+   → This will check:
+     - All required tables exist
+     - All required files exist
+     - Booklet numbers configured
+     - Session variables set
+     - Cost lookup tables available
+
+STEP 2: Set Up Tables (if needed)
+   → If test shows missing tables:
+   → Go to: http://localhost/ZUHAUSE/setup_rts_tables.php
+   → Wait for success messages
+   → Re-run test_rts_save.php
+
+STEP 3: Test Create RTS
+   → Go to: http://localhost/ZUHAUSE/returntosupplier.php
+   → Fill in:
+     * Reference Number (required)
+     * Delivery to (select supplier)
+     * Remarks (required)
+   → Add items (Search button or ADD UNIT button)
+   → Click SAVE button
+   → Should see success message!
+
+STEP 4: Test Approval
+   → Go to: http://localhost/ZUHAUSE/approval-returntosupplier.php
+   → Select date range
+   → Select status filter (try "All Status")
+   → Click SEARCH
+   → Should see your RTS entry
+   → Test Preview, Approve, Disapprove buttons
+
+DATABASE TABLES STRUCTURE:
+--------------------------
+
+1. return_to_supplier (Main records)
+   - id, rts_number, rts_date, reference_number
+   - branch_from, branch_name, delivery_to, remarks
+   - created_by, created_at, updated_at
+
+2. return_to_supplier_items (Items)
+   - id, rts_id, rts_number
+   - item_code, item_description, imei
+   - quantity, cost, reason
+
+3. rts_approval_log (Approval workflow)
+   - id, rts_id, rts_number, reference_number
+   - branch_from, branch_code, delivery_to
+   - reason, remarks, total_items
+   - created_by, created_at
+   - approver, approval_date
+   - disapprover, disapproval_date
+   - status (Pending/Approved/Disapproved)
+
+BOOKLET NUMBERS TABLE:
+----------------------
+The booklet_numbers table has these columns:
+- id, branch_code, page_type
+- booklet_format, current_number
+- prefix, suffix, description
+- status, created_at, updated_at
+
+NOTE: Does NOT have invoice_number, used_at, used_by columns!
+
+COST CALCULATION:
+-----------------
+Items costs are fetched from:
+1. purchase_order_items.cost (primary)
+2. items.srp (fallback if no PO cost)
+3. 0 (if neither found)
+
+TROUBLESHOOTING:
+----------------
+
+Error: "Unknown column 'invoice_number'"
+   ✓ FIXED - This error should not appear anymore
+
+Error: "Table doesn't exist"
+   → Run setup_rts_tables.php
+   → Or let tables auto-create on first save
+
+Error: "po_items doesn't exist"
+   ✓ FIXED - Now uses purchase_order_items
+
+No data in approval page:
+   → Select "All Status" filter first
+   → Check date range includes today
+   → Create an RTS entry first
+
+Save button not working:
+   → Run test_rts_save.php for diagnostics
+   → Check browser console (F12) for errors
+   → Verify all files exist
+
+SYSTEM READY CHECKLIST:
+-----------------------
+□ Run test_rts_save.php - all tests pass
+□ Tables created (3 tables)
+□ Files exist (6 PHP files)
+□ Booklet numbers configured (optional)
+□ Session active (logged in)
+□ Create test RTS entry
+□ Verify in approval page
+□ Test Preview PDF
+□ Test Approve/Disapprove
+
+SUPPORT FILES LOCATION:
+-----------------------
+All files: c:\xampp\htdocs\ZUHAUSE\
+Database: zuhause_management
+
+FINAL STATUS: ✓ ALL ERRORS FIXED - READY TO USE!
+================================================================================
