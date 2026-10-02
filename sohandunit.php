@@ -1,8 +1,8 @@
-﻿<?php require_once 'session_check.php'; ?>
+<?php require_once 'session_check.php'; ?>
 <?php require_once 'config.php'; ?>
 <?php
 
-// ── Branch Access Control ─────────────────────────────────────────────
+// -- Branch Access Control ---------------------------------------------
 $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level']) : '';
 $session_branch = isset($_SESSION['user_branch']) ? trim($_SESSION['user_branch']) : '';
 
@@ -53,7 +53,7 @@ if ($has_full_access) {
     $where = implode(" AND ", $conds);
 
     $sql = "SELECT s.item_code, s.description, COUNT(*) AS total_qty, s.branch, s.family_code, 
-                   COALESCE(i.brand, s.brand, '—') AS brand
+                   COALESCE(i.brand, s.brand, '�') AS brand
             FROM stock_on_hand s
             LEFT JOIN items i ON s.item_code = i.item_code
             WHERE $where
@@ -85,7 +85,7 @@ if ($has_full_access) {
     $where = implode(" AND ", $conds);
 
     $sql = "SELECT s.item_code, s.description, COUNT(*) AS total_qty, s.branch, s.family_code, 
-                   COALESCE(i.brand, s.brand, '—') AS brand
+                   COALESCE(i.brand, s.brand, '�') AS brand
             FROM stock_on_hand s
             LEFT JOIN items i ON s.item_code = i.item_code
             WHERE $where
@@ -297,7 +297,7 @@ if ($has_full_access) {
                                     <td><?php echo htmlspecialchars($row['description']); ?></td>
                                     <td><?php echo intval($row['total_qty']); ?></td>
                                     <td><?php echo htmlspecialchars($row['branch']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['family_code'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($row['family_code'] ?? '�'); ?></td>
                                 </tr>
                                 <?php
                             endwhile; ?>
@@ -503,7 +503,7 @@ if ($has_full_access) {
                 // Filter options on input
                 input.addEventListener('input', function () {
                     const searchTerm = this.value.toLowerCase();
-                    // Clear the select value when user manually types/clears — only a dropdown click sets it
+                    // Clear the select value when user manually types/clears � only a dropdown click sets it
                     select.value = '';
                     dropdown.querySelectorAll('.select-option').forEach(function (option) {
                         option.classList.remove('selected');

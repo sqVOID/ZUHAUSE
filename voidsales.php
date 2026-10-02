@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 
@@ -211,12 +211,7 @@ $branch_code = !empty($branch_codes) ? $branch_codes[0] : '000';
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;
@@ -1207,7 +1202,7 @@ $branch_code = !empty($branch_codes) ? $branch_codes[0] : '000';
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                         </svg>
                     </button>
-                    <span>Invoice: <strong id="modalInvoiceNo">�</strong></span>
+                    <span>Invoice: <strong id="modalInvoiceNo">?</strong></span>
                     <button class="nav-btn" id="modalNextBtn" onclick="modalNav(1)" title="Next">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="white">
                             <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
@@ -1282,10 +1277,10 @@ $branch_code = !empty($branch_codes) ? $branch_codes[0] : '000';
                     </thead>
                     <tbody>
                         <tr>
-                            <td id="vm_date">�</td>
-                            <td id="vm_inv">�</td>
-                            <td id="vm_cust">�</td>
-                            <td id="vm_branch">�</td>
+                            <td id="vm_date">?</td>
+                            <td id="vm_inv">?</td>
+                            <td id="vm_cust">?</td>
+                            <td id="vm_branch">?</td>
                         </tr>
                     </tbody>
                 </table>

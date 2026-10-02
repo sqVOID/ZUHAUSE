@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 
@@ -352,12 +352,7 @@ if (!empty($selected_filter)) {
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;
@@ -539,7 +534,7 @@ if (!empty($selected_filter)) {
         }
 
         #viewDetailsModal .detail-group li:before {
-            content: "✓";
+            content: "?";
             position: absolute;
             left: 5px;
             color: #2e7d32;
@@ -878,7 +873,7 @@ if (!empty($selected_filter)) {
                         <option value="all" <?php echo ($selected_filter === 'all') ? 'selected' : ''; ?>>View All</option>
                     </select>
                     <div class="search-bar">
-                        <input type="text" id="accountSearch" placeholder="Search by name or username…" oninput="filterTable()">
+                        <input type="text" id="accountSearch" placeholder="Search by name or username�" oninput="filterTable()">
                     </div>
                 </div>
             </div>
@@ -1279,7 +1274,7 @@ if (!empty($selected_filter)) {
             if (typeof saveSidebarState === 'function') { saveSidebarState(); }
         }
 
-        // ── Table search and filter ─────────────────────────────────────────────
+        // -- Table search and filter ---------------------------------------------
         function filterAccounts() {
             const filterValue = document.getElementById('accountFilter').value;
             
@@ -1333,7 +1328,7 @@ if (!empty($selected_filter)) {
             }
         });
 
-        // ── Modal ───────────────────────────────────────────────────────────
+        // -- Modal -----------------------------------------------------------
         function openModal(accountId, fullName, currentSidebar) {
             document.getElementById('modal_account_id').value = accountId;
             document.getElementById('modal-account-name').textContent = fullName;

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 
 // Authorization Check - Check if user has access to this page
@@ -413,12 +413,7 @@ if ($booklets_result && $booklets_result->num_rows > 0) {
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;
@@ -780,7 +775,7 @@ if ($booklets_result && $booklets_result->num_rows > 0) {
             background: #45a049;
         }
 
-        /* ── Activation Modal (Professional Design) ── */
+        /* -- Activation Modal (Professional Design) -- */
         .modal {
             display: none;
             position: fixed;
@@ -1268,7 +1263,7 @@ if ($booklets_result && $booklets_result->num_rows > 0) {
     <!-- Activation Modal -->
     <div id="activateModal" class="modal">
         <div class="modal-content">
-            <div class="modal-icon">⚠️</div>
+            <div class="modal-icon">??</div>
             <div class="modal-title">Are you sure you want to activate this booklet again?</div>
             <div class="modal-body">
                 <p>Booklet: <span class="highlight" id="activateBookletNo"></span></p>

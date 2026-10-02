@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 ?>
@@ -77,7 +77,7 @@ include 'config.php';
         .menu-section-title svg { width: 20px; height: 20px; fill: currentColor; }
         .menu-section-title .arrow { transition: transform 0.3s ease; }
         .menu-section.collapsed .arrow { transform: rotate(-90deg); }
-        .submenu { padding-left: 20px; max-height: 500px; overflow: hidden; transition: max-height 0.3s ease; }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
         .menu-section.collapsed .submenu { max-height: 0; }
         .submenu .menu-item { padding: 10px 20px; font-size: 13px; }
 
@@ -1187,7 +1187,7 @@ include 'config.php';
             
             const totalCell = document.getElementById('row-total-' + id);
             if (totalCell) {
-                totalCell.textContent = '₱ ' + formatNumberWithCommas(total.toFixed(2));
+                totalCell.textContent = '? ' + formatNumberWithCommas(total.toFixed(2));
             }
             updateSummary();
         }
@@ -1214,7 +1214,7 @@ include 'config.php';
             
             if (itemsElement) itemsElement.textContent = rows.length;
             if (qtyElement) qtyElement.textContent = totalQty;
-            if (totalElement) totalElement.textContent = '₱ ' + formatNumberWithCommas(grandTotal.toFixed(2));
+            if (totalElement) totalElement.textContent = '? ' + formatNumberWithCommas(grandTotal.toFixed(2));
         }
 
         function checkEmpty() {

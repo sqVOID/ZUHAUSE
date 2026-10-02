@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 
@@ -219,12 +219,7 @@ $conn->query($create_items);
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;

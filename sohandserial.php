@@ -1,8 +1,8 @@
-﻿<?php require_once 'session_check.php'; ?>
+<?php require_once 'session_check.php'; ?>
 <?php require_once 'config.php'; ?>
 <?php
 
-// ── Branch Access Control ─────────────────────────────────────────────
+// -- Branch Access Control ---------------------------------------------
 $system_level = isset($_SESSION['system_level']) ? trim($_SESSION['system_level']) : '';
 $session_branch = isset($_SESSION['user_branch']) ? trim($_SESSION['user_branch']) : '';
 
@@ -57,7 +57,7 @@ if ($has_full_access) {
         $where = implode(" AND ", $conds);
 
         $sql = "SELECT s.item_code, s.description, s.dr_date, s.imei, s.imei2, s.dr_number, s.branch, s.family_code,
-                   COALESCE(i.brand, s.brand, '—') AS brand,
+                   COALESCE(i.brand, s.brand, '�') AS brand,
                    DATEDIFF(CURDATE(), s.dr_date)           AS aging,
                    DATEDIFF(CURDATE(), s.system_entry_date)  AS iou,
                    s.status
@@ -92,7 +92,7 @@ if ($has_full_access) {
         $where = implode(" AND ", $conds);
 
         $sql = "SELECT s.item_code, s.description, s.dr_date, s.imei, s.imei2, s.dr_number, s.branch, s.family_code,
-                   COALESCE(i.brand, s.brand, '—') AS brand,
+                   COALESCE(i.brand, s.brand, '�') AS brand,
                    DATEDIFF(CURDATE(), s.dr_date)           AS aging,
                    DATEDIFF(CURDATE(), s.system_entry_date)  AS iou,
                    s.status
@@ -347,7 +347,7 @@ if ($has_full_access) {
                                     <td><?php echo htmlspecialchars($row['item_code']); ?></td>
                                     <td>
                                         <?php
-                                        $imei1 = htmlspecialchars($row['imei'] ?? '—');
+                                        $imei1 = htmlspecialchars($row['imei'] ?? '�');
                                         $imei2 = !empty($row['imei2']) ? htmlspecialchars($row['imei2']) : '';
                                         
                                         // If "Single IMEI" filter is selected, only show the first IMEI
@@ -365,10 +365,10 @@ if ($has_full_access) {
                                         }
                                         ?>
                                     </td>
-                                    <td><?php echo $row['dr_date'] ? date('m/d/Y', strtotime($row['dr_date'])) : '—'; ?></td>
-                                    <td><?php echo htmlspecialchars($row['dr_number'] ?? '—'); ?></td>
+                                    <td><?php echo $row['dr_date'] ? date('m/d/Y', strtotime($row['dr_date'])) : '�'; ?></td>
+                                    <td><?php echo htmlspecialchars($row['dr_number'] ?? '�'); ?></td>
                                     <td><?php echo htmlspecialchars($row['branch']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['family_code'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($row['family_code'] ?? '�'); ?></td>
                                     <td><?php echo intval($row['aging']); ?> days</td>
                                     <td><?php echo intval($row['iou']); ?> days</td>
                                     <td>

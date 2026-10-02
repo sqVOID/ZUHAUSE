@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 
@@ -634,7 +634,7 @@ $conn->close();
             <div class="left-content">
                 <div class="left-label">ZUHAUSE NVENTORY MANAGEMENT</div>
                 <h1 class="left-headline">Every appliance, <em>perfectly tracked.</em></h1>
-                <p class="left-body">Manage your full appliance catalog, track stock levels, and streamline procurement — all in one place.</p>
+                <p class="left-body">Manage your full appliance catalog, track stock levels, and streamline procurement � all in one place.</p>
             </div>
         </div>
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 
@@ -18,7 +18,7 @@ echo ".info { color: #1976D2; }";
 echo "</style>";
 echo "</head><body>";
 
-echo "<h1>🔍 Sidebar Source Debug Information</h1>";
+echo "<h1>?? Sidebar Source Debug Information</h1>";
 
 // Session Info
 echo "<div class='box'>";
@@ -77,30 +77,30 @@ if (isset($_SESSION['user_id'])) {
         
         // Analysis
         echo "<div class='box'>";
-        echo "<h2>📊 Analysis</h2>";
+        echo "<h2>?? Analysis</h2>";
         
         $sidebar_source = $user['sidebar_source'] ?? 'position';
         
         if ($sidebar_source === 'account') {
-            echo "<p class='success'>✓ Sidebar Source is set to: <strong>Per Account</strong></p>";
+            echo "<p class='success'>? Sidebar Source is set to: <strong>Per Account</strong></p>";
             echo "<p>This account should use its own custom sidebar settings.</p>";
             
             if (empty($user['sidebar_access'])) {
-                echo "<p class='error'>⚠️ WARNING: Account sidebar_access is EMPTY. This account has FULL access to all menu items.</p>";
+                echo "<p class='error'>?? WARNING: Account sidebar_access is EMPTY. This account has FULL access to all menu items.</p>";
                 echo "<p>To restrict access, go to <strong>Sidebar Per Account</strong> page and configure this user's sidebar.</p>";
             } else {
-                echo "<p class='success'>✓ Account has custom sidebar configuration.</p>";
+                echo "<p class='success'>? Account has custom sidebar configuration.</p>";
                 echo "<p><strong>Hidden menu items:</strong> " . $user['sidebar_access'] . "</p>";
             }
         } else {
-            echo "<p class='success'>✓ Sidebar Source is set to: <strong>From Position</strong></p>";
+            echo "<p class='success'>? Sidebar Source is set to: <strong>From Position</strong></p>";
             echo "<p>This account uses sidebar settings from the <strong>" . $user['position'] . "</strong> position.</p>";
             
             if (isset($p_row) && $p_row) {
                 if (empty($p_row['sidebar_access'])) {
-                    echo "<p class='error'>⚠️ The position '" . htmlspecialchars($user['position']) . "' has NO sidebar restrictions. This account has FULL access.</p>";
+                    echo "<p class='error'>?? The position '" . htmlspecialchars($user['position']) . "' has NO sidebar restrictions. This account has FULL access.</p>";
                 } else {
-                    echo "<p class='success'>✓ Position has sidebar configuration.</p>";
+                    echo "<p class='success'>? Position has sidebar configuration.</p>";
                     echo "<p><strong>Hidden menu items:</strong> " . htmlspecialchars($p_row['sidebar_access']) . "</p>";
                 }
             }
@@ -114,7 +114,7 @@ if (isset($_SESSION['user_id'])) {
             $hidden_items = array_map('trim', $hidden_items);
             
             echo "<div class='box'>";
-            echo "<h2>🚫 Currently Hidden Menu Items</h2>";
+            echo "<h2>?? Currently Hidden Menu Items</h2>";
             echo "<ul>";
             foreach ($hidden_items as $item) {
                 if (!empty($item)) {
@@ -125,7 +125,7 @@ if (isset($_SESSION['user_id'])) {
             echo "</div>";
         } else {
             echo "<div class='box'>";
-            echo "<h2>✅ All Menu Items Visible</h2>";
+            echo "<h2>? All Menu Items Visible</h2>";
             echo "<p>No menu items are hidden. User has full access to the sidebar.</p>";
             echo "</div>";
         }
@@ -133,7 +133,7 @@ if (isset($_SESSION['user_id'])) {
 }
 
 echo "<div class='box'>";
-echo "<a href='accountregistration.php' style='display: inline-block; padding: 10px 20px; background: #2e7d32; color: white; text-decoration: none; border-radius: 4px;'>← Back to Account Registration</a> ";
+echo "<a href='accountregistration.php' style='display: inline-block; padding: 10px 20px; background: #2e7d32; color: white; text-decoration: none; border-radius: 4px;'>? Back to Account Registration</a> ";
 echo "<a href='sidebarperacc.php' style='display: inline-block; padding: 10px 20px; background: #1976D2; color: white; text-decoration: none; border-radius: 4px;'>Sidebar Per Account</a> ";
 echo "<a href='position.php' style='display: inline-block; padding: 10px 20px; background: #f57c00; color: white; text-decoration: none; border-radius: 4px;'>Position Settings</a>";
 echo "</div>";

@@ -1,4 +1,4 @@
-Ôªø<?php
+<?php
 require_once 'session_check.php';
 
 $toast_message = '';
@@ -177,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_promo'])) {
     }
 }
 
-// Fetch motors (items) for Motor Model dropdown ‚Äî all active items
+// Fetch motors (items) for Motor Model dropdown ó all active items
 $motors_result = $conn->query("SELECT id, item_code, description, brand FROM items WHERE status='Active' ORDER BY description ASC");
 
 // Fetch ALL active items for the Free Item dropdown (motors, accessories, etc.)
@@ -391,12 +391,7 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;
@@ -1314,7 +1309,7 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
                             value="<?php echo $editMode && !empty($editData['usage_limit']) ? htmlspecialchars($editData['usage_limit']) : ''; ?>">
                         <!--
                             <small style="color: #666; font-size: 11px; margin-top: 5px; display: block;">
-                            ‚ÑπÔ∏è When limit is reached, the promo will automatically be deactivated
+                            ?? When limit is reached, the promo will automatically be deactivated
                         </small>
                             -->
                     </div>
@@ -1510,12 +1505,12 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
                                     <?php if(count($pi_list) > 0): ?>
                                         <?php foreach($pi_list as $index => $pi): ?>
                                             <div style="padding:10px; <?php echo ($index < count($pi_list) - 1) ? 'border-bottom:1px solid #eee;' : ''; ?>">
-                                                <?php echo htmlspecialchars($pi['motor_model'] ?: '‚Äî'); ?>
+                                                <?php echo htmlspecialchars($pi['motor_model'] ?: 'ó'); ?>
                                             </div>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <div style="padding:10px;">
-                                            <?php echo htmlspecialchars($row['motor_model'] ?: '‚Äî'); ?>
+                                            <?php echo htmlspecialchars($row['motor_model'] ?: 'ó'); ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
@@ -1549,12 +1544,12 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
                                     <?php if(count($pi_list) > 0): ?>
                                         <?php foreach($pi_list as $index => $pi): ?>
                                             <div style="padding:10px; <?php echo ($index < count($pi_list) - 1) ? 'border-bottom:1px solid #eee;' : ''; ?>">
-                                                <?php echo htmlspecialchars($pi['promo_item'] ?: '‚Äî'); ?>
+                                                <?php echo htmlspecialchars($pi['promo_item'] ?: 'ó'); ?>
                                             </div>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <div style="padding:10px;">
-                                            <?php echo !empty($row['free_item']) ? htmlspecialchars($row['free_item']) : '‚Äî'; ?>
+                                            <?php echo !empty($row['free_item']) ? htmlspecialchars($row['free_item']) : 'ó'; ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
@@ -1562,7 +1557,7 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
                                     <?php if (!empty($row['branch'])): ?>
                                         <button class="btn-view" onclick="viewBranches('<?php echo htmlspecialchars(addslashes($row['branch'])); ?>')">View</button>
                                     <?php else: ?>
-                                        <span style="color:#999;">‚Äî</span>
+                                        <span style="color:#999;">ó</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -1838,7 +1833,7 @@ $promos_result = $conn->query("SELECT * FROM promos ORDER BY id DESC");
 
             var modal = document.getElementById('searchItemModal');
             var resultsBody = document.getElementById('searchResultsBody');
-            resultsBody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#999;">Searching‚Ä¶</td></tr>';
+            resultsBody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#999;">SearchingÖ</td></tr>';
             modal.style.display = 'flex';
 
             searchTerm = searchTerm.toLowerCase();

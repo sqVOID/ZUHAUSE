@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 
 // Authorization Check
@@ -441,12 +441,7 @@ $brands_for_form_result = $conn->query("SELECT brand_name FROM brands ORDER BY b
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;

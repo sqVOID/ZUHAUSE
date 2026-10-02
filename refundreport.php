@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'session_check.php';
 include 'config.php';
 
@@ -208,12 +208,7 @@ $branch_code = !empty($branch_codes) ? $branch_codes[0] : '000';
             transform: rotate(-90deg);
         }
 
-        .submenu {
-            padding-left: 20px;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
+        .submenu {padding-left: 20px;max-height: 800px;overflow: hidden;transition: max-height 0.3s ease;}
 
         .menu-section.collapsed .submenu {
             max-height: 0;
@@ -1020,7 +1015,7 @@ $branch_code = !empty($branch_codes) ? $branch_codes[0] : '000';
             const start = total > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0;
             const end = Math.min(currentPage * rowsPerPage, total);
             document.getElementById('pageInfo').textContent = total > 0 
-                ? `Showing ${start}–${end} of ${total} entries` 
+                ? `Showing ${start}�${end} of ${total} entries` 
                 : 'No entries found';
 
             document.getElementById('prevBtn').disabled = currentPage <= 1;
