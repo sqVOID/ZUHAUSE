@@ -55589,3 +55589,1429 @@ Stock SQL: INSERT INTO stock_on_hand
 Serial added to stock successfully with status: Good Stock
 Updating purchase_order_allocations with received quantities and invoice number
 === TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-10-02 18:42:35 ===
+POST data: Array
+(
+    [po_id] => 1
+    [status] => Incomplete
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TEST123
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"981723198273198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"237412638172389"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"412983129837198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"142381423298143"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"492384643984649"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"624346984234684"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464239486439846"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464932846439864"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"643294864398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423468643486438"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423498643489613"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464123846492386"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"461983416938461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"314668314683461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"169384613982164"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"179865489856489"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"445798345479834"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"113798314978134"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"713298471329847"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"647139471349871"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798341798341"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"119871423198713"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"134978134978314"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798347498347"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"121984542398449"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"169328464943586"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"413459782434165"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234169834649874"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"141681946984146"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234173984713924"}]
+    [serial_numbers_2] => [{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123761283719283"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"312439812374198"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123491823741298"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"463946843496423"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"642394864234986"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"643298464398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"432946843948643"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"324469834469834"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"343216332416364"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"434986434986439"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"134681349861348"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"413284613984613"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"321469831469831"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"346139846198341"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"316983146831468"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"419841938547934"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"712398743298742"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"611791137498134"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"471329487341498"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341793847139847"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341798317983417"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"713948712398471"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"132479834417983"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"159881459864986"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"134956743498643"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"211649382415512"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"214987234451145"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"123948654139284"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"361394743829474"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"321479831479832"}]
+)
+
+PO ID: 1
+New Status: Incomplete
+Invoice Number: TEST123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"981723198273198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"237412638172389"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"412983129837198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"142381423298143"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"492384643984649"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"624346984234684"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464239486439846"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464932846439864"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"643294864398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423468643486438"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423498643489613"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464123846492386"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"461983416938461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"314668314683461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"169384613982164"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"179865489856489"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"445798345479834"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"113798314978134"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"713298471329847"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"647139471349871"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798341798341"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"119871423198713"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"134978134978314"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798347498347"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"121984542398449"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"169328464943586"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"413459782434165"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234169834649874"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"141681946984146"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234173984713924"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 981723198273198
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 237412638172389
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 412983129837198
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 142381423298143
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 492384643984649
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 624346984234684
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464239486439846
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464932846439864
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 643294864398464
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 423468643486438
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 423498643489613
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464123846492386
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 461983416938461
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 314668314683461
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 169384613982164
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 179865489856489
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 445798345479834
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 113798314978134
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 713298471329847
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 647139471349871
+        )
+
+    [20] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 314798341798341
+        )
+
+    [21] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 119871423198713
+        )
+
+    [22] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 134978134978314
+        )
+
+    [23] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 314798347498347
+        )
+
+    [24] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 121984542398449
+        )
+
+    [25] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 169328464943586
+        )
+
+    [26] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 413459782434165
+        )
+
+    [27] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 234169834649874
+        )
+
+    [28] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 141681946984146
+        )
+
+    [29] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 234173984713924
+        )
+
+)
+
+Serial Numbers Count: 30
+Serial Numbers 2 Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123761283719283"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"312439812374198"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123491823741298"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"463946843496423"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"642394864234986"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"643298464398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"432946843948643"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"324469834469834"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"343216332416364"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"434986434986439"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"134681349861348"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"413284613984613"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"321469831469831"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"346139846198341"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"316983146831468"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"419841938547934"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"712398743298742"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"611791137498134"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"471329487341498"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341793847139847"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341798317983417"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"713948712398471"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"132479834417983"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"159881459864986"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"134956743498643"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"211649382415512"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"214987234451145"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"123948654139284"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"361394743829474"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"321479831479832"}]
+Serial Numbers 2 Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 123761283719283
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 312439812374198
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 123491823741298
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 463946843496423
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 642394864234986
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 643298464398464
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 432946843948643
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 324469834469834
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 343216332416364
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 434986434986439
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 134681349861348
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 413284613984613
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 321469831469831
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 346139846198341
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 316983146831468
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 419841938547934
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 712398743298742
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 611791137498134
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 471329487341498
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 341793847139847
+        )
+
+    [20] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 341798317983417
+        )
+
+    [21] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 713948712398471
+        )
+
+    [22] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 132479834417983
+        )
+
+    [23] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 159881459864986
+        )
+
+    [24] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 134956743498643
+        )
+
+    [25] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 211649382415512
+        )
+
+    [26] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 214987234451145
+        )
+
+    [27] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 123948654139284
+        )
+
+    [28] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 361394743829474
+        )
+
+    [29] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 321479831479832
+        )
+
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+[02-Oct-2026 18:42:35 Asia/Manila] PHP Warning:  Undefined variable $po_number in C:\xampp\htdocs\ZUHAUSE\update_po_status.php on line 1010
+Updating purchase_order_allocations for Incomplete status
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-10-02 18:42:40 ===
+POST data: Array
+(
+    [po_id] => 1
+    [status] => Incomplete
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TEST123
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"981723198273198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"237412638172389"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"412983129837198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"142381423298143"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"492384643984649"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"624346984234684"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464239486439846"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464932846439864"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"643294864398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423468643486438"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423498643489613"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464123846492386"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"461983416938461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"314668314683461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"169384613982164"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"179865489856489"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"445798345479834"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"113798314978134"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"713298471329847"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"647139471349871"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798341798341"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"119871423198713"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"134978134978314"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798347498347"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"121984542398449"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"169328464943586"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"413459782434165"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234169834649874"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"141681946984146"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234173984713924"}]
+    [serial_numbers_2] => [{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123761283719283"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"312439812374198"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123491823741298"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"463946843496423"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"642394864234986"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"643298464398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"432946843948643"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"324469834469834"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"343216332416364"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"434986434986439"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"134681349861348"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"413284613984613"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"321469831469831"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"346139846198341"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"316983146831468"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"419841938547934"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"712398743298742"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"611791137498134"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"471329487341498"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341793847139847"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341798317983417"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"713948712398471"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"132479834417983"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"159881459864986"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"134956743498643"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"211649382415512"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"214987234451145"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"123948654139284"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"361394743829474"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"321479831479832"}]
+)
+
+PO ID: 1
+New Status: Incomplete
+Invoice Number: TEST123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"981723198273198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"237412638172389"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"412983129837198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"142381423298143"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"492384643984649"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"624346984234684"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464239486439846"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464932846439864"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"643294864398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423468643486438"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423498643489613"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464123846492386"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"461983416938461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"314668314683461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"169384613982164"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"179865489856489"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"445798345479834"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"113798314978134"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"713298471329847"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"647139471349871"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798341798341"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"119871423198713"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"134978134978314"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798347498347"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"121984542398449"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"169328464943586"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"413459782434165"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234169834649874"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"141681946984146"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234173984713924"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 981723198273198
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 237412638172389
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 412983129837198
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 142381423298143
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 492384643984649
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 624346984234684
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464239486439846
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464932846439864
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 643294864398464
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 423468643486438
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 423498643489613
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464123846492386
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 461983416938461
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 314668314683461
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 169384613982164
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 179865489856489
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 445798345479834
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 113798314978134
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 713298471329847
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 647139471349871
+        )
+
+    [20] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 314798341798341
+        )
+
+    [21] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 119871423198713
+        )
+
+    [22] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 134978134978314
+        )
+
+    [23] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 314798347498347
+        )
+
+    [24] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 121984542398449
+        )
+
+    [25] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 169328464943586
+        )
+
+    [26] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 413459782434165
+        )
+
+    [27] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 234169834649874
+        )
+
+    [28] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 141681946984146
+        )
+
+    [29] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 234173984713924
+        )
+
+)
+
+Serial Numbers Count: 30
+Serial Numbers 2 Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123761283719283"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"312439812374198"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123491823741298"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"463946843496423"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"642394864234986"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"643298464398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"432946843948643"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"324469834469834"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"343216332416364"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"434986434986439"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"134681349861348"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"413284613984613"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"321469831469831"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"346139846198341"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"316983146831468"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"419841938547934"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"712398743298742"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"611791137498134"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"471329487341498"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341793847139847"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341798317983417"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"713948712398471"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"132479834417983"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"159881459864986"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"134956743498643"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"211649382415512"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"214987234451145"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"123948654139284"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"361394743829474"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"321479831479832"}]
+Serial Numbers 2 Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 123761283719283
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 312439812374198
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 123491823741298
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 463946843496423
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 642394864234986
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 643298464398464
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 432946843948643
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 324469834469834
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 343216332416364
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 434986434986439
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 134681349861348
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 413284613984613
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 321469831469831
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 346139846198341
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 316983146831468
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 419841938547934
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 712398743298742
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 611791137498134
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 471329487341498
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 341793847139847
+        )
+
+    [20] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 341798317983417
+        )
+
+    [21] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 713948712398471
+        )
+
+    [22] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 132479834417983
+        )
+
+    [23] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 159881459864986
+        )
+
+    [24] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 134956743498643
+        )
+
+    [25] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 211649382415512
+        )
+
+    [26] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 214987234451145
+        )
+
+    [27] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 123948654139284
+        )
+
+    [28] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 361394743829474
+        )
+
+    [29] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 321479831479832
+        )
+
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+)
+
+Updating purchase_order_allocations for Incomplete status
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
+
+
+=== NEW REQUEST 2026-10-02 18:42:47 ===
+POST data: Array
+(
+    [po_id] => 1
+    [status] => Incomplete
+    [receiving_branch] => ZUHAUSE INFANTA
+    [invoice_number] => TEST123
+    [serial_numbers] => [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"981723198273198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"237412638172389"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"412983129837198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"142381423298143"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"492384643984649"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"624346984234684"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464239486439846"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464932846439864"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"643294864398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423468643486438"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423498643489613"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464123846492386"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"461983416938461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"314668314683461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"169384613982164"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"179865489856489"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"445798345479834"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"113798314978134"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"713298471329847"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"647139471349871"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798341798341"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"119871423198713"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"134978134978314"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798347498347"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"121984542398449"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"169328464943586"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"413459782434165"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234169834649874"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"141681946984146"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234173984713924"}]
+    [serial_numbers_2] => [{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123761283719283"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"312439812374198"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123491823741298"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"463946843496423"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"642394864234986"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"643298464398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"432946843948643"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"324469834469834"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"343216332416364"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"434986434986439"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"134681349861348"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"413284613984613"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"321469831469831"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"346139846198341"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"316983146831468"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"419841938547934"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"712398743298742"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"611791137498134"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"471329487341498"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341793847139847"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341798317983417"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"713948712398471"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"132479834417983"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"159881459864986"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"134956743498643"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"211649382415512"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"214987234451145"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"123948654139284"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"361394743829474"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"321479831479832"}]
+    [deleted_items] => [3]
+)
+
+PO ID: 1
+New Status: Incomplete
+Invoice Number: TEST123
+Receiving Branch: ZUHAUSE INFANTA
+Serial Numbers Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"981723198273198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"237412638172389"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"412983129837198"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"142381423298143"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"492384643984649"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"624346984234684"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464239486439846"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464932846439864"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"643294864398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423468643486438"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"423498643489613"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"464123846492386"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"461983416938461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"314668314683461"},{"family_code":"IPHONE 15 128GB","item_no":1,"serial_number":"169384613982164"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"179865489856489"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"445798345479834"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"113798314978134"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"713298471329847"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"647139471349871"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798341798341"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"119871423198713"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"134978134978314"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"314798347498347"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"121984542398449"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"169328464943586"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"413459782434165"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234169834649874"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"141681946984146"},{"family_code":"IPHONE 16 128GB","item_no":2,"serial_number":"234173984713924"}]
+Serial Numbers Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 981723198273198
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 237412638172389
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 412983129837198
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 142381423298143
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 492384643984649
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 624346984234684
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464239486439846
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464932846439864
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 643294864398464
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 423468643486438
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 423498643489613
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 464123846492386
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 461983416938461
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 314668314683461
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [serial_number] => 169384613982164
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 179865489856489
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 445798345479834
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 113798314978134
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 713298471329847
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 647139471349871
+        )
+
+    [20] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 314798341798341
+        )
+
+    [21] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 119871423198713
+        )
+
+    [22] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 134978134978314
+        )
+
+    [23] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 314798347498347
+        )
+
+    [24] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 121984542398449
+        )
+
+    [25] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 169328464943586
+        )
+
+    [26] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 413459782434165
+        )
+
+    [27] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 234169834649874
+        )
+
+    [28] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 141681946984146
+        )
+
+    [29] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [serial_number] => 234173984713924
+        )
+
+)
+
+Serial Numbers Count: 30
+Serial Numbers 2 Raw: [{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123761283719283"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"312439812374198"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"123491823741298"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"463946843496423"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"642394864234986"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"643298464398464"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"432946843948643"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"324469834469834"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"343216332416364"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"434986434986439"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"134681349861348"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"413284613984613"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"321469831469831"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"346139846198341"},{"family_code":"IPHONE 15 128GB","item_no":1,"imei_2":"316983146831468"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"419841938547934"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"712398743298742"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"611791137498134"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"471329487341498"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341793847139847"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"341798317983417"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"713948712398471"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"132479834417983"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"159881459864986"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"134956743498643"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"211649382415512"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"214987234451145"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"123948654139284"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"361394743829474"},{"family_code":"IPHONE 16 128GB","item_no":2,"imei_2":"321479831479832"}]
+Serial Numbers 2 Decoded: Array
+(
+    [0] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 123761283719283
+        )
+
+    [1] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 312439812374198
+        )
+
+    [2] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 123491823741298
+        )
+
+    [3] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 463946843496423
+        )
+
+    [4] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 642394864234986
+        )
+
+    [5] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 643298464398464
+        )
+
+    [6] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 432946843948643
+        )
+
+    [7] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 324469834469834
+        )
+
+    [8] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 343216332416364
+        )
+
+    [9] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 434986434986439
+        )
+
+    [10] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 134681349861348
+        )
+
+    [11] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 413284613984613
+        )
+
+    [12] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 321469831469831
+        )
+
+    [13] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 346139846198341
+        )
+
+    [14] => Array
+        (
+            [family_code] => IPHONE 15 128GB
+            [item_no] => 1
+            [imei_2] => 316983146831468
+        )
+
+    [15] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 419841938547934
+        )
+
+    [16] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 712398743298742
+        )
+
+    [17] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 611791137498134
+        )
+
+    [18] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 471329487341498
+        )
+
+    [19] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 341793847139847
+        )
+
+    [20] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 341798317983417
+        )
+
+    [21] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 713948712398471
+        )
+
+    [22] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 132479834417983
+        )
+
+    [23] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 159881459864986
+        )
+
+    [24] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 134956743498643
+        )
+
+    [25] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 211649382415512
+        )
+
+    [26] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 214987234451145
+        )
+
+    [27] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 123948654139284
+        )
+
+    [28] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 361394743829474
+        )
+
+    [29] => Array
+        (
+            [family_code] => IPHONE 16 128GB
+            [item_no] => 2
+            [imei_2] => 321479831479832
+        )
+
+)
+
+Item Models: Array
+(
+)
+
+Item Types: Array
+(
+)
+
+Deleted Items: Array
+(
+    [0] => 3
+)
+
+=== DELETING MARKED ITEMS ===
+Deleting item 3: FC=IPAD PRO M5, PO=PO-2026-001
+Delete stock SQL: DELETE FROM stock_on_hand WHERE family_code = 'IPAD PRO M5' AND dr_number = 'PO-2026-001'
+Delete item SQL: DELETE FROM purchase_order_items WHERE id = 3 AND po_id = 1
+Item 3 deleted successfully
+Updating purchase_order_allocations for Incomplete status
+=== RECALCULATING PO TOTALS ===
+New totals - Items: 2, Qty: 30, Cost: 1050000
+PO totals updated successfully
+=== TRANSACTION COMMITTED SUCCESSFULLY ===
