@@ -686,21 +686,22 @@ $table_exists = ($table_check && $table_check->num_rows > 0);
             <table class="report-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">Date</th>
-                        <th style="width: 12%;">RTS Number</th>
-                        <th style="width: 12%;">Reference Number</th>
-                        <th style="width: 10%;">Branch</th>
-                        <th style="width: 13%;">Delivery To</th>
-                        <th style="width: 15%;">Item Description</th>
-                        <th style="width: 12%;">IMEI</th>
-                        <th style="width: 6%;">Quantity</th>
-                        <th style="width: 8%;">Cost</th>
+                        <th style="width: 7%;">Date</th>
+                        <th style="width: 11%;">RTS Number</th>
+                        <th style="width: 11%;">Reference Number</th>
+                        <th style="width: 9%;">Branch From</th>
+                        <th style="width: 12%;">Delivery To Supplier</th>
+                        <th style="width: 14%;">Item Description</th>
+                        <th style="width: 11%;">IMEI</th>
+                        <th style="width: 5%;">Quantity</th>
+                        <th style="width: 7%;">Cost</th>
+                        <th style="width: 9%;">Prepared By</th>
                         <th style="width: 4%;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="reportTableBody">
                     <tr class="no-data">
-                        <td colspan="10">Loading data...</td>
+                        <td colspan="11">SELECT A FILTER TO DISPLAY THE DATA</td>
                     </tr>
                 </tbody>
             </table>
@@ -733,7 +734,7 @@ $table_exists = ($table_check && $table_check->num_rows > 0);
 
         // Load data on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadReports();
+            // Don't auto-load data, wait for user to apply filter
         });
 
         function loadReports() {
@@ -754,7 +755,7 @@ $table_exists = ($table_check && $table_check->num_rows > 0);
             .then(data => {
                 if (data && data.error) {
                     document.getElementById('reportTableBody').innerHTML =
-                        `<tr class="no-data"><td colspan="10">Error: ${data.error}</td></tr>`;
+                        `<tr class="no-data"><td colspan="11">Error: ${data.error}</td></tr>`;
                     return;
                 }
                 allReports = Array.isArray(data) ? data : [];
@@ -764,7 +765,7 @@ $table_exists = ($table_check && $table_check->num_rows > 0);
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.getElementById('reportTableBody').innerHTML = '<tr class="no-data"><td colspan="10">Error loading data</td></tr>';
+                document.getElementById('reportTableBody').innerHTML = '<tr class="no-data"><td colspan="11">Error loading data</td></tr>';
             });
         }
 
@@ -794,7 +795,7 @@ $table_exists = ($table_check && $table_check->num_rows > 0);
             const pageData = filteredReports.slice(startIndex, endIndex);
 
             if (pageData.length === 0) {
-                tbody.innerHTML = '<tr class="no-data"><td colspan="10">No records found</td></tr>';
+                tbody.innerHTML = '<tr class="no-data"><td colspan="11">No records found</td></tr>';
                 document.getElementById('paginationWrapper').style.display = 'none';
                 return;
             }
@@ -812,6 +813,7 @@ $table_exists = ($table_check && $table_check->num_rows > 0);
                     <td>${report.imei || '-'}</td>
                     <td>${report.quantity}</td>
                     <td style="text-align: left;">${report.cost}</td>
+                    <td>${report.created_by || '-'}</td>
                     <td>
                         <button class="btn-preview" onclick="previewRTS('${report.rts_number}')">Preview</button>
                     </td>

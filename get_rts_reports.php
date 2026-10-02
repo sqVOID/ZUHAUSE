@@ -79,6 +79,7 @@ try {
                 rts.branch_name,
                 rts.delivery_to,
                 rts.created_at,
+                rts.created_by,
                 rtsi.item_code,
                 rtsi.item_description,
                 rtsi.imei,
@@ -115,7 +116,8 @@ try {
             'item_description' => $row['item_description'] ?? ($row['item_code'] ?? ''),
             'imei' => $row['imei'] ?? '',
             'quantity' => intval($row['quantity'] ?? 0),
-            'cost' => number_format(floatval($row['cost'] ?? 0), 2)
+            'cost' => number_format(floatval($row['cost'] ?? 0), 2),
+            'created_by' => $row['created_by'] ?? ''
         ];
     }
 

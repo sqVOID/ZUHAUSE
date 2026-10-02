@@ -1,4 +1,4 @@
-<?php require_once 'session_check.php'; ?>
+﻿<?php require_once 'session_check.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -1071,7 +1071,7 @@
                     } else {
                         alert(data.message || 'Invoice not found');
                         resetDisplay();
-                    }
+                    } 
                 })
                 .catch(error => {
                     console.error('Error:', error);

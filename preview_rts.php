@@ -112,28 +112,7 @@ $pdf->Cell(95, 6, 'REFERENCE NO: ' . ($header['reference_number'] ?: 'N/A'), 0, 
 $pdf->Cell(95, 6, 'BRANCH: ' . $branch_display, 0, 1, 'R');
 
 $pdf->Cell(95, 6, 'DELIVERY TO: ' . ($header['delivery_to'] ?: 'N/A'), 0, 0, 'L');
-$pdf->Cell(95, 6, 'CREATED BY: ' . ($header['created_by'] ?: 'Unknown'), 0, 1, 'R');
-
-// Status information
-if ($status === 'Approved') {
-    $pdf->SetTextColor(0, 128, 0); // Green
-} elseif ($status === 'Disapproved') {
-    $pdf->SetTextColor(255, 0, 0); // Red
-} else {
-    $pdf->SetTextColor(255, 140, 0); // Orange for Pending
-}
-$pdf->Cell(95, 6, 'STATUS: ' . strtoupper($status), 0, 0, 'L');
-$pdf->SetTextColor(0, 0, 0); // Reset to black
-
-if (!empty($status_by)) {
-    $pdf->Cell(95, 6, strtoupper($status) . ' BY: ' . $status_by, 0, 1, 'R');
-} else {
-    $pdf->Cell(95, 6, '', 0, 1, 'R');
-}
-
-if (!empty($status_date)) {
-    $pdf->Cell(190, 6, strtoupper($status) . ' DATE: ' . $status_date, 0, 1, 'L');
-}
+$pdf->Cell(95, 6, 'PREPARED BY: ' . ($header['created_by'] ?: 'Unknown'), 0, 1, 'R');
 
 // Remarks
 $remarks = !empty($header['remarks']) ? $header['remarks'] : 'No remarks';
@@ -145,11 +124,10 @@ $pdf->Ln(5);
 $pdf->SetFont('Courier', 'B', 8);
 $pdf->SetFillColor(240, 240, 240);
 
-$pdf->Cell(15, 8, 'QTY', 1, 0, 'C', true);
-$pdf->Cell(75, 8, 'ITEM DESCRIPTION', 1, 0, 'C', true);
-$pdf->Cell(35, 8, 'IMEI', 1, 0, 'C', true);
-$pdf->Cell(30, 8, 'COST', 1, 0, 'C', true);
-$pdf->Cell(35, 8, 'REASON', 1, 1, 'C', true);
+$pdf->Cell(15, 8, 'QTY', 1, 0, 'C', true);$pdf->Cell(60, 8, 'ITEM DESCRIPTION', 1, 0, 'C', true);
+$pdf->Cell(40, 8, 'IMEI', 1, 0, 'C', true);
+$pdf->Cell(35, 8, 'COST', 1, 0, 'C', true);
+$pdf->Cell(40, 8, 'REASON', 1, 1, 'C', true);
 
 // Items Table Body
 $pdf->SetFont('Courier', '', 7);
@@ -169,9 +147,9 @@ if (count($items) === 0) {
             // Draw the previous reason cell if exists
             if ($current_reason !== null && $reason_row_count > 0) {
                 $reason_height = $reason_row_count * 8;
-                $pdf->Rect(190, $reason_start_y, 35, $reason_height);
-                $pdf->SetXY(190, $reason_start_y + ($reason_height / 2) - 2);
-                $pdf->Cell(35, 4, $current_reason, 0, 0, 'C');
+                $pdf->Rect(165, $reason_start_y, 40, $reason_height);
+                $pdf->SetXY(165, $reason_start_y + ($reason_height / 2) - 2);
+                $pdf->Cell(40, 4, $current_reason, 0, 0, 'C');
             }
             
             // Start new reason group
@@ -184,7 +162,7 @@ if (count($items) === 0) {
         $description = !empty($item['item_description']) ? $item['item_description'] : '-';
         
         $chars_per_mm = 0.55;
-        $desc_chars = floor(75 * $chars_per_mm);
+        $desc_chars = floor(60 * $chars_per_mm);
         $desc_lines = explode("\n", wordwrap($description, $desc_chars, "\n", true));
         $row_height = max(8, count($desc_lines) * 4);
         
@@ -196,9 +174,9 @@ if (count($items) === 0) {
             // Draw pending reason before page break
             if ($reason_row_count > 0) {
                 $reason_height = $reason_row_count * 8;
-                $pdf->Rect(190, $reason_start_y, 35, $reason_height);
-                $pdf->SetXY(190, $reason_start_y + ($reason_height / 2) - 2);
-                $pdf->Cell(35, 4, $current_reason, 0, 0, 'C');
+                $pdf->Rect(165, $reason_start_y, 40, $reason_height);
+                $pdf->SetXY(165, $reason_start_y + ($reason_height / 2) - 2);
+                $pdf->Cell(40, 4, $current_reason, 0, 0, 'C');
             }
             
             $pdf->AddPage();
@@ -206,10 +184,10 @@ if (count($items) === 0) {
             $pdf->SetFont('Courier', 'B', 8);
             $pdf->SetFillColor(240, 240, 240);
             $pdf->Cell(15, 8, 'QTY', 1, 0, 'C', true);
-            $pdf->Cell(75, 8, 'ITEM DESCRIPTION', 1, 0, 'C', true);
-            $pdf->Cell(35, 8, 'IMEI', 1, 0, 'C', true);
-            $pdf->Cell(30, 8, 'COST', 1, 0, 'C', true);
-            $pdf->Cell(35, 8, 'REASON', 1, 1, 'C', true);
+            $pdf->Cell(60, 8, 'ITEM DESCRIPTION', 1, 0, 'C', true);
+            $pdf->Cell(40, 8, 'IMEI', 1, 0, 'C', true);
+            $pdf->Cell(35, 8, 'COST', 1, 0, 'C', true);
+            $pdf->Cell(40, 8, 'REASON', 1, 1, 'C', true);
             
             $pdf->SetFont('Courier', '', 7);
             $y = $pdf->GetY();
@@ -221,9 +199,9 @@ if (count($items) === 0) {
         
         // Draw cell borders (except reason which will be drawn later)
         $pdf->Rect($x, $y, 15, $row_height);
-        $pdf->Rect($x + 15, $y, 75, $row_height);
-        $pdf->Rect($x + 90, $y, 35, $row_height);
-        $pdf->Rect($x + 125, $y, 30, $row_height);
+        $pdf->Rect($x + 15, $y, 60, $row_height);
+        $pdf->Rect($x + 75, $y, 40, $row_height);
+        $pdf->Rect($x + 115, $y, 35, $row_height);
         
         $v_center = $y + ($row_height / 2) - 2;
         
@@ -236,20 +214,20 @@ if (count($items) === 0) {
         $curr_y = $start_y;
         foreach ($desc_lines as $line) {
             $pdf->SetXY($x + 15, $curr_y);
-            $pdf->Cell(75, 4, $line, 0, 0, 'C');
+            $pdf->Cell(60, 4, $line, 0, 0, 'C');
             $curr_y += 4;
         }
         
         // IMEI
-        $pdf->SetXY($x + 90, $v_center);
+        $pdf->SetXY($x + 75, $v_center);
         $imei_value = $item['imei'] ?: '-';
-        $pdf->Cell(35, 4, $imei_value, 0, 0, 'C');
+        $pdf->Cell(40, 4, $imei_value, 0, 0, 'C');
         
         // COST
-        $pdf->SetXY($x + 125, $v_center);
+        $pdf->SetXY($x + 115, $v_center);
         $item_cost = floatval($item['cost']);
         $item_total = $item_cost * intval($item['quantity']);
-        $pdf->Cell(30, 4, number_format($item_total, 2), 0, 0, 'C');
+        $pdf->Cell(35, 4, number_format($item_total, 2), 0, 0, 'C');
         
         $pdf->SetY($y + $row_height);
         $reason_row_count++;
@@ -258,9 +236,9 @@ if (count($items) === 0) {
     // Draw the last reason cell
     if ($reason_row_count > 0) {
         $reason_height = $reason_row_count * 8;
-        $pdf->Rect(190, $reason_start_y, 35, $reason_height);
-        $pdf->SetXY(190, $reason_start_y + ($reason_height / 2) - 2);
-        $pdf->Cell(35, 4, $current_reason, 0, 0, 'C');
+        $pdf->Rect(165, $reason_start_y, 40, $reason_height);
+        $pdf->SetXY(165, $reason_start_y + ($reason_height / 2) - 2);
+        $pdf->Cell(40, 4, $current_reason, 0, 0, 'C');
     }
 }
 

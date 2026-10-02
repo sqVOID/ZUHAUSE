@@ -664,19 +664,17 @@ if (!empty($user_branches)) {
                 <thead>
                     <tr>
                         <th style="width: 10%;">Date</th>
-                        <th style="width: 13%;">RTS Number</th>
-                        <th style="width: 13%;">Reference Number</th>
-                        <th style="width: 12%;">Branch</th>
-                        <th style="width: 15%;">Delivery To</th>
-                        <th style="width: 22%;">Item Description</th>
-                        <th style="width: 8%;">Total Quantity</th>
-                        <th style="width: 10%;">Total Cost</th>
-                        <th style="width: 7%;">Action</th>
+                        <th style="width: 17%;">RTS Number</th>
+                        <th style="width: 15%;">Branch From</th>
+                        <th style="width: 19%;">Delivery To Supplier</th>
+                        <th style="width: 30%;">Item Description</th>
+                        <th style="width: 9%;">Total Quantity</th>
+                        <th style="width: 10%;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="reportTableBody">
                     <tr class="no-data">
-                        <td colspan="9">Loading data...</td>
+                        <td colspan="7">SELECT A FILTER TO DISPLAY THE DATA</td>
                     </tr>
                 </tbody>
             </table>
@@ -709,7 +707,7 @@ if (!empty($user_branches)) {
 
         // Load data on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadReports();
+            // Don't auto-load data, wait for user to apply filter
         });
 
         function loadReports() {
@@ -730,7 +728,7 @@ if (!empty($user_branches)) {
             .then(data => {
                 if (data && data.error) {
                     document.getElementById('reportTableBody').innerHTML =
-                        `<tr class="no-data"><td colspan="9">Error: ${data.error}</td></tr>`;
+                        `<tr class="no-data"><td colspan="7">Error: ${data.error}</td></tr>`;
                     return;
                 }
                 allReports = Array.isArray(data) ? data : [];
@@ -740,7 +738,7 @@ if (!empty($user_branches)) {
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.getElementById('reportTableBody').innerHTML = '<tr class="no-data"><td colspan="9">Error loading data</td></tr>';
+                document.getElementById('reportTableBody').innerHTML = '<tr class="no-data"><td colspan="7">Error loading data</td></tr>';
             });
         }
 
@@ -769,7 +767,7 @@ if (!empty($user_branches)) {
             const pageData = filteredReports.slice(startIndex, endIndex);
 
             if (pageData.length === 0) {
-                tbody.innerHTML = '<tr class="no-data"><td colspan="9">No records found</td></tr>';
+                tbody.innerHTML = '<tr class="no-data"><td colspan="7">No records found</td></tr>';
                 document.getElementById('paginationWrapper').style.display = 'none';
                 return;
             }
@@ -780,12 +778,10 @@ if (!empty($user_branches)) {
                 tr.innerHTML = `
                     <td>${report.date}</td>
                     <td>${report.rts_number}</td>
-                    <td>${report.reference_number}</td>
                     <td>${report.branch_from}</td>
                     <td>${report.delivery_to}</td>
                     <td style="text-align: left;">${report.item_description}</td>
                     <td>${report.total_quantity}</td>
-                    <td style="text-align: left;">${report.total_cost}</td>
                     <td>
                         <button class="btn-preview" onclick="previewRTS('${report.rts_number}')">Preview</button>
                     </td>
