@@ -72,6 +72,13 @@ $sql = "
         se.upgrade,
         se.discount AS discount,
         se.total_amount AS upgrade_amount,
+        se.page_type,
+        COALESCE(
+            (SELECT ual.status FROM upgrade_approval_log ual WHERE ual.new_invoice_no = se.invoice_no ORDER BY ual.id DESC LIMIT 1),
+            (SELECT ral.status FROM replacement_approval_log ral WHERE ral.new_invoice_no = se.invoice_no ORDER BY ral.id DESC LIMIT 1),
+            (SELECT r.status FROM replacements r WHERE r.new_invoice_no = se.invoice_no ORDER BY r.id DESC LIMIT 1),
+            'Pending'
+        ) AS approval_status,
         (SELECT COUNT(*) FROM upgrade_new_items uni
          JOIN upgrades u ON u.id = uni.upgrade_id
          WHERE u.new_invoice_no = se.invoice_no
@@ -419,22 +426,34 @@ for ($i = 0; $i < count($headers); $i++) {
 }
 $pdf->Ln();
 
+$totalSales = 0;
+$totalSalesUpgd = 0;
+
 $pdf->SetFont('Courier', '', 6);
 if (count($rows) === 0) {
     $pdf->Cell(array_sum($widths), 8, 'NO DATA', 1, 1, 'C');
 } else {
     foreach ($rows as $row) {
+        $isDisapproved = (($row['approval_status'] ?? '') === 'Disapproved');
         $isUpgd = !empty($row['is_upgrade_item']);
         $oldUnitAmountRaw = (float)($row['old_unit_amount'] ?? 0);
         $upgradeUnitAmountRaw = (float)($row['upgrade_amount'] ?? 0);
 
-        $cashPaidUpgd = $isUpgd ? $upgradeUnitAmountRaw : 0;
+        $cashPaidUpgd = ($isUpgd && !$isDisapproved) ? $upgradeUnitAmountRaw : 0;
 
-        $displayTotalSales = $isUpgd ? 0 : (float)$row['total_sales'];
-        $displayDateUpg = $isUpgd ? date('m/d/Y', strtotime($row['date_sold'])) : '';
-        $displayOldUnit = $isUpgd ? number_format($oldUnitAmountRaw, 2) : '0.00';
-        $displayUpgdAmt = $isUpgd ? number_format($cashPaidUpgd, 2) : '0.00';
-        $displayTotalUpgd = $isUpgd ? number_format($cashPaidUpgd, 2) : '0.00';
+        $displayTotalSales = $isUpgd ? 0 : ($isDisapproved ? 0 : (float)$row['total_sales']);
+        $displayDateUpg = ($isUpgd && !$isDisapproved) ? date('m/d/Y', strtotime($row['date_sold'])) : '';
+        $displayOldUnit = ($isUpgd && !$isDisapproved) ? number_format($oldUnitAmountRaw, 2) : '0.00';
+        $displayUpgdAmt = ($isUpgd && !$isDisapproved) ? number_format($upgradeUnitAmountRaw, 2) : '0.00';
+        $displayTotalUpgd = ($isUpgd && !$isDisapproved) ? number_format($cashPaidUpgd, 2) : '0.00';
+
+        // Add to totals (exclude disapproved)
+        if (!$isDisapproved) {
+            $totalSales += $displayTotalSales;
+            if ($isUpgd) {
+                $totalSalesUpgd += $cashPaidUpgd;
+            }
+        }
 
         $pdf->Cell($widths[0], 7, strtoupper(substr((string)$row['representative'], 0, 18)), 1, 0, 'L');
         $pdf->Cell($widths[1], 7, $row['quantity'], 1, 0, 'C');
@@ -462,6 +481,32 @@ if (count($rows) === 0) {
         $pdf->Cell($widths[14], 7, $displayTotalUpgd, 1, 0, 'R');
         $pdf->Cell($widths[15], 7, number_format($displayTotalSales, 2), 1, 1, 'R');
     }
+
+    // Breakdown Section (matching salesreport.php)
+    $grandTotal = $totalSales + $totalSalesUpgd;
+
+    if ($pdf->GetY() + 25 > 190) {
+        $pdf->AddPage();
+    }
+
+    $pdf->Ln(4);
+    $pdf->SetTextColor(211, 47, 47);
+    $pdf->SetFont('Courier', 'B', 8.5);
+
+    $labelW = 55;
+    $valW = 35;
+
+    $pdf->Cell($labelW, 5, 'TOTAL SALES:', 0, 0, 'L');
+    $pdf->Cell($valW, 5, number_format($totalSales, 2), 0, 1, 'R');
+
+    $pdf->Cell($labelW, 5, 'TOTAL SALES UPGD:', 0, 0, 'L');
+    $pdf->Cell($valW, 5, number_format($totalSalesUpgd, 2), 0, 1, 'R');
+
+    $pdf->Ln(1);
+    $pdf->Cell($labelW, 5, 'GRAND TOTAL SALES:', 0, 0, 'L');
+    $pdf->Cell($valW, 5, number_format($grandTotal, 2), 0, 1, 'R');
+
+    $pdf->SetTextColor(0, 0, 0);
 }
 
 $pdf->Output('I', 'Sales_Report_' . $date_from . '_to_' . $date_to . '_' . $branch . '.pdf');

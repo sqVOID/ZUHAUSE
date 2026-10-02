@@ -102,6 +102,12 @@ try {
             se.status as display_status,
             se.page_type,
             se.promo_id,
+            (
+                SELECT COUNT(*) 
+                FROM replacements r 
+                WHERE (r.invoice_no = se.invoice_no OR r.new_invoice_no = se.invoice_no)
+                  AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+            ) AS replacement_count,
             CASE
                 WHEN se.page_type = 'upgradeunit' THEN (
                     SELECT ual.status FROM upgrade_approval_log ual 
@@ -109,11 +115,19 @@ try {
                     ORDER BY ual.id DESC LIMIT 1
                 )
                 WHEN se.page_type = 'replacementunit' THEN (
-                    SELECT ral.status FROM replacement_approval_log ral 
-                    WHERE ral.new_invoice_no = se.invoice_no 
-                    ORDER BY ral.id DESC LIMIT 1
+                    SELECT COALESCE(ral.status, r.status, 'Pending') 
+                    FROM replacements r
+                    LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r.id OR ral.new_invoice_no = se.invoice_no OR ral.original_invoice_no = se.invoice_no)
+                    WHERE (r.new_invoice_no = se.invoice_no OR r.invoice_no = se.invoice_no)
+                    ORDER BY COALESCE(ral.id, r.id) DESC LIMIT 1
                 )
-                ELSE NULL
+                ELSE (
+                    SELECT COALESCE(ral.status, r.status)
+                    FROM replacements r
+                    LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r.id OR ral.new_invoice_no = se.invoice_no OR ral.original_invoice_no = se.invoice_no)
+                    WHERE (r.new_invoice_no = se.invoice_no OR r.invoice_no = se.invoice_no)
+                    ORDER BY COALESCE(ral.id, r.id) DESC LIMIT 1
+                )
             END AS approval_status
         FROM sales_entry se 
         LEFT JOIN refunds r ON r.invoice_no = se.invoice_no
@@ -130,8 +144,14 @@ try {
     $sales_data = [];
     $last_invoice = '';
 
+    // Check if old_imei column exists in sales_entry_items
+    $check_old_imei = $conn->query("SHOW COLUMNS FROM sales_entry_items LIKE 'old_imei'");
+    $has_old_imei = ($check_old_imei && $check_old_imei->num_rows > 0);
+    $old_imei_select = $has_old_imei ? "sei.old_imei," : "NULL AS old_imei,";
+
     if ($sales_result && $sales_result->num_rows > 0) {
         while ($sale = $sales_result->fetch_assoc()) {
+            $sale['is_replacement'] = ($sale['page_type'] === 'replacementunit' || (int)($sale['replacement_count'] ?? 0) > 0);
 
             // Get items for this sale
             $items_query = $conn->prepare("
@@ -139,6 +159,7 @@ try {
                     sei.item_description,
                     sei.item_code,
                     sei.imei,
+                    {$old_imei_select}
                     sei.quantity,
                     sei.price,
                     sei.is_promo_item,
@@ -174,13 +195,31 @@ try {
                            (IFNULL(TRIM(uoi.imei), '') != '' AND UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei)))
                            OR (IFNULL(TRIM(uoi.imei), '') = '' AND UPPER(TRIM(uoi.item_description)) = UPPER(TRIM(sei.item_description)))
                        )
-                    ) > 0 AS is_old_upgrade_item
+                    ) > 0 AS is_old_upgrade_item,
+                    (SELECT COUNT(*) FROM replacement_new_items rni
+                     JOIN replacements r ON r.id = rni.replacement_id
+                     WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
+                       AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+                       AND (
+                           (IFNULL(TRIM(rni.imei), '') != '' AND UPPER(TRIM(rni.imei)) = UPPER(TRIM(sei.imei)))
+                           OR (IFNULL(TRIM(rni.imei), '') = '' AND UPPER(TRIM(rni.item_code)) = UPPER(TRIM(sei.item_code)))
+                       )
+                    ) > 0 AS is_replacement_item,
+                    (SELECT COUNT(*) FROM replacement_old_items roi
+                     JOIN replacements r ON r.id = roi.replacement_id
+                     WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
+                       AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+                       AND (
+                           (IFNULL(TRIM(roi.imei), '') != '' AND (UPPER(TRIM(roi.imei)) = UPPER(TRIM(sei.imei)) OR (IFNULL(TRIM(sei.old_imei),'') != '' AND UPPER(TRIM(roi.imei)) = UPPER(TRIM(sei.old_imei)))))
+                           OR (IFNULL(TRIM(roi.imei), '') = '' AND UPPER(TRIM(roi.item_description)) = UPPER(TRIM(sei.item_description)))
+                       )
+                    ) > 0 AS is_old_replacement_item
                 FROM sales_entry_items sei 
                 LEFT JOIN items i ON i.item_code = sei.item_code
                 WHERE sei.sales_entry_id = ?
                 ORDER BY sei.id
             ");
-            $items_query->bind_param("sssi", $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['id']);
+            $items_query->bind_param("sssssssi", $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['invoice_no'], $sale['id']);
             $items_query->execute();
             $items_result = $items_query->get_result();
 

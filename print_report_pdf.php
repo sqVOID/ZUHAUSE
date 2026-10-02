@@ -72,7 +72,19 @@ $stmt = $conn->prepare("
         r.total_amount as refund_amount,
         se.page_type,
         se.promo_id,
-        se.original_invoice_no
+        (
+            SELECT COUNT(*) 
+            FROM replacements r 
+            WHERE (r.invoice_no = se.invoice_no OR r.new_invoice_no = se.invoice_no)
+              AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+        ) AS replacement_count,
+        se.original_invoice_no,
+        COALESCE(
+            (SELECT ual.status FROM upgrade_approval_log ual WHERE ual.new_invoice_no = se.invoice_no ORDER BY ual.id DESC LIMIT 1),
+            (SELECT ral.status FROM replacement_approval_log ral WHERE ral.new_invoice_no = se.invoice_no ORDER BY ral.id DESC LIMIT 1),
+            (SELECT r2.status FROM replacements r2 WHERE r2.new_invoice_no = se.invoice_no ORDER BY r2.id DESC LIMIT 1),
+            'Pending'
+        ) AS approval_status
     FROM sales_entry se
     LEFT JOIN refunds r ON r.invoice_no = se.invoice_no
     WHERE DATE(se.created_at) BETWEEN ? AND ? AND se.branch_code = ?
@@ -87,7 +99,13 @@ $result = $stmt->get_result();
 $sales = [];
 $lastInvoice = '';
 
+// Check if old_imei column exists in sales_entry_items
+$check_old_imei = $conn->query("SHOW COLUMNS FROM sales_entry_items LIKE 'old_imei'");
+$has_old_imei = ($check_old_imei && $check_old_imei->num_rows > 0);
+$old_imei_select = $has_old_imei ? "sei.old_imei," : "NULL AS old_imei,";
+
 while ($row = $result->fetch_assoc()) {
+    $row['is_replacement'] = ($row['page_type'] === 'replacementunit' || (int)($row['replacement_count'] ?? 0) > 0);
     $sales[] = $row;
 
     // Match fetch_sales_report.php: last invoice is MAX invoice_no from sales_entry only
@@ -101,6 +119,7 @@ while ($row = $result->fetch_assoc()) {
             sei.item_description,
             sei.item_code,
             sei.imei,
+            {$old_imei_select}
             sei.quantity,
             sei.price,
             sei.is_promo_item,
@@ -126,13 +145,31 @@ while ($row = $result->fetch_assoc()) {
                    (IFNULL(TRIM(uoi.imei), '') != '' AND UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei)))
                    OR (IFNULL(TRIM(uoi.imei), '') = '' AND UPPER(TRIM(uoi.item_description)) = UPPER(TRIM(sei.item_description)))
                )
-            ) > 0 AS is_old_upgrade_item
+            ) > 0 AS is_old_upgrade_item,
+            (SELECT COUNT(*) FROM replacement_new_items rni
+             JOIN replacements r ON r.id = rni.replacement_id
+             WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
+               AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+               AND (
+                   (IFNULL(TRIM(rni.imei), '') != '' AND UPPER(TRIM(rni.imei)) = UPPER(TRIM(sei.imei)))
+                   OR (IFNULL(TRIM(rni.imei), '') = '' AND UPPER(TRIM(rni.item_code)) = UPPER(TRIM(sei.item_code)))
+               )
+            ) > 0 AS is_replacement_item,
+            (SELECT COUNT(*) FROM replacement_old_items roi
+             JOIN replacements r ON r.id = roi.replacement_id
+             WHERE (r.invoice_no = ? OR r.new_invoice_no = ?)
+               AND (r.status = 'Approved' OR r.status IS NULL OR r.status != 'Disapproved')
+               AND (
+                   (IFNULL(TRIM(roi.imei), '') != '' AND (UPPER(TRIM(roi.imei)) = UPPER(TRIM(sei.imei)) OR (IFNULL(TRIM(sei.old_imei),'') != '' AND UPPER(TRIM(roi.imei)) = UPPER(TRIM(sei.old_imei)))))
+                   OR (IFNULL(TRIM(roi.imei), '') = '' AND UPPER(TRIM(roi.item_description)) = UPPER(TRIM(sei.item_description)))
+               )
+            ) > 0 AS is_old_replacement_item
         FROM sales_entry_items sei 
         WHERE sei.sales_entry_id = ?
         ORDER BY sei.id
     ");
 
-    $stmt_items->bind_param("sssi", $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['id']);
+    $stmt_items->bind_param("sssssssi", $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['invoice_no'], $row['id']);
     $stmt_items->execute();
     $items_result = $stmt_items->get_result();
 
@@ -151,7 +188,8 @@ while ($row = $result->fetch_assoc()) {
         }
     }
 
-    // Determine if this is a loan / payment-partner transaction and get the actual total
+    // Determine if this is a loan / payment-partner transaction based only on payment_type string
+    // (aligns with JS getEffectiveSaleTotal — avoids false positives from key existence checks)
     $loanType = '';
     $lowerPM = strtolower($pd['payment_type'] ?? '');
     $isLoanPayment = (
@@ -164,26 +202,34 @@ while ($row = $result->fetch_assoc()) {
         strpos($lowerPM, 'billease') !== false ||
         strpos($lowerPM, 'paymongo') !== false ||
         strpos($lowerPM, 'skyro') !== false ||
-        strpos($lowerPM, 'samsung') !== false ||
-        isset($pd['Loan Term']) || isset($pd['Loan Terms']) ||
-        isset($pd['Loan Type']) || isset($pd['loan_type']) || isset($pd['loanTypeDropdown']) ||
-        isset($pd['Loan Balance']) || isset($pd['loan_balance']) ||
-        isset($pd['payment_partner'])
+        strpos($lowerPM, 'samsung') !== false
     );
     if ($isLoanPayment) {
         $loanType = $pd['Loan Type'] ?? $pd['loan_type'] ?? $pd['loanTypeDropdown'] ?? 'loan';
     }
 
     $actual_total_amount = floatval($row['total_amount']);
-    if ($isLoanPayment) {
-        $totalFromPaymentData = 0;
-        if (!empty($pd['Total'])) {
-            $totalRaw = str_replace(',', '', (string) $pd['Total']);
-            if (is_numeric($totalRaw) && (float) $totalRaw > 0) {
-                $totalFromPaymentData = (float) $totalRaw;
-            }
+
+    // Compute payment-data total (mirrors JS getEffectiveSaleTotal)
+    $payTotal = 0;
+    if (!empty($pd['Total'])) {
+        $parts = explode('|', (string) $pd['Total']);
+        foreach ($parts as $part) {
+            $v = floatval(str_replace(',', '', trim($part)));
+            if ($v > 0) { $payTotal = $v; break; }
         }
-        if ($totalFromPaymentData <= 0 && !empty($pd['totalLoanAmount'])) {
+    }
+    if ($payTotal <= 0 && !empty($pd['Amount'])) {
+        $parts = explode('|', (string) $pd['Amount']);
+        foreach ($parts as $part) {
+            $v = floatval(str_replace(',', '', trim($part)));
+            if ($v > 0) $payTotal += $v;
+        }
+    }
+    // For confirmed loan payments, also try Loan Balance + DP
+    if ($isLoanPayment && $payTotal <= 0) {
+        $totalFromPaymentData = 0;
+        if (!empty($pd['totalLoanAmount'])) {
             $totalLoanAmt = str_replace(',', '', (string) $pd['totalLoanAmount']);
             if (is_numeric($totalLoanAmt) && (float) $totalLoanAmt > 0) {
                 $totalFromPaymentData = (float) $totalLoanAmt;
@@ -214,9 +260,11 @@ while ($row = $result->fetch_assoc()) {
                 }
             }
         }
-        if ($totalFromPaymentData > 0) {
-            $actual_total_amount = $totalFromPaymentData;
-        }
+        $payTotal = $totalFromPaymentData;
+    }
+    // Use max(db total, payment total) — matches JS getEffectiveSaleTotal
+    if ($payTotal > 0) {
+        $actual_total_amount = max($actual_total_amount, $payTotal);
     }
 
     $sales[count($sales) - 1]['actual_total_amount'] = $actual_total_amount;
@@ -641,17 +689,16 @@ $y = $pdf->GetY();
 // Column widths (total stays 180mm)
 $wInvoice = 19;
 $wQty = 7;
-$wItemCode = 42;
+$wItemCode = 45;
 $wSrp = 13;
-$wOldUnit = 12;
+$wOldUnit = 14;
 $wItemAmt = 15;
 $wTotalAmt = 16;
 $wComm = 9;
-$wUpg = 9;
-$wStat = 8;
-$wSp = 7;
-$wEn = 7;
-$wPayment = 16;
+$wStat = 9;
+$wSp = 8;
+$wEn = 8;
+$wPayment = 17;
 
 // Draw all header cells with borders
 $pdf->Cell($wInvoice, 8, 'INVOICE NO', 1, 0, 'C', true);
@@ -678,7 +725,6 @@ $pdf->Cell($wTotalAmt, 3, 'AMOUNT', 0, 0, 'C');
 
 $pdf->SetXY($x2 + $wTotalAmt, $y);
 $pdf->Cell($wComm, 8, 'COMM', 1, 0, 'C', true);
-$pdf->Cell($wUpg, 8, 'UPG', 1, 0, 'C', true);
 $pdf->Cell($wStat, 8, 'STAT', 1, 0, 'C', true);
 $pdf->Cell($wSp, 8, 'SP', 1, 0, 'C', true);
 $pdf->Cell($wEn, 8, 'EN', 1, 0, 'C', true);
@@ -706,6 +752,13 @@ if (count($sales) === 0) {
         $isVoided = ($sale['status'] === 'voided');
         $isRefunded = ($sale['display_status'] === 'refunded');
         $isTradeIn = (isset($sale['page_type']) && $sale['page_type'] === 'salestrade-in' && ($sale['upgrade'] ?? '') !== 'UPGD');
+
+        // Skip disapproved upgrades/replacements — match report.php JS behaviour
+        $isDisapprovedSale = (
+            (($sale['page_type'] ?? '') === 'upgradeunit' || ($sale['page_type'] ?? '') === 'replacementunit' || ($sale['upgrade'] ?? '') === 'UPGD')
+            && (($sale['approval_status'] ?? '') === 'Disapproved')
+        );
+        if ($isDisapprovedSale) continue;
 
         // Parse payment data
         $paymentMethod = '';
@@ -745,7 +798,8 @@ if (count($sales) === 0) {
             }
         }
         $isPromoEntry = (isset($sale['page_type']) && $sale['page_type'] === 'promosentry') || $hasPromoItemInSale || (!empty($sale['promo_id']) && (int)$sale['promo_id'] > 0);
-        $stat = $isVoided ? 'VD' : ($isRefunded ? 'RF' : ($isTradeIn ? 'TRD' : ($isPromoEntry ? 'PROMO' : '')));
+        $isReplacement = (($sale['page_type'] ?? '') === 'replacementunit') || !empty($sale['is_replacement']) || ((int)($sale['replacement_count'] ?? 0) > 0);
+        $stat = $isVoided ? 'VD' : ($isRefunded ? 'RF' : (($sale['upgrade'] ?? '') === 'UPGD' ? 'UPGD' : ($isReplacement ? 'RP' : ($isTradeIn ? 'TRD' : ($isPromoEntry ? 'PROMO' : '')))));
 
         if ($isVoided || $isRefunded) {
             $pdf->SetTextColor(211, 47, 47);
@@ -771,7 +825,29 @@ if (count($sales) === 0) {
                 }
             }
 
-            foreach ($sale['items'] as $item) {
+            // ── Pre-draw merged INVOICE NO cell spanning all item rows (rowspan simulation) ──
+            $rowH = 6; // height of each item row in mm
+            $totalSpanH = $itemsCount * $rowH;
+            $invoiceStartX = $pdf->GetX();
+            $invoiceStartY = $pdf->GetY();
+            list($invoiceText, $invoiceFontSize) = fitTextInCell($pdf, $sale['invoice_no'], $wInvoice, 5, 3);
+            // Draw outer rect border for merged cell
+            $pdf->Rect($invoiceStartX, $invoiceStartY, $wInvoice, $totalSpanH);
+            // Print invoice text centered vertically inside the merged cell
+            $pdf->SetFont('Courier', '', $invoiceFontSize);
+            if ($isVoided || $isRefunded) {
+                $pdf->SetTextColor(211, 47, 47);
+            } else {
+                $pdf->SetTextColor(0, 0, 0);
+            }
+            $textY = $invoiceStartY + ($totalSpanH / 2) - ($invoiceFontSize * 0.176); // approx vertical center
+            $pdf->SetXY($invoiceStartX, $textY);
+            $pdf->Cell($wInvoice, $invoiceFontSize * 0.352, $invoiceText, 0, 0, 'C');
+            // Restore position to start of first item row (after the invoice cell)
+            $pdf->SetXY($invoiceStartX + $wInvoice, $invoiceStartY);
+            $pdf->SetFont('Courier', '', 5);
+
+            foreach ($sale['items'] as $itemIdx => $item) {
                 $qty = intval($item['quantity'] ?? 0);
                 $price = floatval($item['price'] ?? 0);
                 $itemSubtotal = $qty * $price;
@@ -781,19 +857,20 @@ if (count($sales) === 0) {
                 $itemIsPromo = (!empty($item['is_promo_item']) && (int)$item['is_promo_item'] === 1)
                     || (($sale['page_type'] ?? '') === 'promosentry' && !$hasPromoItemInSale)
                     || ($isPromoEntry && !$hasPromoItemInSale && !empty($sale['promo_id']) && (int)$sale['promo_id'] > 0);
-                $stat = $itemVoided ? 'VD' : ($itemRefunded ? 'RF' : ($isTradeIn ? 'TRD' : ($itemIsPromo ? 'PROMO' : '')));
 
                 // Only NEW upgrade invoices (with original_invoice_no) use cash paid display, not the original invoice
                 $isNewUpgradeSale = (($sale['upgrade'] ?? '') === 'UPGD' && !empty($sale['original_invoice_no']));
                 $itemIsUpgraded = $isNewUpgradeSale || !empty($item['is_upgrade_item']);
                 $itemIsOldUpgraded = !empty($item['is_old_upgrade_item']);
-
-                // report.php colours the entire sale row red when invoice-level is voided/refunded
-                if ($isVoided || $isRefunded || $itemRefunded) {
-                    $pdf->SetTextColor(211, 47, 47);
-                } else {
-                    $pdf->SetTextColor(0, 0, 0);
+                $hasExplicitReplacedItem = false;
+                foreach ($sale['items'] as $si) {
+                    if (!empty($si['is_replacement_item']) || !empty($si['is_old_replacement_item']) || !empty($si['old_imei'])) {
+                        $hasExplicitReplacedItem = true;
+                        break;
+                    }
                 }
+                $itemIsReplacement = !empty($item['is_replacement_item']) || !empty($item['is_old_replacement_item']) || (!empty($item['old_imei']) && trim($item['old_imei']) !== '') || ($itemsCount === 1 && $isReplacement) || (($sale['page_type'] ?? '') === 'replacementunit') || ($isReplacement && !$hasExplicitReplacedItem);
+                $stat = $itemVoided ? 'VD' : ($itemRefunded ? 'RF' : ($itemIsUpgraded || $itemIsOldUpgraded || ($itemsCount === 1 && ($sale['upgrade'] ?? '') === 'UPGD') ? 'UPGD' : ($itemIsReplacement ? 'RP' : ($isTradeIn ? 'TRD' : ($itemIsPromo ? 'PROMO' : '')))));
 
                 // Column display values (match report.php)
                 $oldUnitDisplay = '0.00';
@@ -862,11 +939,17 @@ if (count($sales) === 0) {
                     }
                 }
 
-                // Apply fitTextInCell to INVOICE NO to prevent exceeding border
-                list($invoiceText, $invoiceFontSize) = fitTextInCell($pdf, $sale['invoice_no'], $wInvoice, 5, 3);
-                $pdf->SetFont('Courier', '', $invoiceFontSize);
-                $pdf->Cell($wInvoice, 6, $invoiceText, 1, 0, 'C');
-                $pdf->SetFont('Courier', '', 5);
+                // Restore text color per-row
+                if ($isVoided || $isRefunded || $itemRefunded) {
+                    $pdf->SetTextColor(211, 47, 47);
+                } else {
+                    $pdf->SetTextColor(0, 0, 0);
+                }
+
+                // Each item row: start X after the pre-drawn merged invoice cell
+                $rowX = $invoiceStartX + $wInvoice;
+                $rowY = $invoiceStartY + ($itemIdx * $rowH);
+                $pdf->SetXY($rowX, $rowY);
 
                 $pdf->Cell($wQty, 6, $qty, 1, 0, 'C');
 
@@ -899,7 +982,6 @@ if (count($sales) === 0) {
                 $pdf->SetFont('Courier', '', $commFontSize);
                 $pdf->Cell($wComm, 6, $commText, 1, 0, 'C');
                 $pdf->SetFont('Courier', '', 5);
-                $pdf->Cell($wUpg, 6, $upgradeCellText, 1, 0, 'C');
                 $pdf->Cell($wStat, 6, $stat, 1, 0, 'C');
                 $pdf->Cell($wSp, 6, $assistedByAbbr, 1, 0, 'C');
                 $pdf->Cell($wEn, 6, $encoderAbbr, 1, 0, 'C');
@@ -954,8 +1036,10 @@ if (count($sales) === 0) {
 
                 list($paymentText, $paymentFontSize) = fitTextInCell($pdf, $itemPaymentMethod, $wPayment, 5, 3);
                 $pdf->SetFont('Courier', '', $paymentFontSize);
-                $pdf->Cell($wPayment, 6, $paymentText, 1, 1, 'C');
+                $pdf->Cell($wPayment, 6, $paymentText, 1, 0, 'C');
             }
+            // After all item rows, move cursor below the entire merged block
+            $pdf->SetXY(15, $invoiceStartY + $totalSpanH);
         } else {
             $isUpgradeSale = ($sale['upgrade'] === 'UPGD');
             $saleAmtForNoItems = floatval($sale['actual_total_amount'] ?? $sale['total_amount'] ?? 0);
@@ -991,7 +1075,6 @@ if (count($sales) === 0) {
             $pdf->SetFont('Courier', '', $commFontSize);
             $pdf->Cell($wComm, 6, $commText, 1, 0, 'C');
             $pdf->SetFont('Courier', '', 5);
-            $pdf->Cell($wUpg, 6, $isUpgradeSale ? 'UPGD' : '', 1, 0, 'C');
             $pdf->Cell($wStat, 6, $stat, 1, 0, 'C');
             $pdf->Cell($wSp, 6, $assistedByAbbr, 1, 0, 'C');
             $pdf->Cell($wEn, 6, $encoderAbbr, 1, 0, 'C');
@@ -1022,6 +1105,10 @@ foreach ($sales as $sale) {
     $encoderName = $sale['encoder'] ? $sale['encoder'] : 'Unknown';
     $isVoided = ($sale['status'] === 'voided');
     $isRefunded = ($sale['display_status'] === 'refunded');
+    $isDisapprovedUpgrade = (
+        (($sale['page_type'] ?? '') === 'upgradeunit' || ($sale['page_type'] ?? '') === 'replacementunit' || (($sale['upgrade'] ?? '') === 'UPGD'))
+        && (($sale['approval_status'] ?? '') === 'Disapproved')
+    );
     $rawSaleAmount = floatval($sale['actual_total_amount'] ?? $sale['total_amount'] ?? 0);
     $oldUnitAmount = floatval($sale['old_unit_amount'] ?? 0);
     $discountAmount = floatval($sale['discount'] ?? 0);
@@ -1065,7 +1152,7 @@ foreach ($sales as $sale) {
         ];
     }
 
-    if (!$isVoided) {
+    if (!$isVoided && !$isDisapprovedUpgrade) {
         $groupedByEncoder[$encoderName]['quantity'] += $saleQty;
         $groupedByEncoder[$encoderName]['totalAmount'] += $saleDisplayedTotal;
 
@@ -1074,7 +1161,7 @@ foreach ($sales as $sale) {
     }
 
     // Parse payment data for cash/non-cash calculation (align with report.php JavaScript rules)
-    if ($sale['payment_data']) {
+    if ($sale['payment_data'] && !$isVoided && !$isDisapprovedUpgrade) {
         $paymentData = json_decode($sale['payment_data'], true);
         $rawPaymentType = $paymentData['payment_type'] ?? '';
         $paymentTypeLower = strtolower((string) $rawPaymentType);
@@ -1360,18 +1447,18 @@ foreach ($sales as $sale) {
                 $nonCashBreakdown[$specificTypeUpper] += $saleAmount;
             }
         }
-    } else {
+    } elseif (!$isVoided && !$isDisapprovedUpgrade) {
         // If no payment data, assume cash
         $totalCash += $saleAmount;
     }
 
     // Add commissions
-    if (isset($sale['commission'])) {
+    if (isset($sale['commission']) && !$isVoided && !$isDisapprovedUpgrade) {
         $totalCommissions += floatval($sale['commission']);
     }
 
     // Accumulate upgrade amount (balance paid) for UPGD sales
-    if ($isNewUpgradeSale) {
+    if ($isNewUpgradeSale && ($sale['approval_status'] ?? 'Pending') !== 'Disapproved') {
         $totalUpgrade += $saleAmount;
         $totalOldUnit += $oldUnitAmount;
     }

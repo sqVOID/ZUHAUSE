@@ -1265,34 +1265,38 @@ require_once 'config.php';
                     let totalSalesUpgd = 0;
 
                     data.rows.forEach(row => {
+                        const isDisapproved = (row.approval_status === 'Disapproved');
                         const isUpgd = row.is_upgrade_item == 1;
                         const oldUnitAmountRaw = Number(row.old_unit_amount || 0);
                         const upgradeUnitAmountRaw = Number(row.upgrade_amount || 0);
 
                         // Cash paid on new unit upgrade (upgrade_amount is already the cash paid)
-                        const cashPaidUpgd = isUpgd ? upgradeUnitAmountRaw : 0;
+                        // If disapproved, do NOT count in UPGD amounts or TOTAL SALES UPGD
+                        const cashPaidUpgd = (isUpgd && !isDisapproved) ? upgradeUnitAmountRaw : 0;
 
-                        // Original sale (0017/0019) retains its total_sales amount (e.g. 39,990.00).
-                        // New upgrade invoice (0018/0020) has total_sales = 0, and cashPaidUpgd in TOTAL SALES UPGD.
-                        const displayTotalSales = isUpgd ? 0 : Number(row.total_sales || 0);
-                        const displayDateUpg = isUpgd ? formatDateOnly(row.date_sold) : '';
+                        // Original sale retains its total_sales amount.
+                        // New upgrade invoice has total_sales = 0, and cashPaidUpgd in TOTAL SALES UPGD.
+                        const displayTotalSales = isUpgd ? 0 : (isDisapproved ? 0 : Number(row.total_sales || 0));
+                        const displayDateUpg = (isUpgd && !isDisapproved) ? formatDateOnly(row.date_sold) : '';
 
-                        const displayOldUnitAmount = isUpgd
+                        const displayOldUnitAmount = (isUpgd && !isDisapproved)
                             ? oldUnitAmountRaw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '0.00';
-                        const displayUpgradeUnitAmount = isUpgd
+                        const displayUpgradeUnitAmount = (isUpgd && !isDisapproved)
                             ? cashPaidUpgd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '0.00';
-                        const displayTotalSalesUpgd = isUpgd
+                        const displayTotalSalesUpgd = (isUpgd && !isDisapproved)
                             ? cashPaidUpgd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '0.00';
 
                         const srpAmount = Number(row.srp_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                        // Add to totals
-                        totalSales += displayTotalSales;
-                        if (isUpgd) {
-                            totalSalesUpgd += cashPaidUpgd;
+                        // Add to totals (exclude disapproved)
+                        if (!isDisapproved) {
+                            totalSales += displayTotalSales;
+                            if (isUpgd) {
+                                totalSalesUpgd += cashPaidUpgd;
+                            }
                         }
 
                         html += `

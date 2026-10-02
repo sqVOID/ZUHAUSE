@@ -1206,7 +1206,6 @@ require_once 'config.php';
                                 <th>ITEM AMOUNT</th>
                                 <th>TOTAL AMOUNT</th>
                                 <th>COMM</th>
-                                <th>UPGRADE</th>
                                 <th>STAT</th>
                                 <th>SP</th>
                                 <th>EN</th>
@@ -1215,7 +1214,7 @@ require_once 'config.php';
                         </thead>
                         <tbody id="salesTableBody">
                             <tr>
-                                <td class="td-no-data" colspan="13">SELECT A FILTER TO DISPLAY THE DATA</td>
+                                <td class="td-no-data" colspan="12">SELECT A FILTER TO DISPLAY THE DATA</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1759,7 +1758,7 @@ require_once 'config.php';
 
                 // Check if this is an approval-required transaction
                 const isUpgradeUnit = (sale.page_type === 'upgradeunit');
-                const isReplacementUnit = (sale.page_type === 'replacementunit');
+                const isReplacementUnit = (sale.page_type === 'replacementunit' || sale.is_replacement || parseInt(sale.replacement_count || 0) > 0);
                 const hasApprovalStatus = (isUpgradeUnit || isReplacementUnit);
                 const approvalStatus = hasApprovalStatus ? (sale.approval_status || 'Pending') : null;
 
@@ -1768,6 +1767,10 @@ require_once 'config.php';
                     statCell = '<td style="color:#d32f2f;font-weight:700;">VD</td>';
                 } else if (isRefunded) {
                     statCell = '<td style="color:#d32f2f;font-weight:700;">RF</td>';
+                } else if (sale.upgrade === 'UPGD') {
+                    statCell = '<td style="font-weight:700;">UPGD</td>';
+                } else if (isReplacementUnit) {
+                    statCell = '<td style="font-weight:700;">RP</td>';
                 } else if (isTradeIn) {
                     statCell = '<td style="color:#e65100;font-weight:700;">TRD</td>';
                 } else if (isPromoEntry) {
@@ -1784,6 +1787,7 @@ require_once 'config.php';
                         const isNewUpgradeSale = sale.upgrade === 'UPGD' && sale.original_invoice_no && sale.original_invoice_no.trim() !== '';
                         const itemIsUpgraded = (isNewUpgradeSale || item.is_upgrade_item == 1);
                         const itemIsOldUpgraded = (item.is_old_upgrade_item == 1);
+                        const itemIsReplacement = (item.is_replacement_item == 1 || item.is_old_replacement_item == 1 || (item.old_imei && item.old_imei.trim() !== '') || (sale.items.length === 1 && isReplacementUnit) || (sale.page_type === 'replacementunit') || (isReplacementUnit && !sale.items.some(i => i.is_replacement_item == 1 || i.is_old_replacement_item == 1 || (i.old_imei && i.old_imei.trim() !== ''))));
                         const amtStyle = (itemVoided || itemRefunded) ? ' style="color:#d32f2f;"' : '';
 
                         let itemStatCell = '<td></td>';
@@ -1791,6 +1795,10 @@ require_once 'config.php';
                             itemStatCell = '<td style="color:#d32f2f;font-weight:700;">VD</td>';
                         } else if (itemRefunded) {
                             itemStatCell = '<td style="color:#d32f2f;font-weight:700;">RF</td>';
+                        } else if (itemIsUpgraded || itemIsOldUpgraded || (sale.items.length === 1 && sale.upgrade === 'UPGD')) {
+                            itemStatCell = '<td style="font-weight:700;">UPGD</td>';
+                        } else if (itemIsReplacement) {
+                            itemStatCell = '<td style="font-weight:700;">RP</td>';
                         } else if (isTradeIn) {
                             itemStatCell = '<td style="color:#e65100;font-weight:700;">TRD</td>';
                         } else if (itemIsPromo) {
@@ -1871,10 +1879,6 @@ require_once 'config.php';
                             }
                         }
 
-                        const upgradeCell = (itemIsUpgraded || itemIsOldUpgraded || (sale.items.length === 1 && sale.upgrade === 'UPGD'))
-                            ? '<td style="font-weight:700;">UPGD</td>'
-                            : '<td></td>';
-
                         // Invoice number cell with rowspan - only show on first item
                         let invoiceCell = '';
                         if (index === 0) {
@@ -1898,7 +1902,6 @@ require_once 'config.php';
                                 <td class="td-number"${amtStyle}>${itemAmtDisplay}</td>
                                 <td class="td-number"${amtStyle}>${totalAmtDisplay}</td>
                                 <td class="td-number">${(parseFloat(sale.commission) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                ${upgradeCell}
                                 ${itemStatCell}
                                 <td class="td-text-left">${assistedByAbbr}</td>
                                 <td class="td-text-left">${encoderAbbr}</td>
@@ -1917,7 +1920,6 @@ require_once 'config.php';
                     const oldUnitDisplay = sale.upgrade === 'UPGD'
                         ? oldUnitAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         : '0.00';
-                    const upgradeCell = sale.upgrade ? `<td style="font-weight:700;">${sale.upgrade}</td>` : '<td></td>';
 
                     // Invoice number cell - only add hyperlink if not voided, show red text if voided
                     const escapedPaymentMethod = paymentMethod.replace(/'/g, "\\'").replace(/"/g, '\\"');
@@ -1935,7 +1937,6 @@ require_once 'config.php';
                             <td class="td-number"${amtStyle}>0.00</td>
                             <td class="td-number"${amtStyle}>${upgdTotalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td class="td-number">${(parseFloat(sale.commission) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            ${upgradeCell}
                             ${statCell}
                             <td class="td-text-left">${assistedByAbbr}</td>
                             <td class="td-text-left">${encoderAbbr}</td>

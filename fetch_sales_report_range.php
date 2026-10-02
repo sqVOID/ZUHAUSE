@@ -130,6 +130,13 @@ try {
             se.upgrade,
             se.discount AS discount,
             se.total_amount AS upgrade_amount,
+            se.page_type,
+            COALESCE(
+                (SELECT ual.status FROM upgrade_approval_log ual WHERE ual.new_invoice_no = se.invoice_no ORDER BY ual.id DESC LIMIT 1),
+                (SELECT ral.status FROM replacement_approval_log ral WHERE ral.new_invoice_no = se.invoice_no ORDER BY ral.id DESC LIMIT 1),
+                (SELECT r.status FROM replacements r WHERE r.new_invoice_no = se.invoice_no ORDER BY r.id DESC LIMIT 1),
+                'Pending'
+            ) AS approval_status,
             (SELECT COUNT(*) FROM upgrade_new_items uni
              JOIN upgrades u ON u.id = uni.upgrade_id
              WHERE u.new_invoice_no = se.invoice_no
