@@ -74,7 +74,9 @@ $sql = "
         se.total_amount AS upgrade_amount,
         se.page_type,
         COALESCE(
-            (SELECT ual.status FROM upgrade_approval_log ual WHERE ual.new_invoice_no = se.invoice_no ORDER BY ual.id DESC LIMIT 1),
+            (SELECT ual.status FROM upgrade_approval_log ual
+             WHERE (ual.new_invoice_no = se.invoice_no OR ual.original_invoice_no = se.invoice_no)
+             ORDER BY ual.id DESC LIMIT 1),
             (SELECT ral.status FROM replacement_approval_log ral WHERE ral.new_invoice_no = se.invoice_no ORDER BY ral.id DESC LIMIT 1),
             (SELECT r.status FROM replacements r WHERE r.new_invoice_no = se.invoice_no ORDER BY r.id DESC LIMIT 1),
             'Pending'
@@ -88,11 +90,20 @@ $sql = "
                OR UPPER(TRIM(uni.imei)) = UPPER(TRIM(sei.imei))
            )
         ) > 0 AS is_upgrade_item,
+        (SELECT COUNT(*) FROM upgrade_old_items uoi
+         JOIN upgrades u ON u.id = uoi.upgrade_id
+         WHERE u.original_invoice_no = se.invoice_no
+           AND u.original_invoice_no != ''
+           AND (
+               (IFNULL(TRIM(uoi.imei), '') != '' AND UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei)))
+               OR (IFNULL(TRIM(uoi.imei), '') = '' AND UPPER(TRIM(uoi.item_description)) = UPPER(TRIM(sei.item_description)))
+           )
+        ) > 0 AS is_old_upgrade_item,
         COALESCE((
             SELECT SUM(uoi.price)
             FROM upgrades u
             JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
-            WHERE (u.original_invoice_no = se.invoice_no OR u.new_invoice_no = se.invoice_no)
+            WHERE u.new_invoice_no = se.invoice_no
         ), 0) AS old_unit_amount,
         (SELECT SUM(COALESCE(sei2.quantity, 0) * COALESCE(sei2.price, 0))
          FROM sales_entry_items sei2
@@ -263,6 +274,12 @@ while ($row = $result->fetch_assoc()) {
                 $row['upgrade_amount'] = $upgPaid;
             }
 
+            // Original invoice item upgraded away → deduct from this month's Total Sales
+            $isDisapproved = (($row['approval_status'] ?? '') === 'Disapproved');
+            if (!empty($row['is_old_upgrade_item']) && !$isDisapproved) {
+                $total_sales = 0;
+            }
+
             // Add the calculated values to the row
             $row['total_sales'] = $total_sales;
             $row['srp_amount'] = $srp_amount;
@@ -355,6 +372,7 @@ if ($po_result) {
             'upgrade' => null,
             'upgrade_amount' => 0,
             'is_upgrade_item' => 0,
+            'is_old_upgrade_item' => 0,
             'old_unit_amount' => 0,
             'invoice_subtotal' => $item_subtotal,
             'total_sales' => $item_paid,
@@ -436,22 +454,34 @@ if (count($rows) === 0) {
     foreach ($rows as $row) {
         $isDisapproved = (($row['approval_status'] ?? '') === 'Disapproved');
         $isUpgd = !empty($row['is_upgrade_item']);
+        $isOldUpgd = !empty($row['is_old_upgrade_item']);
         $oldUnitAmountRaw = (float)($row['old_unit_amount'] ?? 0);
         $upgradeUnitAmountRaw = (float)($row['upgrade_amount'] ?? 0);
 
         $cashPaidUpgd = ($isUpgd && !$isDisapproved) ? $upgradeUnitAmountRaw : 0;
 
-        $displayTotalSales = $isUpgd ? 0 : ($isDisapproved ? 0 : (float)$row['total_sales']);
+        // Total Sales = old unit only; Upgrade Unit Amount already has the cash remainder
+        if ($isDisapproved) {
+            $displayTotalSales = 0;
+        } elseif ($isUpgd) {
+            $displayTotalSales = $oldUnitAmountRaw;
+        } elseif ($isOldUpgd) {
+            $displayTotalSales = 0;
+        } else {
+            $displayTotalSales = (float)$row['total_sales'];
+        }
+
         $displayDateUpg = ($isUpgd && !$isDisapproved) ? date('m/d/Y', strtotime($row['date_sold'])) : '';
         $displayOldUnit = ($isUpgd && !$isDisapproved) ? number_format($oldUnitAmountRaw, 2) : '0.00';
         $displayUpgdAmt = ($isUpgd && !$isDisapproved) ? number_format($upgradeUnitAmountRaw, 2) : '0.00';
         $displayTotalUpgd = ($isUpgd && !$isDisapproved) ? number_format($cashPaidUpgd, 2) : '0.00';
 
-        // Add to totals (exclude disapproved)
         if (!$isDisapproved) {
-            $totalSales += $displayTotalSales;
             if ($isUpgd) {
+                $totalSales += $oldUnitAmountRaw;
                 $totalSalesUpgd += $cashPaidUpgd;
+            } else {
+                $totalSales += $displayTotalSales;
             }
         }
 

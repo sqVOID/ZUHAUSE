@@ -132,7 +132,9 @@ try {
             se.total_amount AS upgrade_amount,
             se.page_type,
             COALESCE(
-                (SELECT ual.status FROM upgrade_approval_log ual WHERE ual.new_invoice_no = se.invoice_no ORDER BY ual.id DESC LIMIT 1),
+                (SELECT ual.status FROM upgrade_approval_log ual
+                 WHERE (ual.new_invoice_no = se.invoice_no OR ual.original_invoice_no = se.invoice_no)
+                 ORDER BY ual.id DESC LIMIT 1),
                 (SELECT ral.status FROM replacement_approval_log ral WHERE ral.new_invoice_no = se.invoice_no ORDER BY ral.id DESC LIMIT 1),
                 (SELECT r.status FROM replacements r WHERE r.new_invoice_no = se.invoice_no ORDER BY r.id DESC LIMIT 1),
                 'Pending'
@@ -146,11 +148,20 @@ try {
                    OR UPPER(TRIM(uni.imei)) = UPPER(TRIM(sei.imei))
                )
             ) > 0 AS is_upgrade_item,
+            (SELECT COUNT(*) FROM upgrade_old_items uoi
+             JOIN upgrades u ON u.id = uoi.upgrade_id
+             WHERE u.original_invoice_no = se.invoice_no
+               AND u.original_invoice_no != ''
+               AND (
+                   (IFNULL(TRIM(uoi.imei), '') != '' AND UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei)))
+                   OR (IFNULL(TRIM(uoi.imei), '') = '' AND UPPER(TRIM(uoi.item_description)) = UPPER(TRIM(sei.item_description)))
+               )
+            ) > 0 AS is_old_upgrade_item,
             COALESCE((
                 SELECT SUM(uoi.price)
                 FROM upgrades u
                 JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
-                WHERE (u.original_invoice_no = se.invoice_no OR u.new_invoice_no = se.invoice_no)
+                WHERE u.new_invoice_no = se.invoice_no
             ), 0) AS old_unit_amount,
             se.status as display_status,
             (SELECT SUM(COALESCE(sei2.quantity, 0) * COALESCE(sei2.price, 0))
@@ -308,6 +319,13 @@ try {
                     }
                 }
                 $row['upgrade_amount'] = $upgPaid;
+            }
+
+            // If this original invoice item was upgraded away (e.g. 0147 → 0197),
+            // deduct it from this month's Total Sales so the full value moves to the new invoice.
+            $isDisapproved = (($row['approval_status'] ?? '') === 'Disapproved');
+            if (!empty($row['is_old_upgrade_item']) && !$isDisapproved) {
+                $total_sales = 0;
             }
 
             // Add the calculated values to the row
@@ -476,6 +494,7 @@ try {
                     'upgrade' => null,
                     'upgrade_amount' => 0,
                     'is_upgrade_item' => 0,
+                    'is_old_upgrade_item' => 0,
                     'old_unit_amount' => 0,
                     'display_status' => 'completed',
                     'invoice_subtotal' => $item_subtotal,

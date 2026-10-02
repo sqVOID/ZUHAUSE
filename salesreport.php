@@ -1262,16 +1262,27 @@ require_once 'config.php';
                     data.rows.forEach(row => {
                         const isDisapproved = (row.approval_status === 'Disapproved');
                         const isUpgd = row.is_upgrade_item == 1;
+                        const isOldUpgd = row.is_old_upgrade_item == 1;
                         const oldUnitAmountRaw = Number(row.old_unit_amount || 0);
                         const upgradeUnitAmountRaw = Number(row.upgrade_amount || 0);
+                        const srpRaw = Number(row.srp_amount || 0);
 
-                        // Cash paid on new unit upgrade (upgrade_amount is already the cash paid)
-                        // If disapproved, do NOT count in UPGD amounts or TOTAL SALES UPGD
+                        // Cash paid on new unit upgrade (remaining balance only)
                         const cashPaidUpgd = (isUpgd && !isDisapproved) ? upgradeUnitAmountRaw : 0;
 
-                        // Original sale retains its total_sales amount.
-                        // New upgrade invoice has total_sales = 0, and cashPaidUpgd in TOTAL SALES UPGD.
-                        const displayTotalSales = isUpgd ? 0 : (isDisapproved ? 0 : Number(row.total_sales || 0));
+                        // Total Sales = old unit amount only (e.g. 39990).
+                        // Upgrade Unit Amount already holds the remaining cash (e.g. 10000).
+                        let displayTotalSales = 0;
+                        if (isDisapproved) {
+                            displayTotalSales = 0;
+                        } else if (isUpgd) {
+                            displayTotalSales = oldUnitAmountRaw;
+                        } else if (isOldUpgd) {
+                            displayTotalSales = 0; // deducted — moved to new upgrade invoice
+                        } else {
+                            displayTotalSales = Number(row.total_sales || 0);
+                        }
+
                         const displayDateUpg = (isUpgd && !isDisapproved) ? formatDateOnly(row.date_sold) : '';
 
                         const displayOldUnitAmount = (isUpgd && !isDisapproved)
@@ -1284,13 +1295,15 @@ require_once 'config.php';
                             ? cashPaidUpgd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '0.00';
 
-                        const srpAmount = Number(row.srp_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const srpAmount = srpRaw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                        // Add to totals (exclude disapproved)
+                        // Summary: old unit → TOTAL SALES, cash upgrade → TOTAL SALES UPGD
                         if (!isDisapproved) {
-                            totalSales += displayTotalSales;
                             if (isUpgd) {
+                                totalSales += oldUnitAmountRaw;
                                 totalSalesUpgd += cashPaidUpgd;
+                            } else {
+                                totalSales += displayTotalSales;
                             }
                         }
 

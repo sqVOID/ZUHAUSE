@@ -153,6 +153,7 @@ try {
             se.total_amount,
             se.payment_data,
             se.upgrade,
+            se.page_type,
             (
                 SELECT u.payment_data
                 FROM upgrades u
@@ -172,6 +173,28 @@ try {
                 JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
                 WHERE u.new_invoice_no = se.invoice_no
             ), 0) AS old_unit_amount,
+            COALESCE(
+                CASE
+                    WHEN se.page_type = 'upgradeunit' OR (se.upgrade = 'UPGD' AND se.original_invoice_no IS NOT NULL AND se.original_invoice_no != '') THEN (
+                        SELECT ual.status FROM upgrade_approval_log ual
+                        WHERE ual.new_invoice_no = se.invoice_no
+                        ORDER BY ual.id DESC LIMIT 1
+                    )
+                    WHEN se.page_type = 'replacementunit' THEN (
+                        SELECT COALESCE(ral.status, r2.status, 'Pending')
+                        FROM replacements r2
+                        LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r2.id OR ral.new_invoice_no = se.invoice_no)
+                        WHERE r2.new_invoice_no = se.invoice_no
+                        ORDER BY COALESCE(ral.id, r2.id) DESC LIMIT 1
+                    )
+                    ELSE NULL
+                END,
+                CASE
+                    WHEN se.page_type = 'upgradeunit' OR (se.upgrade = 'UPGD' AND se.original_invoice_no IS NOT NULL AND se.original_invoice_no != '') OR se.page_type = 'replacementunit'
+                    THEN 'Pending'
+                    ELSE NULL
+                END
+            ) AS approval_status,
             CASE 
                 WHEN r.invoice_no IS NOT NULL THEN 'refunded'
                 ELSE se.status
@@ -212,8 +235,8 @@ try {
             $paymentMethods = [];
             $usedFallbackPM = true;
             
-            // If the invoice was upgraded and we have a unit_payment_map for the original split payment,
-            // we should only keep the payment methods of the units that were NOT upgraded.
+            // If the invoice was upgraded (Approved only) and we have a unit_payment_map,
+            // keep payment methods only for units that were NOT upgraded away.
             if (($row['upgrade'] === 'UPGD' || $row['old_unit_amount'] > 0) && !empty($pd['unit_payment_map'])) {
                 $hasActiveOriginals = false;
                 $invNo = $row['invoice_no'];
@@ -226,6 +249,11 @@ try {
                            (IFNULL(TRIM(uoi.imei), '') = '' AND IFNULL(TRIM(sei.imei), '') = '')
                            OR UPPER(TRIM(uoi.imei)) = UPPER(TRIM(sei.imei))
                        )
+                       AND COALESCE((
+                           SELECT ual.status FROM upgrade_approval_log ual
+                           WHERE ual.new_invoice_no = u.new_invoice_no
+                           ORDER BY ual.id DESC LIMIT 1
+                       ), 'Pending') = 'Approved'
                     ) > 0 AS is_upgraded
                     FROM sales_entry_items sei 
                     WHERE sei.sales_entry_id = (SELECT id FROM sales_entry WHERE invoice_no = ? LIMIT 1)
@@ -256,7 +284,7 @@ try {
                 if ($hasActiveOriginals) {
                     $usedFallbackPM = false; // We successfully built the precise remaining methods
                 } else if ($itemsRes->num_rows > 0) {
-                    // All units were upgraded. The original sale methods should be completely dropped.
+                    // All units were upgraded (Approved). The original sale methods should be completely dropped.
                     $usedFallbackPM = false;
                 }
             }
@@ -462,12 +490,13 @@ try {
             $displayTotalAmount = round(floatval($row['total_amount']));
 
             if ($isUpgradeInvoice) {
-                // For upgrade invoices:
-                // payment_amount (Amount column) is the cash/payment paid (e.g. 1,400)
-                // total_amount (Total Amount column) is the full transaction value (SRP: e.g. 2,695)
-                $displayTotalAmount = round(floatval($row['invoice_items_total']) > 0 ? floatval($row['invoice_items_total']) : (floatval($row['total_amount']) + floatval($row['old_unit_amount'])));
-                if ($modalAmount === '' || $modalAmount == 0) {
-                    $modalAmount = round(floatval($row['total_amount']));
+                // Match report.php: Total Amount = cash paid only (Amount column).
+                // Do NOT add Old Unit Amount / full SRP into Total Amount.
+                if ($modalAmount !== '' && floatval($modalAmount) > 0) {
+                    $displayTotalAmount = round(floatval($modalAmount));
+                } else {
+                    $displayTotalAmount = round(floatval($row['total_amount']));
+                    $modalAmount = $displayTotalAmount;
                 }
             } else {
                 if ($loanType !== '' && !empty($pd['Total'])) {
@@ -511,6 +540,9 @@ try {
                 'old_unit_amount' => $row['old_unit_amount'],
                 'refund_amount' => $row['refund_amount'],
                 'upgrade' => $row['upgrade'] ?? '',
+                'original_invoice_no' => $row['original_invoice_no'] ?? '',
+                'page_type' => $row['page_type'] ?? '',
+                'approval_status' => $row['approval_status'] ?? null,
                 'display_status' => $row['display_status'] ?? ''
             ];
         }
@@ -681,6 +713,9 @@ try {
                 'old_unit_amount'     => 0,
                 'refund_amount'       => 0,
                 'upgrade'             => '',
+                'original_invoice_no' => '',
+                'page_type'           => '',
+                'approval_status'     => null,
                 'display_status'      => 'completed',
             ];
         }

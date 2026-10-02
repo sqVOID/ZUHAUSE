@@ -126,6 +126,7 @@ $sql = "
         se.total_amount,
         se.payment_data,
         se.upgrade,
+        se.page_type,
         (
             SELECT u.payment_data
             FROM upgrades u
@@ -145,6 +146,28 @@ $sql = "
             JOIN upgrade_old_items uoi ON uoi.upgrade_id = u.id
             WHERE u.new_invoice_no = se.invoice_no
         ), 0) AS old_unit_amount,
+        COALESCE(
+            CASE
+                WHEN se.page_type = 'upgradeunit' OR (se.upgrade = 'UPGD' AND se.original_invoice_no IS NOT NULL AND se.original_invoice_no != '') THEN (
+                    SELECT ual.status FROM upgrade_approval_log ual
+                    WHERE ual.new_invoice_no = se.invoice_no
+                    ORDER BY ual.id DESC LIMIT 1
+                )
+                WHEN se.page_type = 'replacementunit' THEN (
+                    SELECT COALESCE(ral.status, r2.status, 'Pending')
+                    FROM replacements r2
+                    LEFT JOIN replacement_approval_log ral ON (ral.replacement_id = r2.id OR ral.new_invoice_no = se.invoice_no)
+                    WHERE r2.new_invoice_no = se.invoice_no
+                    ORDER BY COALESCE(ral.id, r2.id) DESC LIMIT 1
+                )
+                ELSE NULL
+            END,
+            CASE
+                WHEN se.page_type = 'upgradeunit' OR (se.upgrade = 'UPGD' AND se.original_invoice_no IS NOT NULL AND se.original_invoice_no != '') OR se.page_type = 'replacementunit'
+                THEN 'Pending'
+                ELSE NULL
+            END
+        ) AS approval_status,
         CASE 
             WHEN r.invoice_no IS NOT NULL THEN 'refunded'
             ELSE se.status
@@ -417,12 +440,13 @@ if ($result) {
         $displayTotalAmount = round((float) $row['total_amount']);
 
         if ($isUpgradeInvoice) {
-            // For upgrade invoices:
-            // payment_amount (Amount column) is the cash/payment paid (e.g. 1,400)
-            // total_amount (Total Amount column) is the full transaction value (SRP: e.g. 2,695)
-            $displayTotalAmount = round((float) $row['invoice_items_total'] > 0 ? (float) $row['invoice_items_total'] : ((float) $row['total_amount'] + (float) $row['old_unit_amount']));
-            if ($modalAmount === '' || $modalAmount == 0) {
-                $modalAmount = round((float) $row['total_amount']);
+            // Match report.php: Total Amount = cash paid only (Amount column).
+            // Do NOT add Old Unit Amount / full SRP into Total Amount.
+            if ($modalAmount !== '' && floatval($modalAmount) > 0) {
+                $displayTotalAmount = round(floatval($modalAmount));
+            } else {
+                $displayTotalAmount = round((float) $row['total_amount']);
+                $modalAmount = $displayTotalAmount;
             }
         } else {
             if ($loanType !== '' && !empty($pd['Total'])) {
@@ -462,6 +486,9 @@ if ($result) {
             'old_unit_amount' => $row['old_unit_amount'],
             'refund_amount' => $row['refund_amount'],
             'upgrade' => $row['upgrade'] ?? '',
+            'original_invoice_no' => $row['original_invoice_no'] ?? '',
+            'page_type' => $row['page_type'] ?? '',
+            'approval_status' => $row['approval_status'] ?? null,
             'display_status' => $row['display_status'] ?? ''
         ];
     }
@@ -522,13 +549,20 @@ if (count($rows) === 0) {
     foreach ($rows as $r) {
         // Check if this is a refunded sale
         $isRefunded = ($r['display_status'] === 'refunded');
-        $isUpgrade = ($r['upgrade'] === 'UPGD');
+        $hasOriginalInv = !empty(trim((string)($r['original_invoice_no'] ?? '')));
+        // Only NEW upgrade/replacement invoices can be Disapproved (match report.php)
+        $isNewUpgradeInvoice = (($r['page_type'] ?? '') === 'upgradeunit') ||
+            (($r['upgrade'] ?? '') === 'UPGD' && $hasOriginalInv);
+        $isNewReplacementInvoice = (($r['page_type'] ?? '') === 'replacementunit');
+        $isUpgrade = $isNewUpgradeInvoice || (($r['upgrade'] ?? '') === 'UPGD');
+        $isDisapproved = ($isNewUpgradeInvoice || $isNewReplacementInvoice) &&
+            (trim((string)($r['approval_status'] ?? 'Pending')) === 'Disapproved');
 
-        // Set text color for refunded items
-        if ($isRefunded) {
-            $pdf->SetTextColor(211, 47, 47); // Red color for refunded items
+        // Set text color for refunded / disapproved items (match report.php)
+        if ($isRefunded || $isDisapproved) {
+            $pdf->SetTextColor(211, 47, 47); // Red
         } else {
-            $pdf->SetTextColor(0, 0, 0); // Black color for normal items
+            $pdf->SetTextColor(0, 0, 0); // Black
         }
 
         $refundIndicator = $isRefunded ? ' RF' : '';
@@ -554,26 +588,30 @@ if (count($rows) === 0) {
         $dpa = $r['dp_amount'] !== '' ? number_format((float) str_replace(',', '', $r['dp_amount']), 2) : '';
         $pdf->Cell($widths[10], 7, $dpa, 1, 0, 'R');
 
-        // Old Unit Amount (for upgrades)
-        $oldUnitAmount = $isUpgrade ? number_format((float) $r['old_unit_amount'], 2) : '';
+        // Old Unit Amount (for upgrades) — disapproved counts as 0
+        $oldUnitAmountRaw = ($isUpgrade && !$isDisapproved) ? (float) $r['old_unit_amount'] : 0;
+        $oldUnitAmount = ($isUpgrade && $oldUnitAmountRaw > 0) ? number_format($oldUnitAmountRaw, 2) : ($isUpgrade ? '0.00' : '');
         $pdf->Cell($widths[11], 7, $oldUnitAmount, 1, 0, 'R');
 
-        $pa = $r['payment_amount'] !== '' ? number_format((float) str_replace(',', '', $r['payment_amount']), 2) : '';
+        $paymentAmountRaw = $isDisapproved ? 0 : (float) str_replace(',', '', (string)($r['payment_amount'] !== '' ? $r['payment_amount'] : 0));
+        $pa = ($r['payment_amount'] !== '' || $isDisapproved) ? number_format($paymentAmountRaw, 2) : '';
         $pdf->Cell($widths[12], 7, $pa, 1, 0, 'R');
 
         // Refund Amount
         $refundAmount = number_format((float) $r['refund_amount'], 2);
         $pdf->Cell($widths[13], 7, $refundAmount, 1, 0, 'R');
 
-        // Calculate row total using the actual displayTotalAmount (includes loan totals)
-        $rowTotalAmountRaw = (float) $r['total_amount'];
+        // Total Amount — exclude disapproved (match report.php)
+        $rowTotalAmountRaw = $isDisapproved ? 0 : (float) $r['total_amount'];
         $refundAmountRaw = (float) $r['refund_amount'];
 
         $ta = number_format($rowTotalAmountRaw, 2);
         $pdf->Cell($widths[14], 7, $ta, 1, 1, 'R');
 
-        // Add to grand total (deduct refunds like in dailysalespaytype.php)
-        $grandTotalAmount += $rowTotalAmountRaw - $refundAmountRaw;
+        // Add to grand total (skip disapproved; deduct refunds)
+        if (!$isDisapproved) {
+            $grandTotalAmount += $rowTotalAmountRaw - $refundAmountRaw;
+        }
 
         // Reset text color
         $pdf->SetTextColor(0, 0, 0);

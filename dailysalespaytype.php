@@ -1089,22 +1089,34 @@ require_once 'config.php';
                     data.rows.forEach(row => {
                         // Check if this is a refunded or UPGD sale
                         const isRefunded = row.display_status === 'refunded';
-                        const isUpgrade = row.upgrade === 'UPGD';
-                        const rowStyle = isRefunded ? ' style="color:#d32f2f;"' : '';
+                        const hasOriginalInv = row.original_invoice_no && String(row.original_invoice_no).trim() !== '';
+                        // Match report.php: only the NEW upgrade/replacement invoice can be Disapproved
+                        // Target invoice (e.g. 0188) keeps its Amount even if upgrade 0189 was Disapproved
+                        const isNewUpgradeInvoice = (row.page_type === 'upgradeunit') ||
+                            (row.upgrade === 'UPGD' && hasOriginalInv);
+                        const isNewReplacementInvoice = row.page_type === 'replacementunit';
+                        const isDisapproved = (isNewUpgradeInvoice || isNewReplacementInvoice) &&
+                            ((row.approval_status || 'Pending').trim() === 'Disapproved');
+                        const rowStyle = (isRefunded || isDisapproved) ? ' style="color:#d32f2f;"' : '';
                         const refundIndicator = isRefunded ? ' RF' : '';
-                        const oldUnitAmountRaw = Math.round(Number(row.old_unit_amount || 0));
+                        const oldUnitAmountRaw = isDisapproved ? 0 : Math.round(Number(row.old_unit_amount || 0));
                         const oldUnitAmount = (oldUnitAmountRaw > 0)
                             ? oldUnitAmountRaw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '0.00';
                         // Use total_amount (from sales_entry or preorder) instead of invoice_items_total
-                        const rowTotalAmountRaw = Math.round(Number(row.total_amount || 0));
+                        const rowTotalAmountRaw = isDisapproved ? 0 : Math.round(Number(row.total_amount || 0));
                         const refundAmountRaw = Math.round(Number(row.refund_amount || 0));
-                        totalAmount += rowTotalAmountRaw;
+                        if (!isDisapproved) {
+                            totalAmount += rowTotalAmountRaw;
+                        }
 
-                        // Amount shows collected payment value(s). For upgraded invoices, backend already combines original + upgrade payments.
-                        const displayAmount = row.payment_amount
-                            ? Math.round(Number(row.payment_amount.toString().replace(/,/g, ''))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            : '';
+                        // Amount shows collected payment value(s). Disapproved NEW upgrades count as 0.
+                        const paymentAmountRaw = isDisapproved
+                            ? 0
+                            : (row.payment_amount ? Math.round(Number(row.payment_amount.toString().replace(/,/g, ''))) : 0);
+                        const displayAmount = paymentAmountRaw
+                            ? paymentAmountRaw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : (isDisapproved ? '0.00' : '');
 
                         const srpAmount = row.srp_amount
                             ? Math.round(Number(row.srp_amount.toString().replace(/,/g, ''))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
