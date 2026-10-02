@@ -57,27 +57,80 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 // Map pages to Sidebar Item Names
 $page_map = [
-    'report.php' => 'Report',
-    'preorder.php' => 'Pre Order',
-    'purchaseorder.php' => 'Purchase Order',
-    'purchaseorder-invperbranch.php' => 'PO Invoice per Branch',
-    'replacementunit.php' => 'Replacement Unit',
+    // Process
     'salesentry.php' => 'Sales Entry',
-    'salesentrylate.php' => 'Late Entry',
-    'modification-motogam.php' => 'Modification Sales',
-    'voidsales.php' => 'Void Sales',
     'stocktransfer.php' => 'Stock Transfer',
     'upgradeunit.php' => 'Upgrade Unit',
+    'replacementunit.php' => 'Replacement Unit',
+    'returntosupplier.php' => 'Return to Supplier',
     'refund.php' => 'Refund',
-    'rddelivery.php' => 'Receive Direct Delivery',
-    'dsentry.php' => 'Dealers Sales Entry',
+    'salestrade-in.php' => 'Trade-In',
     'claimitem.php' => 'Claim Item',
+    'salesentry-status.php' => 'Item Status',
+    
+    // Purchase Order
+    'purchaseorder.php' => 'Purchase Order',
+    'purchaseorder-invperbranch.php' => 'PO Invoice per Branch',
+    
+    // Reports
+    'report.php' => 'Daily Sales Report',
+    'salesreport.php' => 'Monthly Sales Report',
+    'dailysalespaytype.php' => 'Payment Details Report',
+    'voidsalesreport.php' => 'Void Sales Report',
+    'upgradeunitreport.php' => 'Upgrade Unit Report',
+    'report-replacementunit.php' => 'Replacement Unit Report',
+    'report-returntosupplier.php' => 'RTS Report (Complete)',
+    'report-returntosupplier-qty.php' => 'RTS Report (Quantity)',
+    'rddeliveryreport.php' => 'Receive Direct Delivery',
+    'stocktransferreport.php' => 'Stock Transfer Report',
+    'refundreport.php' => 'Refund Report',
+    'sohandunit.php' => 'Stock on Hand',
+    'sohandserial.php' => 'Stock on Hand',
+    'sohandaccessories.php' => 'Stock on Hand',
+    'preorderreport.php' => 'Pre Order Report',
+    'reporttrade-in.php' => 'Trade-In Report',
+    'report-itemstatus.php' => 'Item Status Report',
+    
+    // Approval Process
+    'transferapproval.php' => 'Transfer Approval',
+    'approval-itemstatus.php' => 'Item Status Approval',
+    'approval-upgradeunit.php' => 'Upgrade Unit Approval',
+    'approval-replacementunit.php' => 'Replacement Unit Approval',
+    'approval-returntosupplier.php' => 'Return To Supplier Approval',
+    
+    // Receive Process
+    'purchaseorderreceive.php' => 'Receive Purchase Order',
+    'receivestocktransfer.php' => 'Receive Stock Transfer',
+    
+    // Void Process
+    'voidsales.php' => 'Void Sales',
+    
+    // Sub-admin
+    'salesentrylate.php' => 'Late Entry',
+    
+    // Pre-orders
+    'preorder.php' => 'Pre Order',
+    'preorder2.php' => 'Pre Order 2',
+    'claimpreorder.php' => 'Claim Pre Order',
+    
+    // Booklet
+    'bookletinv.php' => 'Booklet Inventory',
+    'bookletinvlive.php' => 'Cancel Inventory',
+    
+    // User Registration
     'accountregistration.php' => 'Account Registration',
     'useractivation.php' => 'User Activation',
+    'position.php' => 'Position Registration',
+    'sidebarperacc.php' => 'Sidebar Per Account',
+    
+    // Store Registration
     'promotereg.php' => 'Promoter Registration',
     'areareg.php' => 'Area Registration',
     'branchregistration.php' => 'Branch Registration',
     'dealerregistration.php' => 'Dealer Registration',
+    
+    // Item Registration
+    'supplierreg.php' => 'Supplier Registration',
     'brandreg.php' => 'Brand Registration',
     'brandReg.php' => 'Brand Registration',
     'familycodereg.php' => 'Family Code Registration',
@@ -85,8 +138,13 @@ $page_map = [
     'groupreg.php' => 'Group Registration',
     'itemreg.php' => 'Item Registration',
     'bankreg.php' => 'Bank Registration',
-    'position.php' => 'Position Registration',
-    'sidebarperacc.php' => 'Sidebar Per Account'
+    
+    // Terminal Registration
+    'createterminal.php' => 'Terminal Issuer Registration',
+    'createterminalid.php' => 'Terminal ID Registration',
+    
+    // Modification (Super-Admin only)
+    'modification-motogam.php' => 'Modification Sales'
 ];
 
 if (isset($page_map[$current_page])) {
@@ -98,17 +156,59 @@ if (isset($page_map[$current_page])) {
 
     // Check if the current page feature is in the hidden (restricted) list
     if (in_array($restricted_feature, $hidden_items)) {
-        // If it's the Report page (Dashboard) and it's blocked, show simple error to avoid loop
-        if ($current_page == 'main.php') {
-            die("<h1>Access Denied</h1><p>You do not have permission to access the Dashboard (Report).</p><a href='logout.php'>Logout</a>");
+        // If it's the Daily Sales Report page (Dashboard) and it's blocked, show simple error to avoid loop
+        if ($current_page == 'report.php') {
+            die("
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Access Denied</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                    .error-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
+                    h1 { color: #d32f2f; margin: 0 0 20px 0; }
+                    p { color: #666; margin: 0 0 30px 0; }
+                    a { display: inline-block; padding: 10px 24px; background: #1976D2; color: white; text-decoration: none; border-radius: 4px; }
+                    a:hover { background: #1565C0; }
+                </style>
+            </head>
+            <body>
+                <div class='error-container'>
+                    <h1>Access Denied</h1>
+                    <p>You do not have permission to access this page.</p>
+                    <a href='logout.php'>Logout</a>
+                </div>
+            </body>
+            </html>");
         }
 
-        // Otherwise redirect to Report page (if not blocked) or show error
-        if (in_array('Report', $hidden_items)) {
-            die("<h1>Access Denied</h1><p>You do not have permission to access this page.</p><a href='logout.php'>Logout</a>");
+        // Otherwise redirect to Daily Sales Report page (if not blocked) or show error
+        if (in_array('Daily Sales Report', $hidden_items)) {
+            die("
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Access Denied</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                    .error-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
+                    h1 { color: #d32f2f; margin: 0 0 20px 0; }
+                    p { color: #666; margin: 0 0 30px 0; }
+                    a { display: inline-block; padding: 10px 24px; background: #1976D2; color: white; text-decoration: none; border-radius: 4px; }
+                    a:hover { background: #1565C0; }
+                </style>
+            </head>
+            <body>
+                <div class='error-container'>
+                    <h1>Access Denied</h1>
+                    <p>You do not have permission to access this page.</p>
+                    <a href='logout.php'>Logout</a>
+                </div>
+            </body>
+            </html>");
         }
         else {
-            header("Location: main.php");
+            header("Location: report.php");
             exit();
         }
     }

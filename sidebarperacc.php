@@ -74,8 +74,12 @@ $processItems = [
     'Sales Entry',
     'Stock Transfer',
     'Upgrade Unit',
+    'Replacement Unit',
+    'Return to Supplier',
     'Refund',
-    'Claim Item'
+    'Trade-In',
+    'Claim Item',
+    'Item Status'
 ];
 $purchaseOrderItems = [
     'Purchase Order',
@@ -91,7 +95,11 @@ $voidProcessItems = [
     'Void Sales'
 ];
 $approvalProcessItems = [
-    'Transfer Approval'
+    'Transfer Approval',
+    'Item Status Approval',
+    'Upgrade Unit Approval',
+    'Replacement Unit Approval',
+    'Return To Supplier Approval'
 ];
 $receiveProcessItems = [
     'Receive Purchase Order',
@@ -106,10 +114,16 @@ $reportItems = [
     'Payment Details Report',
     'Void Sales Report',
     'Upgrade Unit Report',
+    'Replacement Unit Report',
+    'RTS Report (Complete)',
+    'RTS Report (Quantity)',
     'Receive Direct Delivery',
     'Stock Transfer Report',
     'Refund Report',
-    'Stock on Hand'
+    'Stock on Hand',
+    'Pre Order Report',
+    'Trade-In Report',
+    'Item Status Report'
     // 'Pre-order Report' // GLOBALLY HIDDEN
 ];
 $preorderItems = [
@@ -534,7 +548,7 @@ if (!empty($selected_filter)) {
         }
 
         #viewDetailsModal .detail-group li:before {
-            content: "?";
+            content: "â€¢";
             position: absolute;
             left: 5px;
             color: #2e7d32;
@@ -873,7 +887,7 @@ if (!empty($selected_filter)) {
                         <option value="all" <?php echo ($selected_filter === 'all') ? 'selected' : ''; ?>>View All</option>
                     </select>
                     <div class="search-bar">
-                        <input type="text" id="accountSearch" placeholder="Search by name or username…" oninput="filterTable()">
+                        <input type="text" id="accountSearch" placeholder="Search by name or username" oninput="filterTable()">
                     </div>
                 </div>
             </div>
@@ -1431,16 +1445,16 @@ if (!empty($selected_filter)) {
             const items = sidebarAccess.split(',').map(item => item.trim());
             
             // Categorize items based on the arrays defined in PHP
-            const processItems = ['Sales Entry', 'Stock Transfer', 'Upgrade Unit', 'Refund', 'Claim Item'];
+            const processItems = ['Sales Entry', 'Stock Transfer', 'Upgrade Unit', 'Replacement Unit', 'Return to Supplier', 'Refund', 'Trade-In', 'Claim Item', 'Item Status'];
             const purchaseOrderItems = ['Purchase Order', 'PO Invoice per Branch'];
             const subadminItems = ['Late Entry'];
             const voidProcessItems = ['Void Sales'];
-            const approvalProcessItems = ['Transfer Approval'];
+            const approvalProcessItems = ['Transfer Approval', 'Item Status Approval', 'Upgrade Unit Approval', 'Replacement Unit Approval', 'Return To Supplier Approval'];
             const receiveProcessItems = ['Receive Purchase Order', 'Receive Stock Transfer'];
-            const reportItems = ['Daily Sales Report', 'Monthly Sales Report', 'Payment Details Report', 'Void Sales Report', 'Upgrade Unit Report', 'Receive Direct Delivery', 'Stock Transfer Report', 'Refund Report', 'Stock on Hand'];
+            const reportItems = ['Daily Sales Report', 'Monthly Sales Report', 'Payment Details Report', 'Void Sales Report', 'Upgrade Unit Report', 'Replacement Unit Report', 'RTS Report (Complete)', 'RTS Report (Quantity)', 'Receive Direct Delivery', 'Stock Transfer Report', 'Refund Report', 'Stock on Hand', 'Pre Order Report', 'Trade-In Report', 'Item Status Report'];
             const userRegistrationItems = ['Account Registration', 'User Activation', 'Position Registration', 'Sidebar Per Account'];
             const locationRegistrationItems = ['Promoter Registration', 'Area Registration', 'Branch Registration', 'Dealer Registration'];
-            const itemRegistrationItems = ['Supplier Registration', 'Brand Registration', 'Family Code Registration', 'Department Registration', 'Group Registration', 'Item Registration'];
+            const itemRegistrationItems = ['Supplier Registration', 'Brand Registration', 'Family Code Registration', 'Department Registration', 'Group Registration', 'Item Registration', 'Bank Registration'];
             const terminalRegistrationItems = ['Terminal Issuer Registration', 'Terminal ID Registration'];
             
             const process = items.filter(item => processItems.includes(item));
