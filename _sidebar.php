@@ -211,7 +211,7 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
     endif; ?>
 
     <?php
-    $report_labels = ['Daily Sales Report', 'Monthly Sales Report', 'Payment Details Report', 'Void Sales Report', 'Upgrade Unit Report', 'Replacement Unit Report', 'Receive Direct Delivery', 'Stock Transfer Report', 'Refund Report', 'Stock on Hand', 'Pre Order Report', 'Trade-In Report', 'Item Status Report'];
+    $report_labels = ['Daily Sales Report', 'Monthly Sales Report', 'Payment Details Report', 'Void Sales Report', 'Upgrade Unit Report', 'Replacement Unit Report', 'RTS Report (Complete)', 'RTS Report (Quantity)', 'Receive Direct Delivery', 'Stock Transfer Report', 'Refund Report', 'Stock on Hand', 'Pre Order Report', 'Trade-In Report', 'Item Status Report'];
     $report_visible = false;
     foreach ($report_labels as $label) {
         if (!in_array($label, $sidebar_hidden)) {
@@ -308,6 +308,24 @@ if (basename($_SERVER['PHP_SELF']) === 'viewpurchaseorder.php') {
                         class="menu-item<?php echo ($current_page === 'report-replacementunit.php') ? ' active' : ''; ?>"
                         style="text-decoration:none;">
                         • Replacement Unit Report
+                    </a>
+                    <?php
+                endif; ?>
+
+                <?php if (!in_array('RTS Report (Complete)', $sidebar_hidden)): ?>
+                    <a href="report-returntosupplier.php"
+                        class="menu-item<?php echo ($current_page === 'report-returntosupplier.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">
+                        • RTS Report (Complete)
+                    </a>
+                    <?php
+                endif; ?>
+
+                <?php if (!in_array('RTS Report (Quantity)', $sidebar_hidden)): ?>
+                    <a href="report-returntosupplier-qty.php"
+                        class="menu-item<?php echo ($current_page === 'report-returntosupplier-qty.php') ? ' active' : ''; ?>"
+                        style="text-decoration:none;">
+                        • RTS Report (Quantity)
                     </a>
                     <?php
                 endif; ?>

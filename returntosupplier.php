@@ -1101,16 +1101,17 @@ if (isset($_SESSION['user_branch'])) {
                 <table class="items-table" id="transferTable">
                     <thead>
                         <tr>
-                            <th style="width: 30%">Item Description</th>
-                            <th style="width: 20%">IMEI</th>
+                            <th style="width: 25%">Item Description</th>
+                            <th style="width: 18%">IMEI</th>
                             <th style="width: 10%">Quantity</th>
-                            <th style="width: 25%">Reason</th>
+                            <th style="width: 12%">Cost</th>
+                            <th style="width: 20%">Reason</th>
                             <th style="width: 15%">Action</th>
                         </tr>
                     </thead>
                     <tbody id="transferTableBody">
                         <tr id="empty-row">
-                            <td colspan="5" style="height: 38px;">&nbsp;</td>
+                            <td colspan="6" style="height: 38px;">&nbsp;</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1125,6 +1126,10 @@ if (isset($_SESSION['user_branch'])) {
                     <div class="total-qty-wrap">
                         <span>Total Quantity:</span>
                         <input type="text" id="total_quantity" readonly>
+                    </div>
+                    <div class="total-qty-wrap">
+                        <span>Total Cost:</span>
+                        <input type="text" id="total_cost" readonly>
                     </div>
                     <button type="button" class="btn-save" onclick="saveTransfer()">Save</button>
                 </div>
@@ -1541,8 +1546,15 @@ if (isset($_SESSION['user_branch'])) {
                         return;
                     }
 
+                    // Fetch PO cost for the item
+                    return fetch(`get_po_cost.php?item_code=${encodeURIComponent(code)}`);
+                })
+                .then(response => response.json())
+                .then(costData => {
+                    const poCost = costData.status === 'success' ? parseFloat(costData.cost) || 0 : 0;
+                    
                     // Stock is available, proceed with adding the item
-                    itemsList.push({ code, desc, IMEI: '', qty, reason });
+                    itemsList.push({ code, desc, IMEI: '', qty, reason, cost: poCost });
                     renderTable();
 
                     document.getElementById('input_item_code').value = '';
@@ -1567,12 +1579,14 @@ if (isset($_SESSION['user_branch'])) {
             tbody.innerHTML = '';
 
             if (itemsList.length === 0) {
-                tbody.innerHTML = '<tr id="empty-row"><td colspan="5" style="height: 38px;">&nbsp;</td></tr>';
+                tbody.innerHTML = '<tr id="empty-row"><td colspan="6" style="height: 38px;">&nbsp;</td></tr>';
                 document.getElementById('total_quantity').value = '';
+                document.getElementById('total_cost').value = '';
                 return;
             }
 
             let totalQty = 0;
+            let totalCost = 0;
             
             // Group consecutive items with the same reason for rowspan
             let i = 0;
@@ -1591,6 +1605,9 @@ if (isset($_SESSION['user_branch'])) {
                     const item = itemsList[i + j];
                     const idx = i + j;
                     totalQty += item.qty;
+                    const itemCost = parseFloat(item.cost) || 0;
+                    const itemTotalCost = itemCost * item.qty;
+                    totalCost += itemTotalCost;
                     
                     const tr = document.createElement('tr');
                     
@@ -1610,6 +1627,12 @@ if (isset($_SESSION['user_branch'])) {
                     const tdQty = document.createElement('td');
                     tdQty.textContent = item.qty !== 0 ? item.qty : '';
                     tr.appendChild(tdQty);
+                    
+                    // Add Cost cell
+                    const tdCost = document.createElement('td');
+                    tdCost.style.textAlign = 'left';
+                    tdCost.textContent = itemTotalCost > 0 ? itemTotalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '';
+                    tr.appendChild(tdCost);
                     
                     // Add Reason cell only for the first row of the group
                     if (j === 0) {
@@ -1639,6 +1662,7 @@ if (isset($_SESSION['user_branch'])) {
             }
 
             document.getElementById('total_quantity').value = totalQty > 0 ? totalQty : '';
+            document.getElementById('total_cost').value = totalCost > 0 ? totalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '';
         }
 
         function updateIMEI(index, value) {
@@ -1985,29 +2009,37 @@ if (isset($_SESSION['user_branch'])) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success' && data.data) {
-                        // Found the item - add to temporary list with reason
-                        const itemReason = singleReasonMode ? globalReason : reason;
+                        // Found the item - fetch PO cost based on item_code and IMEI
+                        const itemCode = data.data.item_code;
                         
-                        tempSerialItems.push({
-                            code: data.data.item_code,
-                            desc: data.data.description,
-                            IMEI: serialNumber,
-                            qty: 1,
-                            reason: itemReason
-                        });
+                        return fetch(`get_po_cost.php?item_code=${encodeURIComponent(itemCode)}&imei=${encodeURIComponent(serialNumber)}`)
+                            .then(response => response.json())
+                            .then(costData => {
+                                const itemReason = singleReasonMode ? globalReason : reason;
+                                const itemCost = costData.status === 'success' ? parseFloat(costData.cost) || 0 : 0;
+                                
+                                tempSerialItems.push({
+                                    code: data.data.item_code,
+                                    desc: data.data.description,
+                                    IMEI: serialNumber,
+                                    qty: 1,
+                                    reason: itemReason,
+                                    cost: itemCost
+                                });
 
-                        // Render the updated list
-                        renderSerialItems();
+                                // Render the updated list
+                                renderSerialItems();
 
-                        // Clear IMEI input
-                        document.getElementById('modalSerialInput').value = '';
-                        
-                        // Clear reason input only if in per-item mode
-                        if (!singleReasonMode) {
-                            reasonInput.value = '';
-                        }
-                        
-                        document.getElementById('modalSerialInput').focus();
+                                // Clear IMEI input
+                                document.getElementById('modalSerialInput').value = '';
+                                
+                                // Clear reason input only if in per-item mode
+                                if (!singleReasonMode) {
+                                    reasonInput.value = '';
+                                }
+                                
+                                document.getElementById('modalSerialInput').focus();
+                            });
                     } else {
                         // Not found
                         alert(data.message || 'IMEI not found in stock');
